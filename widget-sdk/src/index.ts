@@ -1,2 +1,2 @@
 export { initAnedyaClient } from "./hooks/AnedyaFrontendClient";
-export {renderLatestData} from "./hooks/renderLatestData";
+export {LatestDataComponent} from "./hooks/renderLatestData";

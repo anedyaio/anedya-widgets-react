@@ -17,11 +17,14 @@ export default [
         file: packageJson.main,
         format: "cjs",
         sourcemap: true,
+        exports: "named",
+         interop: 'auto',
       },
       {
         file: packageJson.module,
         format: "esm",
         sourcemap: true,
+
       },
     ],
     plugins: [
@@ -32,11 +35,20 @@ export default [
       terser(),
       postcss(),
     ],
-    external: ["react", "react-dom"],
+    external: [
+   "react",
+  "react-dom",
+  "react/jsx-runtime",
+  "react/jsx-dev-runtime",
+  "@mui/material",
+  "@mui/system",
+  "@emotion/react",
+  "@emotion/styled"
+    ],
   },
   {
     input: "src/index.ts",
-    output: [{ file: packageJson.types }],
+    output: [{ file: packageJson.types,format: "esm" }],
     plugins: [dts.default()],
     external: [/\.css$/],
   },
