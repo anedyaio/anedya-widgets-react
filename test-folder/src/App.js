@@ -7,22 +7,7 @@ function App() {
   const token =
     "RLqobgKSW9y2pcP6snBQIEA6VjxltMpzTLardZax8nRG9vjmUnrFKKDdTZNv238Q";
   const client = initAnedyaClient(tokenId, token);
-  //return component directly -- done
-  //return only client -- done
-  //remove the refresh button --- done
-  //change how props is passed -- styling props in one object that you directly just destructure instead of passing singularly, should follow mui convention
-  //label
-  //number
-  //unit
-  //if title is not passed then it should handle that
-  //border radius should also be passable
-  //centreting and foct size relative to width and height of card
-  //diff levels of numbners -- diff colors -- pass a callback func to user-- o lket the user decide the numbers
-  // add a check or a failsafe for infinite renders
-//test all these 
 
-  //rm -rf yt-tutorial-app/node_modules/react
-  //rm -rf yt-tutorial-app/node_modules/react-dom
 
   return (
     <div style={{ padding: "2rem" }}>
