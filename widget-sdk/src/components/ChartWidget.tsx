@@ -1,333 +1,303 @@
-
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
-import { Box, CircularProgress, Typography, SxProps, Theme } from "@mui/material";
-import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
+import { Typography, SxProps, Theme } from "@mui/material";
 
-// --- Circuit Breaker Config ---
-const MAX_FAILURES = 3;
-const MIN_FETCH_INTERVAL = 10000;
-
-// --- Default Styles ---
-interface ChartStyleSet {
-  container?: SxProps<Theme>;
-  title?: SxProps<Theme>;
-  tooltip?: React.CSSProperties;
-  fontFamily?: string;
-}
-
-const defaultFontFamily = "Roboto, sans-serif";
-
-const defaultStyles: Required<ChartStyleSet> = {
-  container: {
-    bgcolor: "#f4f4f4",
-    borderRadius: 2,
-    p: 2,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 2,
-    textAlign: "center",
-    width: 400,
-    height: 300,
-  },
-  title: {
-    fontWeight: 600,
-    color: "rgba(0,0,0,0.75)",
-    fontFamily: defaultFontFamily,
-  },
-  tooltip: {
-    position: "absolute",
-    display: "none",
-    background: "#333",
-    color: "#fff",
-    padding: "6px 10px",
-    borderRadius: "6px",
-    fontSize: "12px",
-    pointerEvents: "none",
-  },
-  fontFamily: defaultFontFamily,
+// ---- Helper: Normalize sx like in LatestDataWidget ----
+const normalizeSx = (sx: SxProps<Theme> | undefined): Record<string, any> => {
+  if (!sx) return {};
+  if (Array.isArray(sx)) return Object.assign({}, ...sx);
+  if (typeof sx === "function") return sx({} as Theme) as Record<string, any>;
+  return sx as Record<string, any>;
 };
 
-interface ChartDataPoint {
+// ---- Type Definitions ----
+export interface ChartDataPoint {
   timestamp: number;
   value: number;
 }
 
-interface ChartWidgetProps {
-  client: any;
-  nodeId: string;
-  variable: string;
-  title?: string;
-  width?: number;
-  height?: number;
-  gradientColors?: [string, string];
-  strokeColor?: string;
-  strokeWidth?: number;
-  styles?: ChartStyleSet;
-  tooltipFormatter?: (point: { timestamp: number; value: number }) => string;
+interface ChartStyleSet {
+  container?: SxProps<Theme>;
+  title?: SxProps<Theme>;
+  tooltip?: SxProps<Theme>;
+  chart?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    gradientColors?: [string, string];
+  };
 }
 
+export interface ChartWidgetProps {
+  client?: any;
+  nodeId?: string;
+  variable?: string;
+  title?: string;
+  styles?: ChartStyleSet;
+  tooltipFormatter?: (d: ChartDataPoint) => string;
+}
+
+// ---- Default Styles ----
+const defaultStyles: Required<ChartStyleSet> = {
+  container: {
+    width: 400,
+    height: 250,
+    p: 2,
+    m: 2,
+    background: "linear-gradient(to right, #1e1e2f, #2c2c54)",
+    borderRadius: 4,
+    textAlign: "center",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: 600,
+    color: "rgba(0,0,0,0.75)",
+    mb: 1,
+  },
+  tooltip: {
+    background: "rgba(0,0,0,0.75)",
+    color: "#ffffff",
+    borderRadius: "6px",
+    padding: "6px 10px",
+    fontSize: "12px",
+  },
+  chart: {
+    strokeColor: "#1e88e5",
+    strokeWidth: 2,
+    gradientColors: ["#1e88e5", "#90caf9"],
+  },
+};
+
+// ---- ChartWidget ----
 export const ChartWidget: React.FC<ChartWidgetProps> = ({
   client,
   nodeId,
   variable,
-  title = "Chart",
-  width = 400,
-  height = 250,
-  gradientColors = ["#1e88e5", "#90caf9"],
-  strokeColor = "#1e88e5",
-  strokeWidth = 2,
+  title = "Chart Widget",
   styles = {},
   tooltipFormatter = (d) =>
-    `${new Intl.DateTimeFormat("en-US", {
+    `${new Date(d.timestamp).toLocaleString(undefined, {
       month: "short",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
-    }).format(new Date(d.timestamp))} - ${d.value}`,
+    })}: ${d.value}`,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const tooltipRef = useRef<HTMLDivElement | null>(null);
-   const [data, setData] = useState<ChartDataPoint[]>([
+  const [data, setData] = useState<ChartDataPoint[]>([
     { timestamp: Date.now() - 60000, value: 33 },
     { timestamp: Date.now() - 30000, value: 44 },
-    { timestamp: Date.now(), value: 38 }
+    { timestamp: Date.now(), value: 38 },
   ]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [node, setNode] = useState<any>(null);
-
-  const isFetchingRef = useRef(false);
-  const failureCountRef = useRef(0);
   const mountedRef = useRef(false);
-  const lastFetchRef = useRef(0);
+  const failureCountRef = useRef(0);
+  const isFetchingRef = useRef(false);
+  const MAX_FAILURES = 3;
 
-  // --- Normalize styles ---
-  const normalizeSx = (sx: SxProps<Theme> | undefined): Record<string, any> => {
-    if (!sx) return {};
-    if (Array.isArray(sx)) return Object.assign({}, ...sx);
-    if (typeof sx === "function") return sx({} as Theme) as Record<string, any>;
-    return sx as Record<string, any>;
-  };
+  // ---- Normalize Styles ----
+  const containerSx = normalizeSx(styles?.container);
+  const titleSx = normalizeSx(styles?.title);
+  const tooltipSx = normalizeSx(styles?.tooltip);
+  const chartSx = styles.chart ?? {};
 
-  const containerSx = normalizeSx(styles.container);
-  const titleSx = normalizeSx(styles.title);
+    // --- Container dimensions with TypeScript-safe default ---
+  const containerDefaults: any = defaultStyles.container!;
+  const width = containerSx.width ?? containerDefaults.width;
+  const height = containerSx.height ?? containerDefaults.height;
 
-  const mergedContainerSx: SxProps<Theme> = {
-    ...defaultStyles.container,
-    ...containerSx,
-  };
+  const strokeColor = chartSx.strokeColor ?? defaultStyles.chart.strokeColor;
+  const strokeWidth = chartSx.strokeWidth ?? defaultStyles.chart.strokeWidth;
+  const gradientColors =
+    chartSx.gradientColors ?? defaultStyles.chart.gradientColors;
 
-  const mergedTitleSx: SxProps<Theme> = {
-    ...defaultStyles.title,
-    ...titleSx,
-    fontFamily: styles.fontFamily ?? defaultFontFamily,
-  };
-
-  const mergedTooltipStyle: React.CSSProperties = {
-    ...defaultStyles.tooltip,
-    ...styles.tooltip,
-  };
-
-  // --- Initialize Node ---
+  // ---- Fetch Node ----
   useEffect(() => {
     if (!client || !nodeId) return;
-    const anedya = (client as any)._anedya as Anedya;
-    const createdNode = anedya.NewNode(client, nodeId);
+    const anedya = (client as any)._anedya;
+    const createdNode = anedya?.NewNode?.(client, nodeId);
     setNode(createdNode);
   }, [client, nodeId]);
 
-  // --- Fetch Data ---
+  // ---- Fetch Data ----
   useEffect(() => {
     mountedRef.current = true;
-    if (!node || data.length>0) return;
+    if (!node 
+      // || data.length>0
+    ) return;
 
     const fetchData = async () => {
-      const now = Date.now();
-      if (
-        isFetchingRef.current ||
-        failureCountRef.current >= MAX_FAILURES ||
-        now - lastFetchRef.current < MIN_FETCH_INTERVAL
-      )
-        return;
-
+      if (isFetchingRef.current || failureCountRef.current >= MAX_FAILURES) return;
       isFetchingRef.current = true;
-      lastFetchRef.current = now;
 
       try {
-        setLoading(true);
-        setError(null);
-
         const currentTime = Date.now();
         const twentyFourHoursAgo = currentTime - 86400 * 1000;
-        const req = { variable, from: twentyFourHoursAgo, to: currentTime, limit: 20, order: "asc" };
+
+       const req = { variable, from: twentyFourHoursAgo, to: currentTime, limit: 20, order: "asc" };
         const res = await node.getData(req);
 
         if (!mountedRef.current) return;
-                
-        if (res.isSuccess && res.isDataAvailable) {
 
+        if (res.isSuccess && res.isDataAvailable) {
           setData(res.data);
-          failureCountRef.current = 0;
         } else {
-          setError("No data available");
+          console.warn("No data available");
         }
-      } catch (err: any) {
-        if (!mountedRef.current) return;
+        failureCountRef.current = 0;
+      } catch (err) {
         console.error("Error fetching chart data:", err);
-        setError(err?.message ?? "Failed to fetch chart data");
         failureCountRef.current += 1;
       } finally {
-        if (!mountedRef.current) return;
-        setLoading(false);
-        isFetchingRef.current = false;
+        if (mountedRef.current) isFetchingRef.current = false;
       }
     };
 
     fetchData();
-
     return () => {
       mountedRef.current = false;
     };
   }, [node, variable]);
 
-  // --- Draw Chart ---
-  useEffect(() => {
-    if (!svgRef.current || data.length === 0) return;
+  // ---- D3 Render ----
+useEffect(() => {
+  if (!svgRef.current || data.length === 0) return;
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+  const svg = d3.select(svgRef.current);
+  svg.selectAll("*").remove();
 
-    const margin = { top: 20, right: 20, bottom: 60, left: 40 };
-    const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
+  const margin = { top: 20, right: 30, bottom: 90, left: 40 };
+  const chartWidth = Number(width) - margin.left - margin.right;
+  const chartHeight = Number(height) - margin.top - margin.bottom;
 
-    const g = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Gradient
-    const defs = svg.append("defs");
-    const gradientId = "chartGradient";
-    const gradient = defs
-      .append("linearGradient")
-      .attr("id", gradientId)
-      .attr("x1", "0%")
-      .attr("y1", "0%")
-      .attr("x2", "0%")
-      .attr("y2", "100%");
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(data, (d) => new Date(d.timestamp)) as [Date, Date])
+    .range([0, chartWidth]);
 
-    gradient
-      .append("stop")
-      .attr("offset", "0%")
-      .attr("stop-color", gradientColors[0])
-      .attr("stop-opacity", 0.6);
-    gradient
-      .append("stop")
-      .attr("offset", "100%")
-      .attr("stop-color", gradientColors[1])
-      .attr("stop-opacity", 0);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => d.value) ?? 10])
+    .nice()
+    .range([chartHeight, 0]);
 
-    const x = d3
-      .scaleTime()
-      .domain(d3.extent(data, (d) => new Date(d.timestamp)) as [Date, Date])
-      .range([0, chartWidth]);
+  const safeGradient = gradientColors ?? ["#1e88e5", "#90caf9"];
+  const safeStroke = strokeColor ?? "#1e88e5";
+  const safeWidth = strokeWidth ?? 2;
 
-    const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value) ?? 10])
-      .nice()
-      .range([chartHeight, 0]);
+  const gradient = svg
+    .append("defs")
+    .append("linearGradient")
+    .attr("id", "chartGradient")
+    .attr("x1", "0%")
+    .attr("y1", "0%")
+    .attr("x2", "0%")
+    .attr("y2", "100%");
 
-    const area = d3
-      .area<ChartDataPoint>()
-      .x((d) => x(new Date(d.timestamp)))
-      .y0(chartHeight)
-      .y1((d) => y(d.value))
-      .curve(d3.curveMonotoneX);
+  gradient
+    .append("stop")
+    .attr("offset", "0%")
+    .attr("stop-color", safeGradient[0])
+    .attr("stop-opacity", 0.6);
 
-    g.append("path").datum(data).attr("fill", `url(#${gradientId})`).attr("d", area);
+  gradient
+    .append("stop")
+    .attr("offset", "100%")
+    .attr("stop-color", safeGradient[1])
+    .attr("stop-opacity", 0.1);
 
-    const line = d3
-      .line<ChartDataPoint>()
-      .x((d) => x(new Date(d.timestamp)))
-      .y((d) => y(d.value))
-      .curve(d3.curveMonotoneX);
+  const area = d3
+    .area<ChartDataPoint>()
+    .x((d) => x(new Date(d.timestamp)))
+    .y0(chartHeight)
+    .y1((d) => y(d.value))
+    .curve(d3.curveMonotoneX);
 
-    g.append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", strokeColor)
-      .attr("stroke-width", strokeWidth)
-      .attr("d", line);
+  g.append("path").datum(data).attr("fill", "url(#chartGradient)").attr("d", area);
 
-    // Scatter Dots
-    g.selectAll(".dot")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("class", "dot")
-      .attr("cx", (d) => x(new Date(d.timestamp)))
-      .attr("cy", (d) => y(d.value))
-      .attr("r", 4)
-      .attr("fill", strokeColor)
-      .on("mouseover", (event, d) => {
-        const tooltip = tooltipRef.current;
-        if (tooltip) {
-          tooltip.innerHTML = tooltipFormatter(d);
-          tooltip.style.display = "block";
-          tooltip.style.left = event.pageX + 10 + "px";
-          tooltip.style.top = event.pageY - 30 + "px";
-        }
-      })
-      .on("mouseout", () => {
-        const tooltip = tooltipRef.current;
-        if (tooltip) tooltip.style.display = "none";
-      });
+  const line = d3
+    .line<ChartDataPoint>()
+    .x((d) => x(new Date(d.timestamp)))
+    .y((d) => y(d.value))
+    .curve(d3.curveMonotoneX);
 
-    const dateFormatter = new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
+  g.append("path")
+    .datum(data)
+    .attr("fill", "none")
+    .attr("stroke", safeStroke)
+    .attr("stroke-width", safeWidth)
+    .attr("d", line);
+
+  g.selectAll("circle")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("cx", (d) => x(new Date(d.timestamp)))
+    .attr("cy", (d) => y(d.value))
+    .attr("r", 4)
+    .attr("fill", safeStroke);
+
+    const tooltipDefaults: any = defaultStyles.tooltip!;
+  const tooltip = d3
+    .select("body")
+    .append("div")
+    .style("position", "absolute")
+    .style("pointer-events", "none")
+    .style("opacity", 0)
+    .style("background", tooltipSx.background ?? tooltipDefaults.background)
+    .style("color", tooltipSx.color ?? tooltipDefaults.color)
+    .style("border-radius", tooltipSx.borderRadius ?? tooltipDefaults?.borderRadius)
+    .style("padding", tooltipSx.padding ?? tooltipDefaults.padding)
+    .style("font-size", tooltipSx.fontSize ?? tooltipDefaults.fontSize);
+
+  g.selectAll("circle")
+    .on("mouseover", function (event, d:any) {
+      tooltip.transition().duration(150).style("opacity", 1);
+      tooltip.html(tooltipFormatter(d));
+    })
+    .on("mousemove", function (event) {
+      tooltip.style("left", event.pageX + 10 + "px").style("top", event.pageY - 20 + "px");
+    })
+    .on("mouseout", function () {
+      tooltip.transition().duration(200).style("opacity", 0);
     });
 
-    // Axes
-    g.append("g")
-      .attr("transform", `translate(0,${chartHeight})`)
-      .call(d3.axisBottom(x).ticks(4).tickFormat((d) => dateFormatter.format(d as Date)))
-      .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("transform", "rotate(-35)")
-      .attr("dx", "-0.5em")
-      .attr("dy", "0.5em");
+  const xAxis = d3
+    .axisBottom(x)
+    .ticks(4)
+    .tickFormat((d) =>
+      new Date(d as Date).toLocaleString(undefined, {
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    );
 
-    g.append("g").call(d3.axisLeft(y).ticks(5));
-  }, [data, width, height, strokeColor, strokeWidth, gradientColors]);
+  g.append("g")
+    .attr("transform", `translate(0,${chartHeight})`)
+    .call(xAxis)
+    .selectAll("text")
+    .attr("transform", "rotate(-25)")
+    .style("text-anchor", "end");
 
-console.log(data,"data")
+  g.append("g").call(d3.axisLeft(y).ticks(5));
+
+  // ✅ Proper cleanup
+  return () => {
+    tooltip.remove();
+  };
+}, [data, width, height, strokeColor, gradientColors, strokeWidth, tooltipFormatter]);
+
   return (
-    <Box sx={mergedContainerSx} position="relative">
-      {title && <Typography sx={mergedTitleSx}>{title}</Typography>}
-
-      {loading ? (
-        <CircularProgress />
-      ) 
-      // : error ? (
-      //   <Typography color="error">{error}</Typography>
-      // ) 
-      : (
-        <svg ref={svgRef} width={width} height={height}></svg>
+    <div style={normalizeSx({ ...defaultStyles.container, ...containerSx })}>
+      {title && (
+        <Typography sx={{ ...defaultStyles.title, ...titleSx }}>{title}</Typography>
       )}
-
-      <div ref={tooltipRef} style={mergedTooltipStyle} />
-    </Box>
+      <svg ref={svgRef} width={width as number} height={height as number}></svg>
+    </div>
   );
 };
-
-export default ChartWidget;
-

@@ -53,16 +53,42 @@ function App() {
 
 
       />
-        <ChartWidget
-       client={client}
-        nodeId={nodeId}
-        variable="temperature"
-
+<ChartWidget
+  client={client}
+  nodeId={nodeId}
+  variable="temperature"
   title="Temperature Trend"
-  strokeColor="rgba(0, 143, 251, 0.85)"
-   gradientColors={["rgba(0, 143, 251, 0.85)", "#ffe0b2"]}
-  tooltipFormatter={(d) => `${new Date(d.timestamp).toLocaleString()}: ${d.value}°C`}
+  styles={{
+    container: {
+      width: 450,
+      height: 300,
+     background: "linear-gradient(to right, #cfcfdeff, #5b5b61ff)",
+      borderRadius: 6,
+      p: 2,
+    },
+    title: { color: "#fff", fontSize: "18px" },
+    chart: {
+      strokeColor: "rgba(0, 143, 251, 0.85)",
+      strokeWidth: 3,
+      gradientColors:["rgba(0, 143, 251, 0.85)", "#ffe0b2"],
+    },
+    tooltip: {
+     background: "rgba(0,0,0,0.75)",
+      color: "#fff",
+      fontSize: "13px",
+    },
+  }}
+  tooltipFormatter={(d) =>
+    `${new Date(d.timestamp).toLocaleString(undefined, {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })}: ${d.value}°C`
+  }
 />
+
     </div>
   );
 }
