@@ -273,10 +273,3 @@ useEffect(() => {
 
 export default LatestDataWidget;
 
-//device api domain 
-//custom domain details --- platform api domain
-//another section as dfevice api domain
-
-//ask suraj to test adk and add rate limiter 
-
-//oauth add karo 

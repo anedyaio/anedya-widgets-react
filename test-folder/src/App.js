@@ -1,5 +1,5 @@
 import React from "react";
-import { LatestDataComponent, initAnedyaClient } from "yt-tutorial-app";
+import { LatestDataComponent, initAnedyaClient ,ChartWidget} from "widget-sdk";
 
 function App() {
   const nodeId = "0199c8d5-ce04-78db-aaed-69d8c0222493";
@@ -53,14 +53,18 @@ function App() {
 
 
       />
+        <ChartWidget
+       client={client}
+        nodeId={nodeId}
+        variable="temperature"
+
+  title="Temperature Trend"
+  strokeColor="rgba(0, 143, 251, 0.85)"
+   gradientColors={["rgba(0, 143, 251, 0.85)", "#ffe0b2"]}
+  tooltipFormatter={(d) => `${new Date(d.timestamp).toLocaleString()}: ${d.value}°C`}
+/>
     </div>
   );
 }
 
 export default App;
-
-// Would you like me to show you a final clean layout for your SDK folder structure (src/, index.ts, hooks/, components/) so you can make sure all imports and exports line up perfectly?
-//go back to failsafe chat part
-//paclage json optimized ==>Would you like me to show you what a final clean package.json for your SDK should look like too (perfectly ready for npm publish)?
-// I can also show you a recommended way to handle MUI + peer React dependencies to avoid the useState errors you were seeing earlier — do you want me to do that next
-//is there a way to add a check or failsafe in case of infinte renders by the user's app? i dont want that to happen because that will cause infinite api calls, and thats bad bcs it will probably cause api issues

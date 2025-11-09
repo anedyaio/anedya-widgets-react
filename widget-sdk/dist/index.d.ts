@@ -45,4 +45,16 @@ interface LatestDataComponentProps {
 }
 declare const LatestDataComponent: React.FC<LatestDataComponentProps>;
 
-export { LatestDataComponent, initAnedyaClient };
+interface LatestChartWidgetProps {
+    data: {
+        timestamp: number;
+        value: number;
+    }[];
+    width?: number;
+    height?: number;
+    strokeColor?: string;
+    title?: string;
+}
+declare const ChartWidget: React.FC<LatestChartWidgetProps>;
+
+export { ChartWidget, LatestDataComponent, initAnedyaClient };

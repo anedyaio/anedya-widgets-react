@@ -13,23 +13,25 @@
   "license": "ISC",
   "dependencies": {
     "@anedyasystems/anedya-frontend-sdk": "^0.0.2",
+    "@types/d3": "^7.4.3",
+    "d3": "^7.9.0",
     "iconsax-react": "^0.0.8",
     "tslib": "^2.8.1"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
     "@mui/material": "^7.0.0",
     "@mui/system": "^7.3.3",
-    "@emotion/react": "^11.11.0",
-    "@emotion/styled": "^11.11.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.2",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.1.4",
-    "@types/react": "^19.2.2", 
+    "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "postcss": "^8.4.47",
     "rollup": "^4.52.4",

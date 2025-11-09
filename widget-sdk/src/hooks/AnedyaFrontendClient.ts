@@ -84,6 +84,32 @@ export function initAnedyaClient(
         }
       };
     }
+    if(node.getData){
+      const originalGetData: (...params: any[]) => Promise<any> =
+        node.getData.bind(node);
+
+      node.getData = async (...params: any[]): Promise<any> => {
+        const now = Date.now();
+        const elapsed = now - limiter.lastCallTime;
+
+        if (elapsed < limiter.interval) {
+          const wait = limiter.interval - elapsed;
+          console.warn(
+            `⏳ Rate limited for node ${nodeId}: waiting ${wait}ms before next call`
+          );
+          await new Promise((r) => setTimeout(r, wait));
+        }
+
+        limiter.lastCallTime = Date.now();
+
+        try {
+          return await originalGetData(...params);
+        } catch (err) {
+          console.error(`⚠️ API call failed for node ${nodeId}:`, err);
+          throw err;
+        }
+      };
+    }
 
     return node;
   };
