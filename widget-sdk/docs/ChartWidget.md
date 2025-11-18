@@ -1,35 +1,75 @@
-🧩 LatestDataWidget
+🧩 ChartWidget
 
-Displays the latest sensor or node data from an Anedya network node.
+Displays the historical time-series data for a given variable from an Anedya network node.
 Ideal for dashboards that show real-time or near-real-time values (like temperature, pressure, humidity, etc.).
 
 🚀 Usage Example
 
 ```import { initAnedyaClient } from "widget-sdk";
-import { LatestDataWidget } from "widget-sdk";
+import { ChartWidget } from "widget-sdk";
 
 const client = initAnedyaClient("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
-<LatestDataWidget
-client={client}
-nodeId="NODE123"
-variable="temperature"
-title="Temperature"
-unit="°C"
-colorRangeCallback={(val, def) => {
-if (val < 15) return "#3498db";
-if (val < 30) return "#2ecc71";
-return "#e74c3c";
-}}
-styles={{
-container: { width: 220, height: 220, bgcolor: "#fafafa" },
-value: { fontWeight: 800 },
-}}
+<ChartWidget
+ client={client}
+  nodeId={nodeId}
+  variable="temperature"
+  title="Temperature Trend"
+  styles={{
+    container: {
+      width: 450,
+      height: 300,
+     background: "linear-gradient(to right, #cfcfdeff, #5b5b61ff)",
+      borderRadius: 6,
+      p: 2,
+    },
+    title: { color: "#fff", fontSize: "18px" },
+    chart: {
+      strokeColor: "rgba(0, 143, 251, 0.85)",
+      strokeWidth: 3,
+      gradientColors:["rgba(0, 143, 251, 0.85)", "#ffe0b2"],
+    },
+    tooltip: {
+     background: "rgba(0,0,0,0.75)",
+      color: "#fff",
+      fontSize: "13px",
+    },
+  }}
+  tooltipFormatter={(d) =>
+    `${new Date(d.timestamp).toLocaleString(undefined, {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })}: ${d.value}°C`
+  }
+
+  tickFormatter={(date) =>
+        date.toLocaleString("en-US", {
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      }
+
+      tickFrequency={4}  // default is auto
 />
 );
 }```
+
+🎚 Tick Configuration
+
+```tickFormatter?: (date: Date) => string;
+tickFrequency?: number;   // how many ticks you want (default: auto)
+```
+📡 Tooltip Formatting
+```tooltipFormatter?: (point: { timestamp: number; value: number }) => string;
+```
 
 ⚙️ Props
 
@@ -41,8 +81,6 @@ value: { fontWeight: 800 },
 | title              | string                                          |       ❌       | Optional label displayed above the value.                                  |
 | unit               | string                                          |       ❌      | Unit of measurement shown after the value.                                 |
 | styles             | StyleSet                                        |       ❌      | Custom style overrides for container, label, value, and unit.              |
-| colorRange         | typeof defaultColorRanges                       |       ❌      | Optional custom color range configuration.                                 |
-| colorRangeCallback | (value: number, defaultColor: string) => string |       ❌     | Callback that lets you overrride the computed color logic for data values. |
 | fontFamily         | string                                          |       ❌      | Global font family applied to all text (defaults to  "Roboto").            |
 
 🎨 Styling
@@ -87,42 +125,10 @@ unit: { fontWeight: 400, color: "#888" },
 You can override any of these:
 
 ```tsx
-<LatestDataWidget
+<ChartWidget
 styles={{
 container: { bgcolor: "#fff3cd", width: 250, height: 250 },
 value: { color: "#ff9900", fontSize: 32 },
 }}
 />
 ```
-
-🎨 Color Customization
-
-Use colorRangeCallback to apply dynamic colors based on value:
-
-```tsx
-colorRangeCallback={(val, def) => {
-if (val < 30) return "#2ecc71"; // green
-if (val < 70) return "#f1c40f"; // yellow
-if (val <= 100) return "#e74c3c"; // red
-return def;
-}}
-```
-
-You can also provide your own static colorRange set if you want total control.
-
-🧠 Logic & Behavior
-
--Auto font scaling based on container width/height (if no explicit font size provided).
-
--Global fontFamily can be overridden per text type (label, value, unit).
-
--Gap scaling: If no gap provided in container style, it scales dynamically with font size.
-
--Rate limiter: Prevents rapid API re-fetches and protects backend.
-
--Circuit breaker: Temporarily halts fetches after repeated failures.
-
--Infinite render protection: Detects excessive re-renders in parent component.
-
--Safe mount/unmount: Prevents API updates after unmount or component change.
-
