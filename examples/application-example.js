@@ -92,7 +92,7 @@ function App() {
           variable="temperature"
           title="Temperature Sensor"
           unit={"°C"}
-          value={80}
+        
           showNeedle={false}
           styles={{
             container: {

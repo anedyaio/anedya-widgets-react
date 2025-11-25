@@ -1,299 +1,5 @@
-// //gauage
-// //give user option to set the degree of circle, doesnt have to be full semicircle, ste thickness etc
-
-// //later in our widget sdk we will give the option to add live data views, in which case you will make the normal request the first time to get data, and then further on you will get the live data using event listeners
-// //with this addition the chart will shift once new data becomes available ---> i have the chart ui sir showed in in screenshot
-
-// //props for gauge:
-// //
-// import React, { useEffect, useMemo, useRef, useState } from "react";
-// import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-// import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge';
-
-// import { AnedyaClient } from "../components/types";
-// import MainCard from "./MainCard";
-// // material-ui
-// import Box from "@mui/material/Box";
-// import Grid from "@mui/material/Grid";
-// import Stack from "@mui/material/Stack";
-// import Typography from "@mui/material/Typography";
-// import { CircularProgress, Theme, SxProps } from "@mui/material";
-// // --- Default color ranges ---
-// const defaultColorRanges = [
-//   { max: 20, color: "red" },
-//   { max: 50, color: "yellow" },
-//   { max: Infinity, color: "green" },
-// ];
-
-// // --- Default styles ---
-// interface StyleSet {
-//   container?: SxProps<Theme>;
-//   label?: SxProps<Theme>;
-//   value?: SxProps<Theme>;
-//   unit?: SxProps<Theme>;
-//   fontFamily?: string; // optional global font family for all 3
-// }
-
-// const defaultFontFamily = "Roboto, sans-serif";
-
-// const defaultStyles: Required<StyleSet> = {
-//   container: {
-//     bgcolor: "#f4f4f4",
-//     borderRadius: 2,
-//     p: 2,
-//     display: "flex",
-//     flexDirection: "column",
-//     justifyContent: "center",
-//     alignItems: "center",
-//     gap: 2,
-//     textAlign: "center",
-//     width: 200,
-//     height: 200,
-//   },
-//   label: { fontWeight: 500, color: "#ffffff", fontFamily: defaultFontFamily },
-//   value: { fontWeight: 700, color: "#ffffff", fontFamily: defaultFontFamily },
-//   unit: { fontWeight: 400, color: "#ffffff", fontFamily: defaultFontFamily },
-//   fontFamily: defaultFontFamily,
-// };
-
-// // --- Helper: get color from range ---
-// const getColorFromRange = (value: number, ranges = defaultColorRanges) => {
-//   const range = ranges.find((r) => value <= r.max);
-//   return range?.color ?? "#333";
-// };
-
-// // --- Helper: normalize sx for TypeScript ---
-// const normalizeSx = (sx: SxProps<Theme> | undefined): Record<string, any> => {
-//   if (!sx) return {};
-//   if (Array.isArray(sx)) return Object.assign({}, ...sx);
-//   if (typeof sx === "function") return sx({} as Theme) as Record<string, any>;
-//   return sx as Record<string, any>;
-// };
-
-// // --- Circuit Breaker Config ---
-// const MAX_FAILURES = 3;
-
-// // --- Rate limiter settings ---
-// const MIN_FETCH_INTERVAL = 10000; // 10 seconds between fetches
-
-// // --- Props ---
-// interface WidgetProps {
-//   client: any;
-//   nodeId: string;
-//   variable: string;
-//   title?: string;
-//   unit?: string;
-//   styles?: StyleSet;
-//   colorRange?: typeof defaultColorRanges;
-//   colorRangeCallback?: (value: number, defaultColor: string) => string;
-// }
-
-// export const LatestDataGauge: React.FC<WidgetProps> = ({
-//   client,
-//   nodeId,
-//   variable,
-//   title = "Latest Data",
-//   unit = "",
-//   styles = {},
-//   colorRange,
-//   colorRangeCallback,
-// }) => {
-//   const [data, setData] = useState<any>(null);
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState<string | null>(null);
-//   const [node, setNode] = useState<any>(null); // <-- store node in state
-
-//   // --- Preventing stale closures / infinite renders ---
-
-//   const isFetchingRef = useRef(false);
-//   const failureCountRef = useRef(0);
-//  const mountedRef = useRef(false);
-// const lastFetchRef = useRef(0);
-
-// useEffect(() => {
-//   if (client && nodeId) {
-//     const anedya = (client as any)._anedya as Anedya; // retrieve wrapped instance
-//     const createdNode = anedya.NewNode(client, nodeId);
-//     setNode(createdNode);
-//   }
-// }, [client, nodeId]);
-
-// // --- Fetch data once safely ---
-// //   useEffect(() => {
-
-// //        mountedRef.current = true;
-// //          if (!node) return;
-// //       const fetchData= async()=> {
-
-// //      if ( isFetchingRef.current|| failureCountRef.current >= MAX_FAILURES){
-
-// //       //rate limiter ----> in client
-// //       console.log("!node:",node)
-// //       console.log("isFetchingRef.current:",isFetchingRef.current)
-// //       console.log("failureCountRef.current:",failureCountRef.current)
-// //       return
-// //      }; // don't try if node not ready or if an api call is being currently made already
-
-// //      isFetchingRef.current = true;
-// //     try {
-// //       setLoading(true);
-// //       setError(null);
-// //       const res = await node.getLatestData(variable);
-
-// //       if (!mountedRef.current) return; // <-- SAFE, stops state update if unmounted
-
-// //       if (res.isSuccess && res.isDataAvailable) {
-// //         setData(res.data?.value);
-// //         setError("");
-// //       } else {
-// //         setData(null);
-// //         setError("No data available");
-// //       }
-// //        failureCountRef.current = 0; // reset on success
-// //     } catch (err: any) {
-// //   if (!mountedRef.current) return;
-// //   console.error("Error fetching latest data:", err);
-// //       setData(null);
-// //       setError(err?.message ?? "Failed to fetch data");
-// //          failureCountRef.current += 1;
-
-// //     } finally {
-// //         if (!mountedRef.current) return;
-// //     setLoading(false);
-// //     isFetchingRef.current = false;
-// //     }
-// //   }
-// //     fetchData();
-
-// //     return () => {
-// //       mountedRef.current = false;
-// //     };
-
-// //   }, [node, variable]);
-
-//   // --- Normalize styles ---
-//   const containerSx = normalizeSx(styles?.container);
-//   const labelSx = normalizeSx(styles?.label);
-//   const valueSx = normalizeSx(styles?.value);
-//   const unitSx = normalizeSx(styles?.unit);
-
-//   // --- Container dimensions with TypeScript-safe default ---
-//   const containerDefaults: any = defaultStyles.container!;
-//   const width = containerSx.width ?? containerDefaults.width;
-//   const height = containerSx.height ?? containerDefaults.height;
-
-//   // --- Scaled font sizes ---
-//   const baseFont = Math.min(Number(width), Number(height)) * 0.15;
-
-//   // --- Compute font sizes dynamically if not provided by user ---
-//   const labelFont = (styles?.label as any)?.fontSize ?? baseFont * 0.6;
-
-//   const valueFont = (styles?.value as any)?.fontSize ?? baseFont * 1.2;
-
-//   const unitFont = (styles?.unit as any)?.fontSize ?? baseFont * 0.8;
-
-//   // --- Font family handling ---
-//   const globalFontFamily = styles?.fontFamily ?? "Roboto";
-//   const labelFontFamily = labelSx.fontFamily ?? globalFontFamily;
-//   const valueFontFamily = valueSx.fontFamily ?? globalFontFamily;
-//   const unitFontFamily = unitSx.fontFamily ?? globalFontFamily;
-
-//   // --- Gap scaling ---
-//   const containerGap = (containerSx as any).gap ?? baseFont * 0.2; // scale gap if user didn't pass one
-
-//   // --- Compute dynamic text color ---
-//   const finalRange = colorRange ?? defaultColorRanges;
-//   let textColor = getColorFromRange(Number(data) ?? 0, finalRange);
-//   if (colorRangeCallback) {
-//     textColor = colorRangeCallback(Number(data) ?? 0, textColor);
-//   }
-
-//   // --- Merge styles safely ---
-//   const mergedContainerSx: SxProps<Theme> = {
-//     ...defaultStyles.container,
-//     ...containerSx,
-//     gap: containerGap,
-//   };
-//   const mergedLabelSx: SxProps<Theme> = {
-//     ...defaultStyles.label,
-//     fontSize: labelFont,
-//     ...labelSx,
-//     fontFamily: labelFontFamily,
-//   };
-//   const mergedValueSx: SxProps<Theme> = {
-//     ...defaultStyles.value,
-//     fontSize: valueFont,
-//     color: textColor,
-//     ...valueSx,
-//     fontFamily: valueFontFamily,
-//   };
-//   const mergedUnitSx: SxProps<Theme> = {
-//     ...defaultStyles.unit,
-//     fontSize: unitFont,
-//     ...unitSx,
-//     fontFamily: unitFontFamily,
-//   };
-//   return (
-//     <Box sx={mergedContainerSx}>
-//       {title && <Box sx={mergedLabelSx}>{title}</Box>}
-//       <Box sx={mergedValueSx}>
-//         {loading ? (
-//           <Box
-//             sx={{
-//               display: "flex",
-//               justifyContent: "center",
-//               alignItems: "center",
-//               width: "100%",
-//               height: "100%",
-//             }}
-//           >
-//             <CircularProgress
-//               size={Math.min(Number(width), Number(height)) * 0.3} // scales with container
-//               thickness={4}
-//             />
-//           </Box>
-//         )
-//     //     : error ? (
-//     //       <Typography sx={{fontSize:"12px"}}>
-//     //    {"Error fetching latest data"}
-//     //       </Typography>
-
-//     //     )
-//         : (
-//          <Gauge
-//   value={75}
-// startAngle={-110}
-//   endAngle={110}
-//   innerRadius="80%"
-//   outerRadius="100%"
-//     sx={(theme)=>({
-
-//     [`& .${gaugeClasses.valueText}`]: {
-//       fontSize: 40,
-//         transform: 'translate(45px, 0px)',
-//     },
-//     [`& .${gaugeClasses.valueArc}`]: {
-//       fill: '#52b202',
-//     },
-//     [`& .${gaugeClasses.referenceArc}`]: {
-//       fill: theme.palette.text.disabled,
-//     },
-
-//   })}
-//    text={({ value, valueMax }) => `${value} / ${valueMax}`}
-//   // ...
-// />
-//         )}
-//       </Box>
-//       {unit && <Box sx={mergedUnitSx}>{unit}</Box>}
-//     </Box>
-//   );
-// };
-
-// export default LatestDataGauge;
-
 // GaugeWidget.tsx
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import * as d3 from "d3";
 
 import ReactDOM from "react-dom";
@@ -301,6 +7,7 @@ import ReactDOM from "react-dom";
 import Gauge from "../components/Gauge/Gauge";
 import useGradient from "../components/Gauge/hooks/useGradient";
 import { CSSProperties } from "react";
+import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 
 /**
  * Helper: Normalize SxProps to plain object (like in your other widgets)
@@ -343,7 +50,9 @@ export interface GaugeMetrics {
 }
 
 export interface GaugeWidgetProps {
-  value?: number; // current value to display (if omitted - shows placeholder)
+  client: any;
+  nodeId: string;
+  variable: string;
   min?: number; // default 0
   max?: number; // default 100
   startAngleDeg?: number; // degrees, default -90 (left) for semi-circle
@@ -396,11 +105,16 @@ const defaultContainerSx: CSSProperties = {
     color:"#ffffff"
 };
 
+// --- Circuit Breaker Config ---
+const MAX_FAILURES = 3;
 
 /* ---------------------- Component ---------------------- */
 
 export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
-  value = 20,
+ client,
+  nodeId,
+  variable,
+  title = "Latest Data",
   min = 0,
   max = 100,
   startAngleDeg = -135, // semi-circle: -90 .. 90
@@ -412,7 +126,6 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
   showNeedle = false,
   needleColor = "#111",
   needleWidth = 3,
-  title,
   subtitle,
   styles = {},
   disabled = false,
@@ -424,6 +137,16 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
   valueText = ({ value: v, valueMin, valueMax }) =>
     v === undefined ? `-- / ${valueMax}` : `${v} / ${valueMax}`,
 }) => {
+  const [value,setValue] = useState<any>(null)
+   const [node, setNode] = useState<any>(null); // <-- store node in state
+    const [loading, setLoading] = useState(false);
+     const [error, setError] = useState<string | null>(null);
+
+   // --- Preventing stale closures / infinite renders ---
+   
+     const isFetchingRef = useRef(false);
+     const failureCountRef = useRef(0);
+    const mountedRef = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   // normalize style objects
@@ -474,6 +197,71 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
       cy,
     } as GaugeMetrics;
   }, [value, min, max, startAngleDeg, endAngleDeg, width, height, thickness]);
+
+  useEffect(() => {
+  if (client && nodeId) {
+    const anedya = (client as any)._anedya as Anedya; // retrieve wrapped instance
+    const createdNode = anedya.NewNode(client, nodeId);
+    setNode(createdNode);
+  }
+}, [client, nodeId]);
+
+
+// --- Fetch data once safely ---
+  useEffect(() => {
+
+
+       mountedRef.current = true;
+         if (!node) return;
+      const fetchData= async()=> {
+  
+     if ( isFetchingRef.current|| failureCountRef.current >= MAX_FAILURES){
+
+      //rate limiter ----> in client 
+      console.log("!node:",node)
+      console.log("isFetchingRef.current:",isFetchingRef.current)
+      console.log("failureCountRef.current:",failureCountRef.current)
+      return
+     }; // don't try if node not ready or if an api call is being currently made already
+    
+     isFetchingRef.current = true;
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await node.getLatestData(variable);
+
+      if (!mountedRef.current) return; // <-- SAFE, stops state update if unmounted
+
+      if (res.isSuccess && res.isDataAvailable) {
+        setValue(res.data?.value);
+        setError("");
+      } else {
+        setValue(null);
+        setError("No data available");
+      }
+       failureCountRef.current = 0; // reset on success
+    } catch (err: any) {
+  if (!mountedRef.current) return;
+  console.error("Error fetching latest data:", err);
+      setValue(null);
+      setError(err?.message ?? "Failed to fetch data");
+         failureCountRef.current += 1;
+    
+    } finally {
+        if (!mountedRef.current) return;
+    setLoading(false);
+    isFetchingRef.current = false;
+    }
+  }
+    fetchData();
+
+    return () => {
+      mountedRef.current = false;
+    };
+    
+  }, [node, variable]);
+
+
 
   // call metrics callback if provided
   useEffect(() => {
@@ -684,8 +472,31 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
           {title}
         </h2>
       )}
-      {/* <svg ref={svgRef} width={width} height={height} /> */}
-      <Gauge
+   {loading ? (
+            <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+        height: "100%",
+      }}
+    >
+      <div
+        className="spinner"
+        style={{
+          width: Math.min(Number(width), Number(height)) * 0.3,
+          height: Math.min(Number(width), Number(height)) * 0.3,
+        }}
+      ></div>
+       </div>
+        ) : error ? (
+          
+       "Error fetching latest data"
+    
+   
+        ) : value ? (
+          <Gauge
         height={400}
         width={400}
         min={0}
@@ -705,6 +516,8 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
         }}
         arcSegments={arcSegments}
       />
+        ): "--"}
+    
     </div>
   );
 };
