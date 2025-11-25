@@ -1,7 +1,7 @@
 import { ComponentClass, FunctionComponent } from 'react';
 
 // third-party
-import { Icon } from 'iconsax-react';
+
 
 // ==============================|| TYPES - ROOT  ||============================== //
 
