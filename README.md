@@ -7,7 +7,7 @@
 </p>
 <!--</div>-->
 
-# LatestDataWidget **<LatestDataWidget/>**
+# LatestDataWidget ```<LatestDataWidget/>```
 
 Displays the latest value of a variable from Anedya.
 
@@ -232,7 +232,7 @@ Example returning multiple overrides:
 ```
 
 
-#  Latest Data Guage ** <LatestDataGauge />**
+# Latest Data Guage ``` <LatestDataGauge /> ```
 
 Displays the latest variable's data from an Anedya node in a guage
 
@@ -349,7 +349,7 @@ Example returning multiple overrides:
 ```
 
 
-# Chart Widget **<ChartWidget />**
+# Chart Widget ```<ChartWidget />```
 
 Displays the historical time-series data for a given variable in chart form
 
