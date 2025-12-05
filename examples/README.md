@@ -135,6 +135,30 @@ All widgets require the following mandatory props:
 * `from` — start timestamp (ms)
 * `to` — end timestamp (ms)
 
+### Using Current Time and 24 Hours Ago
+
+If you want your chart to show data from the last 24 hours, you can dynamically generate the timestamps like this:
+
+```javascript
+const currentTime = Date.now(); // Current time in ms
+twentyFourHoursAgo = currentTime - 86400 * 1000; // 24 hours ago in ms
+```
+
+You can then pass these values into the `from` and `to` props:
+
+```javascript
+<ChartWidget
+  client={client}
+  nodeId={nodeId}
+  variable="humidity"
+  from={twentyFourHoursAgo}
+  to={currentTime}
+/>
+```
+
+* `from` — start timestamp (ms)
+* `to` — end timestamp (ms)
+
 ---
 
 ## 7. Example Usage
@@ -145,6 +169,11 @@ function App() {
   const tokenId = "";
   const token = "";
   const client = initAnedyaClient(tokenId, token);
+
+
+  const currentTime = Date.now();          // ms timestamp
+const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
+
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -158,8 +187,8 @@ function App() {
             client={client}
             nodeId={nodeId}
             variable="humidity"
-            from={1732420983000}
-            to={1763956983000}
+              from={twentyFourHoursAgo}
+            to={currentTime}
           />
         </div>
 

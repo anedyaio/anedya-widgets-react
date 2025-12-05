@@ -12,6 +12,10 @@ function App() {
   const token = "";
   const client = anedyaClientInit(tokenId, token);
 
+
+  const currentTime = Date.now();          // ms timestamp
+const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
+
   return (
    <div
       style={{
@@ -37,8 +41,8 @@ function App() {
             client={client}
             nodeId={nodeId}
             variable="humidity"
-            from={1732420983000}
-            to={1763956983000}
+            from={twentyFourHoursAgo}
+            to={currentTime}
             limit={20}
             title="Humidity Trend"
             styles={{
