@@ -10,7 +10,7 @@ The Anedya Public SDK helps you easily fetch data from Anedya and display it usi
 
 This SDK currently provides:
 
-- [**LatestDataComponent**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latestdatawidget-latestdatawidget) — Displays the latest value of a variable.
+- [**LatestDataWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latestdatawidget-latestdatawidget) — Displays the latest value of a variable.
 - [**ChartWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latest-data-guage-latestdatagauge-) — Displays timeseries data between given timestamps.
 - [**LatestDataGauge**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#chart-widget-chartwidget-) — A gauge‑style visualization of the latest value.
 
@@ -157,7 +157,7 @@ displayText?: (value: number, unit: string) => {
 ### Usage Example
 
 ```
-<LatestData
+<LatestDataWidget
  ...
  displayText={(value, unit) => ({
    text: `${value}`,
@@ -208,7 +208,7 @@ onStyleChange?: (value: number) => Partial<LatestDataStyles>;
 ### Usage Example
 
 ```
-<LatestData
+<LatestDataWidget
   ...
   onStyleChange={(value) => {
     if (value > 80) {
@@ -246,7 +246,7 @@ return {
 
 # Latest Data Guage `<LatestDataGauge />`
 
-Displays the latest variable's data from an Anedya node in a guage
+Displays a variable's latest data from an Anedya node in a guage
 
 Usage Example
 
@@ -263,8 +263,6 @@ return (
           variable="temperature"
           title="Temperature Sensor"
           unit={"°C"}
-
-          showNeedle={false}
           styles={{
             container: {
               width: 350,
