@@ -6,7 +6,7 @@ The Anedya Public SDK helps you easily fetch data from Anedya and display it usi
 
 This SDK currently provides:
 
-* **LatestDataComponent** — Displays the latest value of a variable.
+* **LatestDataWidget** — Displays the latest value of a variable.
 * **ChartWidget** — Displays timeseries data between given timestamps.
 * **LatestDataGauge** — A gauge‑style visualization of the latest value.
 
@@ -57,7 +57,7 @@ npm install public-sdk
 ## 4. Import the SDK Components
 
 ```javascript
-import anedyaClientInit, { LatestDataComponent, ChartWidget, LatestDataGauge } from "public-sdk";
+import anedyaClientInit, { LatestDataWidget, ChartWidget, LatestDataGauge } from "public-sdk";
 ```
 
 ---
@@ -142,16 +142,16 @@ const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
           />
         </div>
 
-        {/* Latest Data Component */}
+        {/* Latest Data Widget */}
         <div style={{ display: "flex", alignItems: "center" }}>
-          <LatestDataComponent
+          <LatestDataWidget
             client={client}
             nodeId={nodeId}
             variable="humidity"
           />
         </div>
 
-        {/* Gauge Component */}
+        {/* Gauge Widget */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <LatestDataGauge
             client={client}
