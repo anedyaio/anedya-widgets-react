@@ -1,4 +1,4 @@
-# Anedya Public SDK — README
+# Anedya Public SDK — Getting Started
 
 ## Overview
 
@@ -42,48 +42,6 @@ Use the documentation here:
 1. Go to your project dashboard.
 2. Navigate to **Access Tokens**.
 3. Create a token using the UI.
-
-### Token Body (Dashboard)
-
-Below is the JSON body you will submit when creating a token through the dashboard:
-
-```json
-{
-  "resources": {
-    "nodes": [
-      "----ADD YOUR NODES HERE---"
-    ],
-    "variables": [
-      "----ADD YOUR VARIABLES HERE---"
-    ],
-    "vsglobalscopes": [
-      "------ ADD YOUR Namespace HERE----"
-    ],
-    "vskeys": [
-      "----- ADD YOUR KEY -----"
-    ],
-    "streams": [
-      "----- ADD STREAMS HERE ----"
-    ]
-  },
-  "allow": [
-    "data::getsnapshot",
-    "data::getlatest",
-    "data::gethistorical",
-    "cmd::sendcommand",
-    "cmd::listcommands",
-    "cmd::getstatus",
-    "cmd::invalidate",
-    "vs::getvalue",
-    "vs::setvalue",
-    "vs::scankeys",
-    "vs::deletekeys",
-    "streams::connect",
-    "health::gethbstats",
-    "health::getstatus"
-  ]
-}
-```
 
 ### Important
 
