@@ -1,9 +1,17 @@
- 🧩 LatestDataWidget
+[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
-Displays the latest data from an Anedya node.
-Ideal for dashboards that show latest values (like temperature, pressure, humidity, etc.).
 
-🚀 Usage Example
+<!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
+<p align="center">
+    <img src="https://cdn.anedya.io/anedya_black_banner.png" alt="Logo">
+</p>
+<!--</div>-->
+
+# LatestDataWidget **<LatestDataWidget/>**
+
+Displays the latest value of a variable from Anedya.
+
+## Usage Example
 
 ```
 import { initAnedyaClient } from "../utils/anedyaClient";
@@ -224,12 +232,12 @@ Example returning multiple overrides:
 ```
 
 
- 🧩 Latest Data Guage
+#  Latest Data Guage ** <LatestDataGauge />**
 
-Displays the latest sensor or node data from an Anedya network node in a guage
+Displays the latest variable's data from an Anedya node in a guage
 
 
-🚀 Usage Example
+Usage Example
 
 ```import { initAnedyaClient } from "../utils/anedyaClient";
 import { LatestDataGauge } from "../components/LatestDataWidget";
@@ -341,12 +349,12 @@ Example returning multiple overrides:
 ```
 
 
-🧩 Chart Widget
+# Chart Widget **<ChartWidget />**
 
 Displays the historical time-series data for a given variable in chart form
 
 
-🚀 Usage Example
+Usage Example
 
 ```import { initAnedyaClient } from "../utils/anedyaClient";
 import { ChartWidget } from "../components/LatestDataWidget";
