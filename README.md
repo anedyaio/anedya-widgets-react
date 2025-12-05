@@ -10,9 +10,9 @@ The Anedya Public SDK helps you easily fetch data from Anedya and display it usi
 
 This SDK currently provides:
 
-- **LatestDataComponent** — Displays the latest value of a variable.
-- **ChartWidget** — Displays timeseries data between given timestamps.
-- **LatestDataGauge** — A gauge‑style visualization of the latest value.
+- [**LatestDataComponent**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latestdatawidget-latestdatawidget) — Displays the latest value of a variable.
+- [**ChartWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latest-data-guage-latestdatagauge-) — Displays timeseries data between given timestamps.
+- [**LatestDataGauge**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#chart-widget-chartwidget-) — A gauge‑style visualization of the latest value.
 
 # LatestDataWidget `<LatestDataWidget/>`
 
