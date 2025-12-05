@@ -1,7 +1,7 @@
 import React, { PureComponent } from "react";
 import { symbol, symbolTriangle } from "d3";
 
-class InvertedTriangle extends PureComponent {
+class InvertedTriangle extends PureComponent<any> {
   render() {
     const { center, disabled }:any = this.props;
     return (

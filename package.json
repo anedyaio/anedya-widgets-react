@@ -1,6 +1,6 @@
 {
-  "name": "widget-sdk",
-  "version": "0.0.1",
+  "name": "public-widget-sdk",
+  "version": "5.5.0",
   "description": "Anedya widget SDK",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -10,6 +10,13 @@
     "clean": "rm -rf dist node_modules package-lock.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:abhishreecodes/new-sdk.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "ISC",
   "dependencies": {
     "@anedyasystems/anedya-frontend-sdk": "^0.0.2",
@@ -18,7 +25,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.1",  
+    "@types/react-dom": "^19.2.1",
     "typescript": "^5.9.3"
   }
 }

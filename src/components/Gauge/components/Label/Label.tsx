@@ -34,7 +34,7 @@ const tickLineShort = line()
   .x(0)
   .y((d, i) => i)(Array.from({ length: 12 }));
 
-class Label extends PureComponent {
+class Label extends PureComponent <any>{
   render() {
     const {
       disabled,

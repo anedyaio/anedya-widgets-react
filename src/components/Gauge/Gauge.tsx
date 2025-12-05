@@ -14,9 +14,9 @@ import "../../index.css"
 const defaultSize = 250;
 
 const Gauge = ({
-  height,
-  width,
-  disabled,
+  height=400,
+  width=400,
+  disabled=false,
   value = -1,
   min = 0,
   max = 100,
@@ -81,19 +81,19 @@ const Gauge = ({
           minAngle={minAngle}
           {...labelProps}
         />
-        {arcSegments.map(({ min, max, color, node }, idx) => (
+        {arcSegments.map(({ min, max, color}, idx) => (
           <g key={`arcsegment-${idx}`}>
-            {typeof node === "function" ? node(disabled) : node}
+            {/* {typeof node === "function" ? node(disabled) : node} */}
             <GaugeArc
               key={`gauge-arcsegment-${idx}`}
               inset={12}
               min={min}
               max={max}
               stroke={
-                disabled && !node
-                  ? `rgba(${idx * 15},${idx * 15},${idx * 15}, ${idx * 0.1 +
-                      0.1})`
-                  : color
+         
+                  // `rgba(${idx * 15},${idx * 15},${idx * 15}, ${idx * 0.1 +
+                  //     0.1})`
+                  color
               }
               strokeWidth={20}
               center={gaugeOrigin}

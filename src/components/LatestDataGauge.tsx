@@ -1,3 +1,4 @@
+
 // GaugeWidget.tsx
 import React, { useEffect, useRef, useMemo, useState } from "react";
 import * as d3 from "d3";
@@ -8,6 +9,7 @@ import Gauge from "../components/Gauge/Gauge";
 import useGradient from "../components/Gauge/hooks/useGradient";
 import { CSSProperties } from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
+import { validateRequiredProps } from "../helpers/validate";
 
 /**
  * Helper: Normalize SxProps to plain object (like in your other widgets)
@@ -20,6 +22,29 @@ const normalizeSx = (
   if (typeof sx === "function") return sx({}) as Record<string, any>;
   return sx as Record<string, any>;
 };
+const defaultFontFamily = "Roboto, sans-serif";
+
+interface GaugeArcStyle {
+  trackColor?: string;
+  progressColor?: string;
+  progressStroke?: string;
+  fontSize?: string | number;
+  fontFamily?: string;
+}
+
+const defaultArcSx: GaugeArcStyle = {
+  trackColor: "#e6e6e6",        // light background arc
+  progressColor: "#4caf50",     // the “filled” arc part
+  progressStroke: "none",
+  fontSize: "20px",
+  fontFamily: defaultFontFamily,
+};
+const defaultSubtitleSx: CSSProperties = {
+  fontSize: "12px",
+  color: "#666",
+  fontFamily: defaultFontFamily,
+};
+
 
 /* ---------------------- Types ---------------------- */
 
@@ -28,14 +53,28 @@ export interface Zone {
   to: number; // exclusive
   color: string;
 }
+type WidgetState = {
+  value?: any;
+  loading?: boolean;
+  error?: string | null; // ✅ matches your React state
+};
 
 export interface GaugeStyleSet {
   container?: CSSProperties;
-  title?: CSSProperties;
-  valueText?: CSSProperties;
-  subtitle?: CSSProperties;
-  arc?: CSSProperties;
+  label?: CSSProperties;
+  value?: CSSProperties;
+  unit?: CSSProperties;
+subtitle?: CSSProperties;
+  arc?: GaugeArcStyle;   
+    fontFamily?: string; // optional global font family for all 3
 }
+
+
+type StylesInput =
+  | GaugeStyleSet
+  | ((state: WidgetState) => GaugeStyleSet);
+
+
 
 export interface GaugeMetrics {
   maxRadius: number;
@@ -57,8 +96,6 @@ export interface GaugeWidgetProps {
   max?: number; // default 100
   startAngleDeg?: number; // degrees, default -90 (left) for semi-circle
   endAngleDeg?: number; // degrees, default 90 (right) for semi-circle
-  width?: number; // overall width in px (default 400)
-  height?: number; // overall height in px (default 250)
   thickness?: number; // thickness of the arc (absolute px) — default: 0.2 * radius
   zones?: Zone[]; // colored zones, optional (defaults provided)
   showNeedle?: boolean; // draw a needle for the value
@@ -66,10 +103,10 @@ export interface GaugeWidgetProps {
   needleWidth?: number;
   title?: string;
   subtitle?: string;
-  styles?: GaugeStyleSet;
+styles?: StylesInput;
   disabled?: boolean; //for pointer label
   tickCount?: number;
-  uom?: string;
+  unit?: string;
   uomOffset?: number;
   labelOffset?: number;
   // callback to receive computed values (optional)
@@ -80,7 +117,26 @@ export interface GaugeWidgetProps {
     valueMin: number;
     valueMax: number;
   }) => string;
+   onStyleChange?:(value:number) =>{};
+     displayText?: DisplayTextFormatter;
 }
+
+type UnitPosition = "left" | "right" | "top" | "bottom";
+type UnitStyle = "normal" | "subscript" | "superscript";
+
+
+interface DisplayTextResult {
+  text: string;
+  unitText?: string;
+  position?: UnitPosition;
+  unitStyle?: UnitStyle;
+}
+
+type DisplayTextFormatter = (
+  value: number,
+  unit?: string
+) => DisplayTextResult;
+
 
 /* ---------------------- Defaults ---------------------- */
 
@@ -89,20 +145,38 @@ const defaultZones: Zone[] = [
   { from: 40, to: 60, color: "#ffeb3b" }, // yellow
   { from: 60, to: 100, color: "#f44336" }, // red
 ];
-const defaultFontFamily = "Roboto, sans-serif";
 
-const defaultContainerSx: CSSProperties = {
-  width: 400,
-  height: 250,
-  borderRadius: 10,
-  backgroundColor: "#f4f4f4",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 2,
+// --- Default styles ---
+interface StyleSet {
+
+  label?: CSSProperties;
+  value?: CSSProperties;
+  unit?: CSSProperties;
+  fontFamily?: string; // optional global font family for all 3
+}
+
+const defaultContainerSx: any = {
+     width: 400,
+   height: 250,
+   padding: 2,
+   margin: 0,
+   display: "flex",
+   flexDirection: "column",
+   justifyContent: "flex-start",
+   alignItems: "center",
+   borderRadius: 10,
+   boxSizing: "border-box",
+  background:  "rgb(248, 249, 250)",
+      border: "1px solid rgba(211, 216, 220, 1)",
+//'linear-gradient(to right, rgb(47, 99, 255), rgb(20, 110, 180))'
     fontFamily: defaultFontFamily,
-    color:"#ffffff"
+    color:"#000000",
+ overflowWrap: "break-word",
+  label: { fontWeight: 500, color: "#000000", fontFamily: defaultFontFamily },
+  value: { fontWeight: 700, color: "#000000", fontFamily: defaultFontFamily },
+  unit: { fontWeight: 400, color: "#000000", fontFamily: defaultFontFamily },
+
+    
 };
 
 // --- Circuit Breaker Config ---
@@ -119,8 +193,6 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
   max = 100,
   startAngleDeg = -135, // semi-circle: -90 .. 90
   endAngleDeg = 135,
-  width = 400,
-  height = 250,
   thickness, // optional
   zones = defaultZones,
   showNeedle = false,
@@ -130,18 +202,49 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
   styles = {},
   disabled = false,
   tickCount = 11,
-  uom = "Units",
+  unit = "Units",
   uomOffset = -15,
   labelOffset = -7,
   onMetrics,
   valueText = ({ value: v, valueMin, valueMax }) =>
     v === undefined ? `-- / ${valueMax}` : `${v} / ${valueMax}`,
+  onStyleChange,
+    displayText,
 }) => {
+
+     validateRequiredProps(
+      "LatestDataGauge",
+      { client, nodeId, variable },
+      ["client", "nodeId", "variable"]
+    );
+  
+
+ 
   const [value,setValue] = useState<any>(null)
    const [node, setNode] = useState<any>(null); // <-- store node in state
     const [loading, setLoading] = useState(false);
      const [error, setError] = useState<string | null>(null);
 
+     // Build a state object to pass into the callback styles
+const widgetState = { value, loading, error };
+
+
+// Resolve function or static style object
+const [dynamicStyles, setDynamicStyles] = useState<Partial<GaugeStyleSet>>({});
+
+const baseResolvedStyles =
+  typeof styles === "function" ? styles(widgetState) : styles || {};
+
+const resolvedStyles = {
+  container: { ...baseResolvedStyles.container, ...dynamicStyles?.container },
+  label: { ...baseResolvedStyles.label, ...dynamicStyles?.label },
+  value: { ...baseResolvedStyles.value, ...dynamicStyles?.value },
+  unit: { ...baseResolvedStyles.unit, ...dynamicStyles?.unit },
+  fontFamily: dynamicStyles?.fontFamily ?? baseResolvedStyles.fontFamily,
+   subtitle: { ...defaultSubtitleSx, ...baseResolvedStyles.subtitle, ...dynamicStyles.subtitle },
+  arc: { ...defaultArcSx, ...baseResolvedStyles.arc, ...dynamicStyles.arc },
+
+};
    // --- Preventing stale closures / infinite renders ---
    
      const isFetchingRef = useRef(false);
@@ -150,11 +253,18 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   // normalize style objects
-  const containerSx = normalizeSx(styles.container);
-  const titleSx = normalizeSx(styles.title);
-  const valueTextSx = normalizeSx(styles.valueText);
-  const subtitleSx = normalizeSx(styles.subtitle);
-  const arcSx = normalizeSx(styles.arc);
+  const containerSx = normalizeSx(resolvedStyles.container);
+  const titleSx = normalizeSx(resolvedStyles.label);
+  const valueTextSx = normalizeSx(resolvedStyles.value);
+  const subtitleSx = normalizeSx(resolvedStyles.subtitle);
+  const unitSx =  normalizeSx(resolvedStyles.unit);
+  const arcSx = normalizeSx(resolvedStyles.arc);
+
+
+    // --- Container dimensions with TypeScript-safe default ---
+  const containerDefaults: any = defaultContainerSx!;
+  const width = containerSx.width ?? containerDefaults.width;
+  const height = containerSx.height ?? containerDefaults.height;
 
   // convert degrees -> radians helper
   const deg2rad = (d: number) => (d * Math.PI) / 180;
@@ -233,11 +343,14 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
       if (!mountedRef.current) return; // <-- SAFE, stops state update if unmounted
 
       if (res.isSuccess && res.isDataAvailable) {
+
         setValue(res.data?.value);
         setError("");
+          //  setValue(null);
       } else {
         setValue(null);
-        setError("No data available");
+         console.error("error fetching data:", res.error);
+          setError(res.error.errorMessage);
       }
        failureCountRef.current = 0; // reset on success
     } catch (err: any) {
@@ -260,6 +373,26 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
     };
     
   }, [node, variable]);
+
+    // Whenever value changes, allow user to modify styles dynamically
+ useEffect(() => {
+    if (typeof onStyleChange === "function") {
+      const updated = onStyleChange(value);
+      if (updated && typeof updated === "object") {
+        setDynamicStyles(updated);
+      }
+    }
+  }, [value]);
+const formatted: DisplayTextResult = displayText
+  ? displayText(Number(value), unit)
+  : {
+      text: String(value ?? ""),
+      unitText: unit,
+      position: "right",
+      unitStyle: "normal",
+    };
+
+
 
 
 
@@ -436,7 +569,7 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
     needleColor,
     needleWidth,
     valueText,
-    styles, // keep redraw when style shape changes
+    resolvedStyles, // keep redraw when style shape changes
   ]);
 
   /** Red gradient props for arcSegments */
@@ -457,18 +590,60 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
       ...redFade,
     },
   ];
+
+    // --- Scaled font sizes ---
+  const baseFont = Math.min(Number(width), Number(height)) * 0.15;
+
+  // --- Compute font sizes dynamically if not provided by user ---
+  const labelFont = (resolvedStyles?.label as any)?.fontSize ?? baseFont * 0.6;
+
+  const valueFont = (resolvedStyles?.value as any)?.fontSize ?? baseFont * 1.2;
+
+  const unitFont = (resolvedStyles?.unit as any)?.fontSize ?? baseFont * 0.8;
+
   // overall container style (MUI Box)
   const mergedContainer = {
     ...defaultContainerSx,
     ...containerSx,
     width,
     height,
+  
   };
+  // --- Font family handling ---
+  const globalFontFamily = resolvedStyles?.fontFamily ?? "Roboto";
+  const labelFontFamily = defaultContainerSx.label?.fontFamily ?? globalFontFamily;
+  const valueFontFamily = defaultContainerSx.value?.fontFamily ?? globalFontFamily;
+  const unitFontFamily = defaultContainerSx.label?.fontFamily ?? globalFontFamily;
+  
+
+   const mergedLabelSx: CSSProperties = {
+      ...defaultContainerSx.label,
+      fontSize: labelFont,
+      ...titleSx,
+      fontFamily: labelFontFamily,
+    };
+    const mergedValueSx: CSSProperties = {
+      ...defaultContainerSx.value,
+      fontSize: valueFont,
+      // color: textColor,
+      ...valueTextSx,
+      fontFamily: valueFontFamily,
+    };
+    const mergedUnitSx: CSSProperties = {
+      ...defaultContainerSx.unit,
+      fontSize: unitFont,
+      ...unitSx,
+      fontFamily: unitFontFamily,
+    };
+  
 
   return (
-    <div style={mergedContainer}>
+    
+    <div style={{...mergedContainer}}>
       {title && (
-        <h2 style={{ ...((styles.title as any) ?? {}), ...titleSx }}>
+        <h2 style={{
+          ...mergedLabelSx
+        }}>
           {title}
         </h2>
       )}
@@ -492,7 +667,33 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
        </div>
         ) : error ? (
           
-       "Error fetching latest data"
+       <div style={{
+              fontSize: "25px",
+    display: "flex",           // <-- required
+    justifyContent: "center",
+    alignItems: "center",
+height:"100%",
+paddingRight:"10px",
+paddingLeft:"10px"
+          }}
+          >
+            <div
+            style={{
+            background: "rgba(255, 0, 0, 0.15)",   // light transparent red
+    border: "1px solid rgba(255, 0, 0, 0.6)", // softer red border
+              boxShadow:'rgba(149, 157, 165, 0.2) 0px 8px 24px',
+          
+              color:"rgba(255, 0, 0, 0.6)",
+              textAlign:"center",
+              borderRadius:"5px",
+              padding:"5px",
+   
+            }}
+            >
+{error}
+            </div>
+
+          </div>
     
    
         ) : value ? (
@@ -507,7 +708,7 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
         disabled={disabled}
         pointerLabel={disabled ? "Disabled" : value + ""}
         tickCount={Number(tickCount)}
-        uom={uom}
+        uom={unit}
         uomProps={{
           offsetText: uomOffset,
         }}
@@ -515,8 +716,41 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
           offsetText: labelOffset,
         }}
         arcSegments={arcSegments}
+        mergedValueSx={mergedValueSx}
+        mergedUnitSx={mergedUnitSx}
+        formatted={formatted}
       />
-        ): "--"}
+        ):  !value?
+   
+
+                <div style={{
+              fontSize: "25px",
+    display: "flex",           // <-- required
+    justifyContent: "center",
+    alignItems: "center",
+height:"100%",
+paddingRight:"10px",
+paddingLeft:"10px"
+          }}
+          >
+            <div
+            style={{
+
+    
+          
+        color:"#757575",
+              textAlign:"center",
+              borderRadius:"5px",
+              padding:"5px",
+   
+            }}
+            >
+{     "No data available"}
+            </div>
+
+          </div>
+
+         :<></>}
     
     </div>
   );

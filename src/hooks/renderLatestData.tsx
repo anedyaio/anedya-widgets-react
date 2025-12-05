@@ -1,5 +1,5 @@
 import React, { useState, useCallback, JSX } from "react";
-import { LatestDataWidget } from "../components/LatestDataWidget";
+
 import { AnedyaClient } from "../components/types";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 
@@ -10,6 +10,7 @@ const defaultColorRanges = [
   { max: Infinity, color: "green" },
 ];
 import { CSSProperties } from "react";
+import LatestDataWidgetComponent from "../components/LatestDataWidget";
 
 // --- Default styles ---
 interface StyleSet {
@@ -19,7 +20,23 @@ interface StyleSet {
   unit?: CSSProperties;
 }
 
-interface LatestDataComponentProps {
+type UnitPosition = "left" | "right" | "top" | "bottom";
+type UnitStyle = "normal" | "subscript" | "superscript";
+
+interface DisplayTextResult {
+  text: string;
+  unitText?: string;
+  position?: UnitPosition;
+  unitStyle?: UnitStyle;
+}
+
+type DisplayTextFormatter = (
+  value: number,
+  unit?: string
+) => DisplayTextResult;
+
+
+interface LatestDataWidgetProps {
  client: AnedyaClient;
   nodeId: string;
   variable: string;
@@ -28,10 +45,12 @@ interface LatestDataComponentProps {
   styles?: StyleSet;
   colorRange?: typeof defaultColorRanges;
   colorRangeCallback?: (value: number, defaultColor: string) => string;
-  fontFamily? : string
+  fontFamily? : string;
+  displayText?: DisplayTextFormatter;
+  onStyleChange?:(value:number)=>{}
 }
 
-export const LatestDataComponent: React.FC<LatestDataComponentProps> = React.memo((
+export const LatestDataWidget: React.FC<LatestDataWidgetProps> = React.memo((
   {
    client,
   nodeId,
@@ -41,17 +60,15 @@ export const LatestDataComponent: React.FC<LatestDataComponentProps> = React.mem
   styles = {},
   colorRange,
   colorRangeCallback,
+  displayText,
+  onStyleChange
   } 
 ) => {
   return (
     <>
-      <div
-        style={{
-          height: "200px",
-          width: "200px",
-        }}
-      >
-        <LatestDataWidget
+   
+        <LatestDataWidgetComponent
+        displayText={displayText}
          client={client}
   nodeId={nodeId}
   variable={variable}
@@ -60,8 +77,9 @@ export const LatestDataComponent: React.FC<LatestDataComponentProps> = React.mem
   styles = {styles}
   colorRange={colorRange}
   colorRangeCallback={colorRangeCallback}
+  onStyleChange={onStyleChange}
         />
-      </div>
+      
     </>
   );
 }, 

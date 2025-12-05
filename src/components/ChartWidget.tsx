@@ -4,11 +4,34 @@ import * as d3 from "d3";
 
 import { CSSProperties } from "react";
 import "../../src/index.css"
+import { validateRequiredProps } from "../helpers/validate";
+import { defaultDateFormatter, formatDate, formatNumber } from "../helpers/formatDate";
+
+function computeBottomMargin(ticks: string[]) {
+  if (!ticks.length) return 40;
+
+  // estimate width of text based on average character width
+  const longest = ticks.reduce((a, b) => (a.length > b.length ? a : b), "");
+  const approxCharWidth = 7;       // px
+  const approximateTextWidth = longest.length * approxCharWidth;
+
+  // because labels rotate -30deg, height ≈ width * sin(30°)
+  const estimatedHeight = approximateTextWidth * 0.5;
+
+  return Math.max(40, estimatedHeight + 20); // + extra padding
+}
+
 /* ------------------------ Types ------------------------ */
 export interface ChartDataPoint {
   timestamp: number;
   value: number;
 }
+type WidgetState = {
+  value?: any;
+  loading?: boolean;
+  error?: string | null; // ✅ matches your React state
+};
+
 
 interface ChartStyleSet {
   container?: CSSProperties;
@@ -21,17 +44,28 @@ interface ChartStyleSet {
     gradientColors?: [string, string];
     dotRadius?: number;
   };
+  fontFamily:string
 }
+type StylesInput =
+  | ChartStyleSet
+  | ((state: WidgetState) => ChartStyleSet);
 
 export interface ChartWidgetProps {
-  client?: any;
-  nodeId?: string;
-  variable?: string;
+  client: any;
+  nodeId: string;
+  variable: string;
+  from:number,
+  to:number,
+  limit?:number,
   title?: string;
-  styles?: ChartStyleSet;
+  styles?: StylesInput;
   tooltipFormatter?: (d: ChartDataPoint) => string;
   tickCount?: number; // number of ticks on x axis (default: 4)
   tickFormatter?: (d: Date) => string; // optional custom formatter
+    xTickFormat?: string | ((d: Date) => string);  // date formatting
+  yTickFormat?: string | ((v: number) => string); // numeric formatting
+  tooltipFormat?: string | ((d: ChartDataPoint) => string);
+    onStyleChange?:(data:ChartDataPoint[]) =>{}
 }
 
 /* ------------------------ Helpers ------------------------ */
@@ -45,6 +79,7 @@ const normalizeSx = (sx: Record<string, any>  | undefined): Record<string, any> 
 const toDateSafe = (ts: number): Date => {
   // If ts < 1e12, treat as seconds -> convert to ms
   if (ts < 1e12) return new Date(ts * 1000);
+
   return new Date(ts);
 };
 
@@ -53,26 +88,36 @@ const defaultFontFamily = "Roboto, sans-serif";
 
 const defaultStyles: Required<ChartStyleSet> = {
   container: {
-    width: 400,
-    height: 250,
-    padding: 2,
-    margin: 2,
-    background: "linear-gradient(to right, #1e1e2f, #2c2c54)",
-    borderRadius: 4,
-    border:"1px solid black",
+      width: 400,
+   height: 250,
+   padding: 2,
+   margin: 0,
+   display: "flex",
+   flexDirection: "column",
+   justifyContent: "flex-start",
+   alignItems: "center",
+   borderRadius: 10,
+   boxSizing: "border-box",
+gap:0,
+   background: "rgb(248, 249, 250)",
+                border: "1px solid rgba(211, 216, 220, 1)",
+ 
+
     textAlign: "center",
         fontFamily: defaultFontFamily,
   },
   title: {
-    fontSize: "20px",
+  
     fontWeight: 600,
     color: "rgba(0,0,0,0.75)",
-    marginBottom: 1,
+    // marginBottom: 1,
         fontFamily: defaultFontFamily,
   },
   tooltip: {
     background: "rgba(0,0,0,0.75)",
+
     color: "#ffffff",
+
     borderRadius: "6px",
     padding: "6px 10px",
     fontSize: "12px",
@@ -81,7 +126,7 @@ const defaultStyles: Required<ChartStyleSet> = {
   axis: {
     color: "#666",
     fontSize: "11px",
-    fontFamily: "Roboto, sans-serif",
+    fontFamily:defaultFontFamily,
 
   },
   chart: {
@@ -91,15 +136,21 @@ const defaultStyles: Required<ChartStyleSet> = {
        dotRadius: 4,
 
   },
+   fontFamily:defaultFontFamily
+
    
 };
+
 
 // ---- ChartWidget ----
 export const ChartWidget: React.FC<ChartWidgetProps> = ({
   client,
   nodeId,
   variable,
-  title = "Chart Widget",
+  from,
+  to,
+  limit=20,
+  title = "Latest Data",
   styles = {},
   tooltipFormatter = (d) =>
     `${new Date(
@@ -113,7 +164,34 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
     })}: ${d.value}`,
       tickCount = 4,
   tickFormatter,
+  xTickFormat,
+  yTickFormat,
+  tooltipFormat,
+  onStyleChange
 }) => {
+
+   validateRequiredProps(
+    "Chart Widget",
+    { client, nodeId, variable,from,to },
+    ["client", "nodeId", "variable","from time","to time"]
+  );
+
+  const resolvedXFormatter =
+  typeof xTickFormat === "string"
+    ? (d: Date) => formatDate(d, xTickFormat)
+    : xTickFormat;
+
+const resolvedYFormatter =
+  typeof yTickFormat === "string"
+    ? (v: number) => formatNumber(v, yTickFormat)
+    : yTickFormat;
+
+const resolvedTooltipFormatter =
+  typeof tooltipFormat === "string"
+    ? (d: ChartDataPoint) =>
+        `${formatDate(toDateSafe(d.timestamp), tooltipFormat)}: ${d.value}`
+    : tooltipFormat;
+
 
   // Refs + state
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -128,23 +206,57 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
   const [node, setNode] = useState<any>(null);
 
 
+  const state = { data, loading, error }; // <-- your widget’s internal state
+
+// Resolve function or static style object
+const [dynamicStyles, setDynamicStyles] = useState<Partial<ChartStyleSet>>({});
+
+const baseResolvedStyles =
+  typeof styles === "function" ? styles(state) : styles || {};
+
+const resolvedStyles = {
+  container: { ...baseResolvedStyles.container, ...dynamicStyles?.container },
+  title: { ...baseResolvedStyles.title, ...dynamicStyles?.title },
+  tooltip: { ...baseResolvedStyles.tooltip, ...dynamicStyles?.tooltip },
+  chart: { ...baseResolvedStyles.chart, ...dynamicStyles?.chart },
+  axis:  { ...baseResolvedStyles.axis, ...dynamicStyles?.axis },
+  fontFamily: dynamicStyles?.fontFamily ?? baseResolvedStyles.fontFamily,
+};
   const mountedRef = useRef(false);
   const failureCountRef = useRef(0);
   const isFetchingRef = useRef(false);
   const MAX_FAILURES = 3;
 
   // ---- Normalize Styles ----
-  const containerSx = normalizeSx(styles?.container);
-  const titleSx = normalizeSx(styles?.title);
-  const tooltipSx = normalizeSx(styles?.tooltip);
-  const chartSx = styles.chart ?? {};
-  const axisSx = normalizeSx(styles?.axis);
+  const containerSx = normalizeSx(resolvedStyles?.container);
+  const titleSx = normalizeSx(resolvedStyles?.title);
+  const tooltipSx = normalizeSx(resolvedStyles?.tooltip);
+  const chartSx = resolvedStyles.chart ?? {};
+  const axisSx = normalizeSx(resolvedStyles?.axis);
 
   // --- Container dimensions with TypeScript-safe default ---
   const containerDefaults: any = defaultStyles.container!;
   const width = containerSx.width ?? containerDefaults.width;
   const height = containerSx.height ?? containerDefaults.height;
 
+
+  // --- Font family handling ---
+  const globalFontFamily = resolvedStyles?.fontFamily ?? "Roboto";
+  const labelFontFamily = titleSx.fontFamily ??  globalFontFamily;
+
+
+  
+
+
+
+
+  // --- Scaled font sizes ---
+  const baseFont = Math.min(Number(width), Number(height)) * 0.15;
+
+  // --- Compute font sizes dynamically if not provided by user ---
+  const labelFont = (resolvedStyles?.title as any)?.fontSize ?? baseFont * 0.6;
+
+  
   const strokeColor = chartSx.strokeColor ?? defaultStyles.chart.strokeColor;
   const strokeWidth = chartSx.strokeWidth ?? defaultStyles.chart.strokeWidth;
   const gradientColors =
@@ -175,14 +287,15 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       try {
         setLoading(true);
         setError(null);
-        const currentTime = Date.now();
-        const twentyFourHoursAgo = currentTime - 86400 * 1000;
-
+        // const currentTime = Date.now();
+        // const twentyFourHoursAgo = currentTime - 86400 * 1000;
+//1732420983000
+//1763956983000
         const req = {
           variable,
-          from: 1732420983000,
-          to: 1763956983000,
-          limit: 20,
+          from: from,
+          to: to,
+          limit: limit,
           order: "asc",
         };
         const res = await node.getData(req);
@@ -192,9 +305,10 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
         if (res.isSuccess && res.isDataAvailable) {
           setData(res.data);
           setError("");
+
         } else {
-          console.warn("No data available");
-          setError("No data available");
+          console.error("error fetching data:", res.error);
+          setError(res.error.errorMessage);
         }
         failureCountRef.current = 0;
       } catch (err: any) {
@@ -226,8 +340,32 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       return;
     }
 
-    // margins (leave extra bottom space for rotated ticks)
-    const margin = { top: 20, right: 20, bottom: 100, left: 50 };
+
+
+  // // --- COMPUTE SCALES --- //
+  // const tempDates = data.map((d) => toDateSafe(d.timestamp));
+  // const tempX = d3.scaleTime().domain(d3.extent(tempDates)  as [Date, Date]).range([0, 1]); // temp range
+  // const provisionalTicks = tempX.ticks(tickCount);
+
+  // const tickLabels = provisionalTicks.map((d) =>
+  //   resolvedXFormatter ? resolvedXFormatter(d) : defaultDateFormatter(d)
+  // );
+
+  // const dynamicBottom = computeBottomMargin(tickLabels);
+
+  // // --- NOW REAL MARGINS --- //
+  // const margin = { top: 20, right: 20, bottom: dynamicBottom, left: 50 };
+
+  // // recompute chart area
+  // const chartW = Math.max(10, width - margin.left - margin.right);
+  // const chartH = Math.max(10, height - margin.top - margin.bottom);
+
+  // // recompute x with real width
+  // tempX.range([0, chartW]);
+
+    //.attr("transform", "rotate(-30)")
+//margins (leave extra bottom space for rotated ticks)
+    const margin = { top: 20, right: 20, bottom: 130, left: 50 };
     const chartW = Math.max(10, width - margin.left - margin.right);
     const chartH = Math.max(10, height - margin.top - margin.bottom);
 
@@ -316,7 +454,7 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
     tooltipDiv.style.position = "absolute";
     tooltipDiv.style.pointerEvents = "none";
     tooltipDiv.style.opacity = "0";
-    tooltipDiv.style.background = (tooltipSx.background ?? tooltipDefaults.background) as string;
+    tooltipDiv.style.background = (tooltipSx.backgroundColor ?? tooltipDefaults.background) as string;
     tooltipDiv.style.color = (tooltipSx.color ?? tooltipDefaults.color) as string;
     tooltipDiv.style.borderRadius = (tooltipSx.borderRadius ?? tooltipDefaults.borderRadius) as string;
     tooltipDiv.style.padding = (tooltipSx.padding ?? tooltipDefaults.padding) as string;
@@ -327,7 +465,9 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
     dots
       .on("mouseover", function (event, d: ChartDataPoint) {
         tooltipDiv!.style.opacity = "1";
-        tooltipDiv!.innerHTML = tooltipFormatter(d);
+        tooltipDiv!.innerHTML = resolvedTooltipFormatter
+  ? resolvedTooltipFormatter(d)
+  : tooltipFormatter(d);
       })
       .on("mousemove", function (event) {
         // place tooltip near pointer but keep inside window
@@ -346,17 +486,10 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       .axisBottom(x)
       .ticks(tickCount)
       .tickFormat((d) => {
-        const dt = d as Date;
-        if (tickFormatter) return tickFormatter(dt);
-        // default formatter
-        return new Intl.DateTimeFormat(undefined, {
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        }).format(dt);
-      });
+    if (resolvedXFormatter) return resolvedXFormatter(d as Date);
+    return defaultDateFormatter(d as Date);
+  });
+
 
       const axisDefaults : any = defaultStyles.axis
     g.append("g")
@@ -370,7 +503,10 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       .style("font-family", (axisSx.fontFamily ?? axisDefaults.fontFamily) as string);
 
     g.append("g")
-      .call(d3.axisLeft(y).ticks(5))
+      .call(d3.axisLeft(y).ticks(5).tickFormat((v) => {
+        if (resolvedYFormatter) return resolvedYFormatter(v as number);
+        return String(v);
+      }))
       .selectAll("text")
       .style("font-size", (axisSx.fontSize ?? axisDefaults.fontSize) as string)
       .style("fill", (axisSx.color ?? axisDefaults.color) as string)
@@ -414,21 +550,44 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
     tooltipSx,
   ]);
 
+
+
+      // Whenever value changes, allow user to modify styles dynamically
+   useEffect(() => {
+      if (typeof onStyleChange === "function") {
+        const updated = onStyleChange(data);
+        if (updated && typeof updated === "object") {
+          setDynamicStyles(updated);
+        }
+      }
+    }, [data]);
+  
   /* ------------------------ Helpers ------------------------ */
   function computeDotRadius(chartW: number, chartH: number, requested: number) {
     // scale dot radius a bit relative to min dimension but honor requested if provided
     const base = Math.max(2, Math.min(chartW, chartH) * 0.012);
     return requested ?? Math.round(base);
   }
+  // --- Merge styles safely ---
+  const mergedContainerSx: CSSProperties = {
+    ...defaultStyles.container,
+    ...containerSx,
+  
+  };
+  const mergedLabelSx: CSSProperties = {
+    ...defaultStyles.title,
+    fontSize: labelFont,
+    ...titleSx,
+    fontFamily: labelFontFamily,
+  };
+
 
   return (
-    <div style={normalizeSx({ ...defaultStyles.container, ...containerSx })}>
+    <div style={{...mergedContainerSx}}>
       {title && (
        <h2
       style={{
-        margin: 0,
-        ...defaultStyles.title,
-        ...titleSx,
+       ...mergedLabelSx
       }}
     >
       {title}
@@ -438,10 +597,11 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       <div
       style={{
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+     
         width: "100%",
         height: "100%",
+           justifyContent: "center",
+        alignItems: "center",
       }}
     >
       <div
@@ -453,17 +613,71 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
       ></div>
        </div>
       ) : error ? (
-        "Error fetching latest data"
-      ) : (
+         <div style={{
+              fontSize: "25px",
+    display: "flex",           // <-- required
+    justifyContent: "center",
+    alignItems: "center",
+height:"100%",
+paddingRight:"10px",
+paddingLeft:"10px"
+          }}
+          >
+            <div
+            style={{
+            background: "rgba(255, 0, 0, 0.15)",   // light transparent red
+    border: "1px solid rgba(255, 0, 0, 0.6)", // softer red border
+              boxShadow:'rgba(149, 157, 165, 0.2) 0px 8px 24px',
+          
+              color:"rgba(255, 0, 0, 0.6)",
+              textAlign:"center",
+              borderRadius:"5px",
+              padding:"5px",
+   
+            }}
+            >
+{error}
+            </div>
+
+          </div>
+      ) : data?.length === 0?
+                  <div style={{
+              fontSize: "25px",
+    display: "flex",           // <-- required
+    justifyContent: "center",
+    alignItems: "center",
+height:"100%",
+paddingRight:"10px",
+paddingLeft:"10px"
+          }}
+          >
+            <div
+            style={{
+
+    
+          
+        color:"#757575",
+              textAlign:"center",
+              borderRadius:"5px",
+              padding:"5px",
+   
+            }}
+            >
+{     "No data available"}
+            </div>
+
+          </div>:
+       (
         <svg
           ref={svgRef}
           width={width as number}
-          height={height as number}
+          height={"90%"}
         ></svg>
       )}
     </div>
   );
 };
+
 
 //add customizable toolips, stroke width and color, and title obvs , timestamps for get data request
 //match customization and failsafes to latest data

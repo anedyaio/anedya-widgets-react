@@ -3,7 +3,7 @@ import { line, scaleLinear } from "d3";
 
 
 
-class Pointer extends PureComponent {
+class Pointer extends PureComponent <any>{
   render() {
     const {
       width = 12.5,

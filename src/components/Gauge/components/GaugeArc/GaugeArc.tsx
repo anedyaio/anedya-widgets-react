@@ -7,7 +7,7 @@ const baseRatio = 0.8;
 /** Resolution of arc. */
 const length = 40;
 
-class GaugeArc extends PureComponent {
+class GaugeArc extends PureComponent <any>{
   render() {
     const {
       inset = 0,

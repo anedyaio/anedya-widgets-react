@@ -1,6 +1,6 @@
 import React, { PureComponent } from "react";
 
-class UnitOfMeasurement extends PureComponent {
+class UnitOfMeasurement extends PureComponent<any> {
   render() {
     const { value, disabled, center, offsetText,uom ,...rest }:any = this.props;
 

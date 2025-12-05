@@ -19,7 +19,7 @@ interface InitOptions {
  *
  * @returns client
  */
-declare function initAnedyaClient(tokenId: string, token: string, options?: InitOptions): AnedyaClient;
+declare function anedyaClientInit(tokenId: string, token: string, options?: InitOptions): AnedyaClient;
 
 declare const defaultColorRanges: {
     max: number;
@@ -32,7 +32,16 @@ interface StyleSet {
     value?: CSSProperties;
     unit?: CSSProperties;
 }
-interface LatestDataComponentProps {
+type UnitPosition$1 = "left" | "right" | "top" | "bottom";
+type UnitStyle$1 = "normal" | "subscript" | "superscript";
+interface DisplayTextResult$1 {
+    text: string;
+    unitText?: string;
+    position?: UnitPosition$1;
+    unitStyle?: UnitStyle$1;
+}
+type DisplayTextFormatter$1 = (value: number, unit?: string) => DisplayTextResult$1;
+interface LatestDataWidgetProps {
     client: AnedyaClient;
     nodeId: string;
     variable: string;
@@ -42,13 +51,20 @@ interface LatestDataComponentProps {
     colorRange?: typeof defaultColorRanges;
     colorRangeCallback?: (value: number, defaultColor: string) => string;
     fontFamily?: string;
+    displayText?: DisplayTextFormatter$1;
+    onStyleChange?: (value: number) => {};
 }
-declare const LatestDataComponent: React.FC<LatestDataComponentProps>;
+declare const LatestDataWidget: React.FC<LatestDataWidgetProps>;
 
 interface ChartDataPoint {
     timestamp: number;
     value: number;
 }
+type WidgetState$1 = {
+    value?: any;
+    loading?: boolean;
+    error?: string | null;
+};
 interface ChartStyleSet {
     container?: CSSProperties;
     title?: CSSProperties;
@@ -60,31 +76,55 @@ interface ChartStyleSet {
         gradientColors?: [string, string];
         dotRadius?: number;
     };
+    fontFamily: string;
 }
+type StylesInput$1 = ChartStyleSet | ((state: WidgetState$1) => ChartStyleSet);
 interface ChartWidgetProps {
-    client?: any;
-    nodeId?: string;
-    variable?: string;
+    client: any;
+    nodeId: string;
+    variable: string;
+    from: number;
+    to: number;
+    limit?: number;
     title?: string;
-    styles?: ChartStyleSet;
+    styles?: StylesInput$1;
     tooltipFormatter?: (d: ChartDataPoint) => string;
     tickCount?: number;
     tickFormatter?: (d: Date) => string;
+    xTickFormat?: string | ((d: Date) => string);
+    yTickFormat?: string | ((v: number) => string);
+    tooltipFormat?: string | ((d: ChartDataPoint) => string);
+    onStyleChange?: (data: ChartDataPoint[]) => {};
 }
 declare const ChartWidget: React.FC<ChartWidgetProps>;
 
+interface GaugeArcStyle {
+    trackColor?: string;
+    progressColor?: string;
+    progressStroke?: string;
+    fontSize?: string | number;
+    fontFamily?: string;
+}
 interface Zone {
     from: number;
     to: number;
     color: string;
 }
+type WidgetState = {
+    value?: any;
+    loading?: boolean;
+    error?: string | null;
+};
 interface GaugeStyleSet {
     container?: CSSProperties;
-    title?: CSSProperties;
-    valueText?: CSSProperties;
+    label?: CSSProperties;
+    value?: CSSProperties;
+    unit?: CSSProperties;
     subtitle?: CSSProperties;
-    arc?: CSSProperties;
+    arc?: GaugeArcStyle;
+    fontFamily?: string;
 }
+type StylesInput = GaugeStyleSet | ((state: WidgetState) => GaugeStyleSet);
 interface GaugeMetrics {
     maxRadius: number;
     valueAngleDeg: number;
@@ -97,13 +137,13 @@ interface GaugeMetrics {
     cy: number;
 }
 interface GaugeWidgetProps {
-    value?: number;
+    client: any;
+    nodeId: string;
+    variable: string;
     min?: number;
     max?: number;
     startAngleDeg?: number;
     endAngleDeg?: number;
-    width?: number;
-    height?: number;
     thickness?: number;
     zones?: Zone[];
     showNeedle?: boolean;
@@ -111,10 +151,10 @@ interface GaugeWidgetProps {
     needleWidth?: number;
     title?: string;
     subtitle?: string;
-    styles?: GaugeStyleSet;
+    styles?: StylesInput;
     disabled?: boolean;
     tickCount?: number;
-    uom?: string;
+    unit?: string;
     uomOffset?: number;
     labelOffset?: number;
     onMetrics?: (metrics: GaugeMetrics) => void;
@@ -123,7 +163,18 @@ interface GaugeWidgetProps {
         valueMin: number;
         valueMax: number;
     }) => string;
+    onStyleChange?: (value: number) => {};
+    displayText?: DisplayTextFormatter;
 }
+type UnitPosition = "left" | "right" | "top" | "bottom";
+type UnitStyle = "normal" | "subscript" | "superscript";
+interface DisplayTextResult {
+    text: string;
+    unitText?: string;
+    position?: UnitPosition;
+    unitStyle?: UnitStyle;
+}
+type DisplayTextFormatter = (value: number, unit?: string) => DisplayTextResult;
 declare const LatestDataGauge: React.FC<GaugeWidgetProps>;
 
-export { ChartWidget, LatestDataComponent, LatestDataGauge, initAnedyaClient };
+export { ChartWidget, LatestDataGauge, LatestDataWidget, anedyaClientInit };

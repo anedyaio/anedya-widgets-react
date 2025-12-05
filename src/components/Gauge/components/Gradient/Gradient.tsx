@@ -1,6 +1,6 @@
 import React, { PureComponent } from "react";
 
-class Gradient extends PureComponent {
+class Gradient extends PureComponent<any> {
   render() {
     const { start, end, id, disabled }:any = this.props;
     return (
