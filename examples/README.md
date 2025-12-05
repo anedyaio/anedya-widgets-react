@@ -31,14 +31,6 @@ To send (ingest) data into Anedya:
 
 To use the SDK, you must generate an access token. There are two ways:
 
-### **Option A: Create via Platform API**
-
-Use the documentation here:
-
-* [https://docs.anedya.io/platform-api/access-token-create/](https://docs.anedya.io/platform-api/access-token-create/)
-
-### **Option B: Create via Anedya Dashboard**
-
 1. Go to your project dashboard.
 2. Navigate to **Access Tokens**.
 3. Create a token using the UI.
@@ -65,7 +57,7 @@ npm install public-sdk
 ## 4. Import the SDK Components
 
 ```javascript
-import initAnedyaClient, { LatestDataComponent, ChartWidget, LatestDataGauge } from "public-sdk";
+import anedyaClientInit, { LatestDataComponent, ChartWidget, LatestDataGauge } from "public-sdk";
 ```
 
 ---
@@ -73,7 +65,7 @@ import initAnedyaClient, { LatestDataComponent, ChartWidget, LatestDataGauge } f
 ## 5. Initialize the Anedya Client
 
 ```javascript
-const client = initAnedyaClient(tokenId, token);
+const client = anedyaClientInit(tokenId, token);
 ```
 
 ---
@@ -126,7 +118,7 @@ function App() {
   const nodeId = "";
   const tokenId = "";
   const token = "";
-  const client = initAnedyaClient(tokenId, token);
+  const client = anedyaClientInit(tokenId, token);
 
 
   const currentTime = Date.now();          // ms timestamp

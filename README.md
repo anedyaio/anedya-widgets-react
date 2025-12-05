@@ -14,10 +14,10 @@ Displays the latest value of a variable from Anedya.
 ## Usage Example
 
 ```
-import { initAnedyaClient } from "../utils/anedyaClient";
+import { anedyaClientInit } from "../utils/anedyaClient";
 import { LatestDataWidget } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -45,7 +45,7 @@ value: { fontWeight: 800 },
 
 | **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
 |--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
+| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  anedyaClientInit().  |
 | nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
 | variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.                     |
 | title              | string                                          |       ❌       | Optional label displayed above the value.                                  |
@@ -239,10 +239,10 @@ Displays the latest variable's data from an Anedya node in a guage
 
 Usage Example
 
-```import { initAnedyaClient } from "../utils/anedyaClient";
+```import { anedyaClientInit } from "../utils/anedyaClient";
 import { LatestDataGauge } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -288,7 +288,7 @@ return (
 
 | **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
 |--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
+| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  anedyaClientInit().  |
 | nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
 | variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.                     |
 | title              | string                                          |       ❌       | Optional label displayed above the value.                                  |
@@ -356,10 +356,10 @@ Displays the historical time-series data for a given variable in chart form
 
 Usage Example
 
-```import { initAnedyaClient } from "../utils/anedyaClient";
+```import { anedyaClientInit } from "../utils/anedyaClient";
 import { ChartWidget } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -414,7 +414,7 @@ return (
 
 | **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
 |--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
+| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  anedyaClientInit().  |
 | nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
 | variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.       
 | from               | number                                          |       ✅      |  earliest timestamp or date from which data should be fetched, in milliseconds epoch  
