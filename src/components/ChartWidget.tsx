@@ -3,7 +3,7 @@ import * as d3 from "d3";
 
 
 import { CSSProperties } from "react";
-import "../../src/index.css"
+// import "../../src/index.css"
 import { validateRequiredProps } from "../helpers/validate";
 import { defaultDateFormatter, formatDate, formatNumber } from "../helpers/formatDate";
 
