@@ -11,9 +11,9 @@ import {
 
 function App() {
   
-  const tokenId = "itATCNCVamYNmwfdeBumQMwS";
-  const token = "Evd8wL35Xt4tNQOXP11YddiRHtM74jqw3JZYuIaPmnWxNozbmnNTUfVaqXmQERV1";
-  const nodeId = "20deeee8-f8ae-11ee-9dd8-c3aa61afe2fb";
+  const tokenId = "";
+  const token = "";
+  const nodeId = "";
   const client = anedyaClientInit(tokenId, token);
   
   console.log(client, "client");
