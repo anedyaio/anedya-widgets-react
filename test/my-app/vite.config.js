@@ -8,4 +8,8 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  resolve: {
+    dedupe: ["react", "react-dom", "@base-ui/react"],
+  },
+
 })

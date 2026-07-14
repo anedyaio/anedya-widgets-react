@@ -4,30 +4,32 @@ import {
   anedyaClientInit,
   ChartWidget,
   LatestDataGauge,
-  // StreamWidget
-} from "public-widget-sdk";
-
-// import {StreamWidget} from "public-widget-sdk"
+} from "../../../src/index";
 
 function App() {
-  
-  const tokenId = "";
-  const token = "";
-  const nodeId = "";
+const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
+const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
+const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
   const client = anedyaClientInit(tokenId, token);
-  
-  console.log(client, "client");
+//default min and max 
+//client ki implementatrion bahar lelo
 
-  const currentTime = Date.now(); // ms timestamp
-  const twentyFourHoursAgo = currentTime - 86400 * 1000; // ms timestamp
+  //019f5f58-2a58-733e-81cc-fbec233a9856
+  //wss://ZxBpErVPCj.acs-r1.ap-in-1.anedya.io/v1/streams/connect
+
+  const currentTime = Date.now();          // ms timestamp
+const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
 
   return (
-    <div
+   <div
       style={{
         padding: "2rem",
+        backgroundColor:"white"
       }}
     >
-      <h1>Test Widget SDK</h1>
+      <h1 style={{
+        color:"black"
+      }}>Test Widget SDK</h1>
       <div
         style={{
           display: "flex",
@@ -40,61 +42,21 @@ function App() {
             display: "flex",
 
             alignItems: "center",
+ 
           }}
         >
-          <ChartWidget
-            client={client}
-            nodeId={nodeId}
-            variable="humidity"
-            from={twentyFourHoursAgo}
-            to={currentTime}
-            limit={20}
-            title="Humidity Trend"
-            styles={{
-              container: {
-                // width: 450,
-                // height: 300,
-                //rgb(248, 249, 250)
-                background: "rgb(248, 249, 250)",
-                borderRadius: 10,
-                // border: "1px solid rgba(211, 216, 220, 1)",
-              },
-              title: { color: "#000000", fontSize: "20px", fontWeight: 500 },
-              chart: {
-                strokeColor: "rgba(0, 143, 251, 0.85)",
-                strokeWidth: 3,
-                gradientColors: ["rgba(0, 143, 251, 0.85)", "#ffe0b2"],
-              },
-              tooltip: {
-                backgroundColor: "rgba(202, 10, 10, 0.75)",
-                color: "#fff",
-                fontSize: "13px",
-              },
-            }}
-            tickCount={5}
-            //optional super simple options
-            //            xTickFormat="YYYY-MM-DD"
-            // yTickFormat="0.00"          // 2 decimal places
-            // tooltipFormat="YYYY/MM/DD HH:mm"
-
-            xTickFormat={(d) => d.toLocaleDateString()}
-            yTickFormat={(v) => `${v} °C`}
-            tooltipFormat={(d, unit) =>
-              `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
-            }
-            onStyleChange={(data) => {
-              return {
-                title: { color: "red" },
-                container: {
-                  background: "rgba(232, 236, 240, 1)",
-                  borderRadius: 10,
-                },
-              };
-            }}
-          />
+       <ChartWidget
+  client={client}
+  nodeId={nodeId}
+  variable="humidity"
+  from={twentyFourHoursAgo}
+  to={currentTime}
+ width={800}
+ height={500}
+/>
         </div>
 
-        <div
+        {/* <div
           style={{
             display: "flex",
 
@@ -107,6 +69,7 @@ function App() {
             variable="humidity"
             title="Humidity Sensor"
             unit={"°C"}
+           
             styles={{
               container: {
                 // width: 350,
@@ -179,21 +142,6 @@ function App() {
               return {}; // keep original styling
             }}
           />
-        </div>
-
-        {/* <div
-          style={{
-            display: "flex",
-
-            alignItems: "center",
-          }}
-        >
-          <StreamWidget
-            client={client}
-            nodeId={nodeId}
-            streamId="019d3dbe-f14f-7365-b339-bcefbcc848a0"
-            streamUrl="wss://ZxBpErVPCj.acs-r1.ap-in-1.anedya.io/v1/streams/connect"
-          />
         </div> */}
       </div>
     </div>
@@ -201,3 +149,9 @@ function App() {
 }
 
 export default App;
+
+
+//create react app
+//link public-widget-sdk
+//npm run dev
+//send this file tp yash to copy paste 

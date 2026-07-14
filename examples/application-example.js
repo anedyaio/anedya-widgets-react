@@ -7,9 +7,9 @@ import {
 } from "public-sdk";
 
 function App() {
-  const nodeId = "";
-  const tokenId = "";
-  const token = "";
+const tokenId = "itATCNCVamYNmwfdeBumQMwS";
+const token = "Evd8wL35Xt4tNQOXP11YddiRHtM74jqw3JZYuIaPmnWxNozbmnNTUfVaqXmQERV1";
+const nodeId = "20deeee8-f8ae-11ee-9dd8-c3aa61afe2fb";
   const client = anedyaClientInit(tokenId, token);
 
   const currentTime = Date.now(); // ms timestamp
