@@ -22,6 +22,12 @@ export interface ChartColors {
   tickFontSize: number;
   /** Font size (px) for the chart title. Exposed so responsiveStyles can shrink it on small screens. */
   titleFontSize: number;
+
+  barColor?: string;
+  barHoverColor?: string;
+  barRadius?: number; 
+  tooltipBg?: string;
+  tooltipColor?: string;
 }
 
 /* ============================================================
@@ -63,6 +69,12 @@ export const lightTheme: ChartColors = {
   titleColor: "#0f172a",
   tickFontSize: 10,
   titleFontSize: 16,
+
+  barColor: "#1e88e5",       
+  barHoverColor: "#1565c0", 
+  barRadius: 3,
+  tooltipBg: "#0f172a",
+  tooltipColor: "#ffffff",
 };
 
 export const darkTheme: ChartColors = {
@@ -77,6 +89,12 @@ export const darkTheme: ChartColors = {
   titleColor: "#f1f5f9",
   tickFontSize: 10,
   titleFontSize: 16,
+
+  barColor: "#60a5fa", 
+  barHoverColor: "#3b82f6",
+  barRadius: 3,
+  tooltipBg: "#1e293b",
+  tooltipColor: "#f1f5f9",
 };
 
 export const themes = {
