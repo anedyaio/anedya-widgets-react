@@ -39,13 +39,13 @@ export function anedyaClientInit(
   }
 
   const anedya = new Anedya();
-  const config = anedya.NewConfig(tokenId, token);
-  const client = anedya.NewClient(config);
+  const config = anedya.newConfig(tokenId, token);
+  const client = anedya.newClient(config);
 
   // --- Patch NewNode with per-node rate limiter ---
-  const originalNewNode: (...args: any[]) => any = anedya.NewNode.bind(anedya);
+  const originalNewNode: (...args: any[]) => any = anedya.newNode.bind(anedya);
 
-  anedya.NewNode = (...args: any[]): any => {
+  anedya.newNode = (...args: any[]): any => {
     const node = originalNewNode(...args); // ✅ now properly typed
 
     // Extract nodeId (second argument)

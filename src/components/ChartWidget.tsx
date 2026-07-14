@@ -1,324 +1,263 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
-
-
-import { CSSProperties } from "react";
-import "../../src/index.css"
+import { Tooltip } from "@base-ui/react/tooltip";
 import { validateRequiredProps } from "../helpers/validate";
 import { defaultDateFormatter, formatDate, formatNumber } from "../helpers/formatDate";
+import {
+  ChartStyleSet,
+  ThemeName,
+  DEFAULT_THEME,
+  themes,
+  mergeStyleSets,
+  ResponsiveStyleSet,
+  resolveResponsiveStyle,
+} from "./chartTheme";
 
-function computeBottomMargin(ticks: string[]) {
-  if (!ticks.length) return 40;
-
-  // estimate width of text based on average character width
-  const longest = ticks.reduce((a, b) => (a.length > b.length ? a : b), "");
-  const approxCharWidth = 7;       // px
-  const approximateTextWidth = longest.length * approxCharWidth;
-
-  // because labels rotate -30deg, height ≈ width * sin(30°)
-  const estimatedHeight = approximateTextWidth * 0.5;
-
-  return Math.max(40, estimatedHeight + 20); // + extra padding
-}
+// Re-exported so consumers only ever need to import from ChartWidget,
+// e.g. `import { ChartWidget, defineStyleRules } from "your-sdk"`.
+export type { ChartStyleSet, ThemeName, ResponsiveStyleSet, Breakpoint } from "./chartTheme";
+export { defineStyleRules, lightTheme, darkTheme, themes, BREAKPOINTS } from "./chartTheme";
 
 /* ------------------------ Types ------------------------ */
 export interface ChartDataPoint {
   timestamp: number;
   value: number;
 }
+
 type WidgetState = {
-  value?: any;
-  loading?: boolean;
-  error?: string | null; // ✅ matches your React state
+  data: ChartDataPoint[];
+  loading: boolean;
+  error: string | null;
 };
 
-
-interface ChartStyleSet {
-  container?: CSSProperties;
-  title?: CSSProperties;
-  tooltip?: CSSProperties;
-  axis?: CSSProperties;
-  chart?: {
-    strokeColor?: string;
-    strokeWidth?: number;
-    gradientColors?: [string, string];
-    dotRadius?: number;
-  };
-  fontFamily:string
-}
-type StylesInput =
-  | ChartStyleSet
-  | ((state: WidgetState) => ChartStyleSet);
+// `styles` accepts either a plain object, or a function that receives the
+// widget's current state (data/loading/error) and returns a style set —
+// useful if styling should depend on load state, not just the data values.
+// NOTE: this is always UNCONDITIONAL fixed styling — same at every screen
+// size. Use `responsiveStyles` (below) for per-breakpoint overrides.
+type StylesInput = ChartStyleSet | ((state: WidgetState) => ChartStyleSet);
 
 export interface ChartWidgetProps {
   client: any;
   nodeId: string;
   variable: string;
-  from:number,
-  to:number,
-  limit?:number,
+  from: number;
+  to: number;
+  limit?: number;
   title?: string;
+  /** Base color theme. Defaults to "light". Overridden per-token by `styles`, `responsiveStyles`, and `onStyleChange`. */
+  theme?: ThemeName;
+  /** Fixed styling, unconditional across all screen/container sizes. */
   styles?: StylesInput;
-  tooltipFormatter?: (d: ChartDataPoint) => string;
-  tickCount?: number; // number of ticks on x axis (default: 4)
-  tickFormatter?: (d: Date) => string; // optional custom formatter
-    xTickFormat?: string | ((d: Date) => string);  // date formatting
-  yTickFormat?: string | ((v: number) => string); // numeric formatting
-  tooltipFormat?: string | ((d: ChartDataPoint) => string);
-    onStyleChange?:(data:ChartDataPoint[]) =>{}
+  /**
+   * Per-breakpoint styling, layered on top of `styles`. Mobile-first:
+   * `base` always applies, then `sm`/`md`/`lg`/`xl` apply additionally
+   * once the widget's own measured container width crosses that
+   * breakpoint. This measures the widget's OWN box (container-query
+   * style), not the browser window, so it behaves correctly no matter
+   * where it's embedded.
+   *
+   *   responsiveStyles={{
+   *     base: { chart: { dotRadius: 2, tickFontSize: 8 } },
+   *     md:   { chart: { dotRadius: 3.5, tickFontSize: 10 } },
+   *     lg:   { chart: { dotRadius: 4.5, tickFontSize: 12 } },
+   *   }}
+   */
+  responsiveStyles?: ResponsiveStyleSet;
+  tooltipFormat?: (d: ChartDataPoint) => string;
+  tickCount?: number;
+  xTickFormat?: string | ((d: Date) => string);
+  yTickFormat?: string | ((v: number) => string);
+  /**
+   * Called with the fetched data whenever it changes. Return a ChartStyleSet
+   * to override styling conditionally — e.g. recolor the line when the
+   * latest value crosses a threshold. Pair with `defineStyleRules(...)` for
+   * a declarative shorthand instead of writing this by hand:
+   *
+   *   onStyleChange={defineStyleRules([
+   *     { when: (d) => d.value > 80, style: { chart: { strokeColor: "#dc2626" } } },
+   *     { when: (d) => d.value < 20, style: { chart: { strokeColor: "#2563eb" } } },
+   *   ])}
+   */
+  onStyleChange?: (data: ChartDataPoint[]) => ChartStyleSet | void;
+  /**
+   * Fixed pixel width. If omitted, the chart is fully RESPONSIVE — it
+   * fills whatever width its parent container gives it, tracked live via
+   * ResizeObserver. Set this only if you specifically want a non-fluid,
+   * constant-size chart.
+   */
+  width?: number;
+  /**
+   * Fixed pixel height. If omitted while `width` is also omitted, height
+   * is derived from `aspectRatio` relative to the measured container
+   * width, so the chart keeps sensible proportions at any size.
+   */
+  height?: number;
+  /** Width-to-height ratio used to derive height when the chart is responsive (no fixed height given). Defaults to 1.6 (800x500). */
+  aspectRatio?: number;
+  /**
+   * Lower/upper bounds (px) on the RESPONSIVE size — ignored entirely if
+   * `width`/`height` are set to a fixed value, since those already mean
+   * "constant, don't resize at all." These only kick in for the fluid
+   * (no fixed width/height) case, so the chart stops shrinking once the
+   * container gets very small, and stops growing once it gets very large.
+   * Defaults: minWidth 280, maxWidth 1200, minHeight 200, maxHeight 700.
+   * Pass your own to override — your values always take precedence over
+   * these defaults.
+   */
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
 }
 
-/* ------------------------ Helpers ------------------------ */
-const normalizeSx = (sx: Record<string, any>  | undefined): Record<string, any> => {
-  if (!sx) return {};
-  if (Array.isArray(sx)) return Object.assign({}, ...sx);
-  if (typeof sx === "function") return sx({}) as Record<string, any>;
-  return sx as Record<string, any>;
-};
+// Fallback size used only for the very first render, before ResizeObserver
+// has reported the real container width (e.g. during SSR or the first
+// paint frame). Once measured, `measuredWidth` takes over.
+const FALLBACK_WIDTH = 800;
+const DEFAULT_ASPECT_RATIO = 800 / 500;
+const MARGIN = { top: 16, right: 16, bottom: 36, left: 44 };
 
-const toDateSafe = (ts: number): Date => {
-  // If ts < 1e12, treat as seconds -> convert to ms
-  if (ts < 1e12) return new Date(ts * 1000);
+// Default responsive bounds — only used when the chart is fluid (no fixed
+// width/height passed) and the caller hasn't supplied their own bounds.
+// These exist so the chart can't shrink into an unreadable sliver on a
+// tiny screen, or stretch absurdly wide/tall on a huge one.
+const DEFAULT_MIN_WIDTH = 280;
+const DEFAULT_MAX_WIDTH = 1200;
+const DEFAULT_MIN_HEIGHT = 200;
+const DEFAULT_MAX_HEIGHT = 700;
 
-  return new Date(ts);
-};
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-/* ------------------------ Defaults ------------------------ */
-const defaultFontFamily = "Roboto, sans-serif";
+const toDateSafe = (ts: number): Date => (ts < 1e12 ? new Date(ts * 1000) : new Date(ts));
 
-const defaultStyles: Required<ChartStyleSet> = {
-  container: {
-      width: 400,
-   height: 250,
-   padding: 2,
-   margin: 0,
-   display: "flex",
-   flexDirection: "column",
-   justifyContent: "flex-start",
-   alignItems: "center",
-   borderRadius: 10,
-   boxSizing: "border-box",
-gap:0,
-   background: "rgb(248, 249, 250)",
-                border: "1px solid rgba(211, 216, 220, 1)",
- 
-
-    textAlign: "center",
-        fontFamily: defaultFontFamily,
-  },
-  title: {
-  
-    fontWeight: 600,
-    color: "rgba(0,0,0,0.75)",
-    // marginBottom: 1,
-        fontFamily: defaultFontFamily,
-  },
-  tooltip: {
-    background: "rgba(0,0,0,0.75)",
-
-    color: "#ffffff",
-
-    borderRadius: "6px",
-    padding: "6px 10px",
-    fontSize: "12px",
-        fontFamily: defaultFontFamily,
-  },
-  axis: {
-    color: "#666",
-    fontSize: "11px",
-    fontFamily:defaultFontFamily,
-
-  },
-  chart: {
-    strokeColor: "#1e88e5",
-    strokeWidth: 2,
-    gradientColors: ["#1e88e5", "#90caf9"],
-       dotRadius: 4,
-
-  },
-   fontFamily:defaultFontFamily
-
-   
-};
-
-
-// ---- ChartWidget ----
+/* ------------------------ ChartWidget ------------------------ */
 export const ChartWidget: React.FC<ChartWidgetProps> = ({
   client,
   nodeId,
   variable,
   from,
   to,
-  limit=20,
+  limit = 20,
   title = "Latest Data",
+  theme = DEFAULT_THEME,
   styles = {},
-  tooltipFormatter = (d) =>
-    `${new Date(
-      new Date(d.timestamp < 1e12 ? d.timestamp * 1000 : d.timestamp)
-    ).toLocaleString(undefined, {
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    })}: ${d.value}`,
-      tickCount = 4,
-  tickFormatter,
+  responsiveStyles,
+  tooltipFormat,
+  tickCount = 4,
   xTickFormat,
   yTickFormat,
-  tooltipFormat,
-  onStyleChange
+  onStyleChange,
+  width: fixedWidth,
+  height: fixedHeight,
+  aspectRatio = DEFAULT_ASPECT_RATIO,
+  minWidth = DEFAULT_MIN_WIDTH,
+  maxWidth = DEFAULT_MAX_WIDTH,
+  minHeight = DEFAULT_MIN_HEIGHT,
+  maxHeight = DEFAULT_MAX_HEIGHT,
 }) => {
-
-   validateRequiredProps(
+  validateRequiredProps(
     "Chart Widget",
-    { client, nodeId, variable,from,to },
-    ["client", "nodeId", "variable","from time","to time"]
+    { client, nodeId, variable, from, to },
+    ["client", "nodeId", "variable", "from time", "to time"]
   );
 
-  const resolvedXFormatter =
-  typeof xTickFormat === "string"
-    ? (d: Date) => formatDate(d, xTickFormat)
-    : xTickFormat;
+  /* ------------------------------------------------------------
+   * Responsive sizing
+   * ------------------------------------------------------------
+   * If `fixedWidth` is provided, the chart behaves exactly like
+   * before (constant pixel size, same on every screen). Otherwise
+   * we measure the wrapper div's real rendered width via
+   * ResizeObserver and recompute on every resize — so the chart
+   * genuinely fills whatever space it's given, live, without a
+   * page reload.
+   * ---------------------------------------------------------- */
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number>(FALLBACK_WIDTH);
 
-const resolvedYFormatter =
-  typeof yTickFormat === "string"
-    ? (v: number) => formatNumber(v, yTickFormat)
-    : yTickFormat;
+  useLayoutEffect(() => {
+    // Fixed width means we never need to observe — skip entirely.
+    if (fixedWidth != null) return;
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
 
-const resolvedTooltipFormatter =
-  typeof tooltipFormat === "string"
-    ? (d: ChartDataPoint) =>
-        `${formatDate(toDateSafe(d.timestamp), tooltipFormat)}: ${d.value}`
-    : tooltipFormat;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const w = Math.round(entry.contentRect.width);
+      // Guard against 0-width flashes (e.g. element briefly display:none)
+      // which would otherwise collapse the chart to nothing.
+      if (w > 0) setMeasuredWidth(w);
+    });
 
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fixedWidth]);
 
-  // Refs + state
-  const svgRef = useRef<SVGSVGElement | null>(null);
-   const tooltipNodeRef = useRef<HTMLDivElement | null>(null);
-  const [data, setData] = useState<ChartDataPoint[]>([
-    // { timestamp: Date.now() - 60000, value: 33 },
-    // { timestamp: Date.now() - 30000, value: 44 },
-    // { timestamp: Date.now(), value: 38 },
-  ]);
+  const effectiveWidth = fixedWidth ?? clamp(measuredWidth, minWidth, maxWidth);
+  const effectiveHeight =
+    fixedHeight ?? clamp(Math.round(effectiveWidth / aspectRatio), minHeight, maxHeight);
+
+  const CHART_W = effectiveWidth - MARGIN.left - MARGIN.right;
+  const CHART_H = effectiveHeight - MARGIN.top - MARGIN.bottom;
+
+  // Fewer x-axis ticks on narrow containers so labels don't overlap.
+  // Only kicks in below the widths where crowding actually becomes a
+  // problem; larger containers use the caller's requested tickCount as-is.
+  const effectiveTickCount =
+    effectiveWidth < 380 ? Math.min(tickCount, 2) : effectiveWidth < 560 ? Math.min(tickCount, 3) : tickCount;
+
+  const [node, setNode] = useState<any>(null);
+  const [data, setData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [node, setNode] = useState<any>(null);
 
+  // Holds only the *data-driven* layer of styling (from `styles` prop +
+  // `onStyleChange`). Theme and responsiveStyles are applied separately
+  // below so that resizing or switching `theme` never requires waiting
+  // on the data-fetch effect.
+  const [dynamicStyle, setDynamicStyle] = useState<ChartStyleSet>({});
 
-  const state = { data, loading, error }; // <-- your widget’s internal state
-
-// Resolve function or static style object
-const [dynamicStyles, setDynamicStyles] = useState<Partial<ChartStyleSet>>({});
-
-const baseResolvedStyles =
-  typeof styles === "function" ? styles(state) : styles || {};
-
-const resolvedStyles = {
-  container: { ...baseResolvedStyles.container, ...dynamicStyles?.container },
-  title: { ...baseResolvedStyles.title, ...dynamicStyles?.title },
-  tooltip: { ...baseResolvedStyles.tooltip, ...dynamicStyles?.tooltip },
-  chart: { ...baseResolvedStyles.chart, ...dynamicStyles?.chart },
-  axis:  { ...baseResolvedStyles.axis, ...dynamicStyles?.axis },
-  fontFamily: dynamicStyles?.fontFamily ?? baseResolvedStyles.fontFamily,
-};
   const mountedRef = useRef(false);
-  const failureCountRef = useRef(0);
   const isFetchingRef = useRef(false);
-  const MAX_FAILURES = 3;
 
-  // ---- Normalize Styles ----
-  const containerSx = normalizeSx(resolvedStyles?.container);
-  const titleSx = normalizeSx(resolvedStyles?.title);
-  const tooltipSx = normalizeSx(resolvedStyles?.tooltip);
-  const chartSx = resolvedStyles.chart ?? {};
-  const axisSx = normalizeSx(resolvedStyles?.axis);
-
-  // --- Container dimensions with TypeScript-safe default ---
-  const containerDefaults: any = defaultStyles.container!;
-  const width = containerSx.width ?? containerDefaults.width;
-  const height = containerSx.height ?? containerDefaults.height;
-
-
-  // --- Font family handling ---
-  const globalFontFamily = resolvedStyles?.fontFamily ?? "Roboto";
-  const labelFontFamily = titleSx.fontFamily ??  globalFontFamily;
-
-
-  
-
-
-
-
-  // --- Scaled font sizes ---
-  const baseFont = Math.min(Number(width), Number(height)) * 0.15;
-
-  // --- Compute font sizes dynamically if not provided by user ---
-  const labelFont = (resolvedStyles?.title as any)?.fontSize ?? baseFont * 0.6;
-
-  
-  const strokeColor = chartSx.strokeColor ?? defaultStyles.chart.strokeColor;
-  const strokeWidth = chartSx.strokeWidth ?? defaultStyles.chart.strokeWidth;
-  const gradientColors =
-    chartSx.gradientColors ?? defaultStyles.chart.gradientColors;
-const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
-  // ---- Fetch Node ----
+  // Resolve the node through the client's (rate-limited) Anedya instance
   useEffect(() => {
     if (!client || !nodeId) return;
-    const anedya = (client as any)._anedya;
-    const createdNode = anedya?.NewNode?.(client, nodeId);
-    setNode(createdNode);
+    const anedya = client._anedya;
+    setNode(anedya?.newNode?.(client, nodeId) ?? null);
   }, [client, nodeId]);
 
-  // ---- Fetch Data ----
+  // Fetch data
   useEffect(() => {
+    if (!node) return;
     mountedRef.current = true;
-    if (
-      !node
-      // || data.length>0
-    )
-      return;
 
     const fetchData = async () => {
-      if (isFetchingRef.current || failureCountRef.current >= MAX_FAILURES)
-        return;
+      if (isFetchingRef.current) return;
       isFetchingRef.current = true;
+      setLoading(true);
+      setError(null);
 
       try {
-        setLoading(true);
-        setError(null);
-        // const currentTime = Date.now();
-        // const twentyFourHoursAgo = currentTime - 86400 * 1000;
-//1732420983000
-//1763956983000
-        const req = {
-          variable,
-          from: from,
-          to: to,
-          limit: limit,
-          order: "asc",
-        };
-        const res = await node.getData(req);
-
+        const res = await node.getData({ variable, from, to, limit, order: "asc" });
         if (!mountedRef.current) return;
 
         if (res.isSuccess && res.isDataAvailable) {
           setData(res.data);
-          setError("");
-
         } else {
-          console.error("error fetching data:", res.error);
-          setError(res.error.errorMessage);
+          setData([]);
+          setError(res.error?.errorMessage ?? "No data available");
         }
-        failureCountRef.current = 0;
       } catch (err: any) {
-        console.error("Error fetching chart data:", err);
+        if (!mountedRef.current) return;
         setData([]);
         setError(err?.message ?? "Failed to fetch data");
-        failureCountRef.current += 1;
       } finally {
-        setLoading(false);
-        if (mountedRef.current) isFetchingRef.current = false;
+        if (mountedRef.current) {
+          setLoading(false);
+          isFetchingRef.current = false;
+        }
       }
     };
 
@@ -326,371 +265,307 @@ const dotRadius = chartSx.dotRadius ?? defaultStyles.chart.dotRadius;
     return () => {
       mountedRef.current = false;
     };
-  }, [node, variable]);
+  }, [node, variable, from, to, limit]);
 
- /* ------------------------ D3 render (dots + line + area + tooltip + axes) ------------------------ */
+  // Resolve the `styles` prop (static or function) and `onStyleChange`
+  // result whenever the data changes, and merge them together. Order
+  // matters: onStyleChange is applied last so conditional/threshold
+  // styling always wins over the caller's static `styles` prop.
   useEffect(() => {
-    if (!svgRef.current) return;
-    const svgEl = svgRef.current;
-    const svg = d3.select(svgEl);
-    svg.selectAll("*").remove();
+    const fromStylesProp =
+      typeof styles === "function" ? styles({ data, loading, error }) : styles;
+    const fromCallback = onStyleChange?.(data) ?? {};
 
-    // If no data, nothing to draw
-    if (!data || data.length === 0) {
-      return;
+    setDynamicStyle(mergeStyleSets(fromStylesProp, fromCallback));
+    // Intentionally only re-resolves when the data itself changes, matching
+    // the original widget's behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  // Final style resolution, applied in precedence order:
+  //   1. theme preset (light/dark)               — base layer
+  //   2. dynamicStyle (styles prop + onStyleChange) — data-driven layer
+  //   3. responsiveStyles for the current breakpoint — highest priority,
+  //      resolved fresh on every render against `effectiveWidth` so a
+  //      live resize is reflected immediately.
+  const resolvedStyle = useMemo(
+    () =>
+      mergeStyleSets(
+        { chart: themes[theme] },
+        dynamicStyle,
+        resolveResponsiveStyle(responsiveStyles, effectiveWidth)
+      ),
+    [theme, dynamicStyle, responsiveStyles, effectiveWidth]
+  );
+  const chartStyle:any = resolvedStyle.chart!; // themes[theme] guarantees every ChartColors field is present
+
+  const { linePath, areaPath, points, xTicks, yTicks } = useMemo(() => {
+    if (!data.length) {
+      return { linePath: "", areaPath: "", points: [] as { cx: number; cy: number; point: ChartDataPoint }[], xTicks: [], yTicks: [] };
     }
 
-
-
-  // // --- COMPUTE SCALES --- //
-  // const tempDates = data.map((d) => toDateSafe(d.timestamp));
-  // const tempX = d3.scaleTime().domain(d3.extent(tempDates)  as [Date, Date]).range([0, 1]); // temp range
-  // const provisionalTicks = tempX.ticks(tickCount);
-
-  // const tickLabels = provisionalTicks.map((d) =>
-  //   resolvedXFormatter ? resolvedXFormatter(d) : defaultDateFormatter(d)
-  // );
-
-  // const dynamicBottom = computeBottomMargin(tickLabels);
-
-  // // --- NOW REAL MARGINS --- //
-  // const margin = { top: 20, right: 20, bottom: dynamicBottom, left: 50 };
-
-  // // recompute chart area
-  // const chartW = Math.max(10, width - margin.left - margin.right);
-  // const chartH = Math.max(10, height - margin.top - margin.bottom);
-
-  // // recompute x with real width
-  // tempX.range([0, chartW]);
-
-    //.attr("transform", "rotate(-30)")
-//margins (leave extra bottom space for rotated ticks)
-    const margin = { top: 20, right: 20, bottom: 130, left: 50 };
-    const chartW = Math.max(10, width - margin.left - margin.right);
-    const chartH = Math.max(10, height - margin.top - margin.bottom);
-
-    // group
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-
-    // parse / convert timestamps to Date safely
     const dates = data.map((d) => toDateSafe(d.timestamp));
-    const x = d3.scaleTime().domain(d3.extent(dates) as [Date, Date]).range([0, chartW]);
-    const maxY = Math.max(10, d3.max(data, (d) => Number(d.value)) ?? 10);
-    const y = d3.scaleLinear().domain([0, maxY]).nice().range([chartH, 0]);
+    const x = d3.scaleTime().domain(d3.extent(dates) as [Date, Date]).range([0, CHART_W]);
+    const maxY = Math.max(10, d3.max(data, (d) => d.value) ?? 10);
+    const y = d3.scaleLinear().domain([0, maxY]).nice().range([CHART_H, 0]);
 
-    // gradient
-  const safeGradient = gradientColors ?? ["#1e88e5", "#90caf9"];
-  const safeStroke = strokeColor ?? "#1e88e5";
-  const safeWidth = strokeWidth ?? 2;
-  const safeDotRadius = dotRadius ?? 4
-    const defs = svg.append("defs");
-
-    const gradient = defs
-      .append("linearGradient")
-      .attr("id", "chartGradient")
-      .attr("x1", "0%")
-      .attr("y1", "0%")
-      .attr("x2", "0%")
-      .attr("y2", "100%");
-    gradient
-      .append("stop")
-      .attr("offset", "0%")
-      .attr("stop-color", safeGradient[0])
-      .attr("stop-opacity", 0.5);
-    gradient
-      .append("stop")
-      .attr("offset", "100%")
-      .attr("stop-color", safeGradient[1])
-      .attr("stop-opacity", 0);
-
-    // area
-    const area = d3
-      .area<ChartDataPoint>()
-      .x((d) => x(toDateSafe(d.timestamp)))
-      .y0(chartH)
-      .y1((d) => y(d.value))
-      .curve(d3.curveMonotoneX);
-
-  g.append("path").datum(data).attr("fill", "url(#chartGradient)").attr("d", area);
-
-    // line
     const line = d3
       .line<ChartDataPoint>()
       .x((d) => x(toDateSafe(d.timestamp)))
       .y((d) => y(d.value))
       .curve(d3.curveMonotoneX);
 
-   g.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", safeStroke)
-    .attr("stroke-width", safeWidth)
-    .attr("d", line);
+    const area = d3
+      .area<ChartDataPoint>()
+      .x((d) => x(toDateSafe(d.timestamp)))
+      .y0(CHART_H)
+      .y1((d) => y(d.value))
+      .curve(d3.curveMonotoneX);
 
-    // dots
-    const dotR = computeDotRadius(chartW, chartH, safeDotRadius);
-    const dots = g
-      .selectAll(".dot")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("class", "dot")
-      .attr("cx", (d) => x(toDateSafe(d.timestamp)))
-      .attr("cy", (d) => y(d.value))
-      .attr("r", dotR)
-      .attr("fill", safeStroke)
-      .style("cursor", "default");
+    const points = data.map((d) => ({
+      cx: x(toDateSafe(d.timestamp)),
+      cy: y(d.value),
+      point: d,
+    }));
 
-    // Tooltip (create single DOM node appended to body)
-    // Reuse tooltip div if present
-    let tooltipDiv = tooltipNodeRef.current;
-    if (!tooltipDiv) {
-      tooltipDiv = document.createElement("div");
-      tooltipNodeRef.current = tooltipDiv;
-      document.body.appendChild(tooltipDiv);
-    }
-    // apply tooltip styles (inline)
-    const tooltipDefaults: any = defaultStyles.tooltip;
-    tooltipDiv.style.position = "absolute";
-    tooltipDiv.style.pointerEvents = "none";
-    tooltipDiv.style.opacity = "0";
-    tooltipDiv.style.background = (tooltipSx.backgroundColor ?? tooltipDefaults.background) as string;
-    tooltipDiv.style.color = (tooltipSx.color ?? tooltipDefaults.color) as string;
-    tooltipDiv.style.borderRadius = (tooltipSx.borderRadius ?? tooltipDefaults.borderRadius) as string;
-    tooltipDiv.style.padding = (tooltipSx.padding ?? tooltipDefaults.padding) as string;
-    tooltipDiv.style.fontSize = (tooltipSx.fontSize ?? tooltipDefaults.fontSize) as string;
-    tooltipDiv.style.transition = "opacity 120ms";
+    const xTicks = x.ticks(effectiveTickCount).map((d) => ({
+      x: x(d),
+      label:
+        typeof xTickFormat === "function"
+          ? xTickFormat(d)
+          : typeof xTickFormat === "string"
+          ? formatDate(d, xTickFormat)
+          : defaultDateFormatter(d),
+    }));
 
-    // interactions
-    dots
-      .on("mouseover", function (event, d: ChartDataPoint) {
-        tooltipDiv!.style.opacity = "1";
-        tooltipDiv!.innerHTML = resolvedTooltipFormatter
-  ? resolvedTooltipFormatter(d)
-  : tooltipFormatter(d);
-      })
-      .on("mousemove", function (event) {
-        // place tooltip near pointer but keep inside window
-        const pad = 8;
-        const left = Math.min(window.innerWidth - 200, event.pageX + pad);
-        const top = Math.max(8, event.pageY - 36);
-        tooltipDiv!.style.left = `${left}px`;
-        tooltipDiv!.style.top = `${top}px`;
-      })
-      .on("mouseout", function () {
-        tooltipDiv!.style.opacity = "0";
-      });
+    const yTicks = y.ticks(4).map((v) => ({
+      y: y(v),
+      label:
+        typeof yTickFormat === "function"
+          ? yTickFormat(v)
+          : typeof yTickFormat === "string"
+          ? formatNumber(v, yTickFormat)
+          : String(v),
+    }));
 
-    // axes - bottom x with custom tick formatting and rotated labels
-    const xAxis = d3
-      .axisBottom(x)
-      .ticks(tickCount)
-      .tickFormat((d) => {
-    if (resolvedXFormatter) return resolvedXFormatter(d as Date);
-    return defaultDateFormatter(d as Date);
-  });
+    return { linePath: line(data) ?? "", areaPath: area(data) ?? "", points, xTicks, yTicks };
+  }, [data, effectiveTickCount, xTickFormat, yTickFormat, CHART_W, CHART_H]);
 
-
-      const axisDefaults : any = defaultStyles.axis
-    g.append("g")
-      .attr("transform", `translate(0,${chartH})`)
-      .call(xAxis)
-      .selectAll("text")
-      .attr("transform", "rotate(-30)")
-      .style("text-anchor", "end")
-      .style("font-size", (axisSx.fontSize ?? axisDefaults.fontSize) as string)
-      .style("fill", (axisSx.color ?? axisDefaults.color) as string)
-      .style("font-family", (axisSx.fontFamily ?? axisDefaults.fontFamily) as string);
-
-    g.append("g")
-      .call(d3.axisLeft(y).ticks(5).tickFormat((v) => {
-        if (resolvedYFormatter) return resolvedYFormatter(v as number);
-        return String(v);
-      }))
-      .selectAll("text")
-      .style("font-size", (axisSx.fontSize ?? axisDefaults.fontSize) as string)
-      .style("fill", (axisSx.color ?? axisDefaults.color) as string)
-      .style("font-family", (axisSx.fontFamily ?? axisDefaults.fontFamily) as string);
-
-    // keep axes inside container by clipping overflow
-    // Add clipPath so elements don't overflow container boundaries visually
-    const clipId = `clip-${Math.random().toString(36).slice(2, 9)}`;
-    svg
-      .append("defs")
-      .append("clipPath")
-      .attr("id", clipId)
-      .append("rect")
-      .attr("width", width)
-      .attr("height", height);
-    svg.attr("clip-path", `url(#${clipId})`);
-
-    // cleanup on effect re-run
-    return () => {
-      // remove tooltip div if created by this component
-      if (tooltipNodeRef.current) {
-        try {
-          tooltipNodeRef.current.remove();
-        } catch {}
-        tooltipNodeRef.current = null;
-      }
-      svg.selectAll("*").remove();
-    };
-  }, [
-    data,
-    width,
-    height,
-    strokeColor,
-    strokeWidth,
-    gradientColors,
-    dotRadius,
-    tickCount,
-    tickFormatter,
-    tooltipFormatter,
-    axisSx,
-    tooltipSx,
-  ]);
-
-
-
-      // Whenever value changes, allow user to modify styles dynamically
-   useEffect(() => {
-      if (typeof onStyleChange === "function") {
-        const updated = onStyleChange(data);
-        if (updated && typeof updated === "object") {
-          setDynamicStyles(updated);
-        }
-      }
-    }, [data]);
-  
-  /* ------------------------ Helpers ------------------------ */
-  function computeDotRadius(chartW: number, chartH: number, requested: number) {
-    // scale dot radius a bit relative to min dimension but honor requested if provided
-    const base = Math.max(2, Math.min(chartW, chartH) * 0.012);
-    return requested ?? Math.round(base);
-  }
-  // --- Merge styles safely ---
-  const mergedContainerSx: CSSProperties = {
-    ...defaultStyles.container,
-    ...containerSx,
-  
-  };
-  const mergedLabelSx: CSSProperties = {
-    ...defaultStyles.title,
-    fontSize: labelFont,
-    ...titleSx,
-    fontFamily: labelFontFamily,
-  };
-
+  const gradientId = useMemo(() => `chart-gradient-${Math.random().toString(36).slice(2, 9)}`, []);
 
   return (
-    <div style={{...mergedContainerSx}}>
-      {title && (
-       <h2
-      style={{
-       ...mergedLabelSx
-      }}
-    >
-      {title}
-    </h2>
-      )}
-      {loading ? (
-      <div
+    // NOTE ON STYLING APPROACH: this component intentionally uses inline
+    // styles / SVG presentation attributes instead of Tailwind classes.
+    // Base UI (used below for the tooltip) is headless and doesn't need
+    // Tailwind — but Tailwind utility classNames shipped from an SDK
+    // package don't compile in a consuming app's build unless that app's
+    // Tailwind `content` glob explicitly scans this package, which most
+    // consumers won't have configured. Inline styles work everywhere with
+    // zero consumer setup. If Tailwind classes are required, they should
+    // be pre-compiled into a standalone stylesheet as part of *this SDK's*
+    // build and shipped as e.g. `dist/style.css` for consumers to import.
+    <div
+      ref={containerRef}
       style={{
         display: "flex",
-     
-        width: "100%",
-        height: "100%",
-           justifyContent: "center",
+        flexDirection: "column",
         alignItems: "center",
+        gap: 8,
+        borderRadius: 12,
+        border: `1px solid ${chartStyle.borderColor}`,
+        backgroundColor: chartStyle.backgroundColor,
+        padding: 16,
+        textAlign: "center",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        // Fixed width -> constant pixel size (still capped at 100% so it
+        // never overflows a parent narrower than the fixed value).
+        // Fluid -> fills parent, bounded between minWidth/maxWidth.
+        width: fixedWidth ?? "100%",
+        maxWidth: fixedWidth != null ? "100%" : `min(100%, ${maxWidth}px)`,
+        minWidth: fixedWidth != null ? undefined : minWidth,
+        minHeight: fixedHeight != null ? undefined : minHeight,
+        maxHeight: fixedHeight != null ? undefined : maxHeight,
+        boxSizing: "border-box",
+        ...resolvedStyle.container,
       }}
     >
-      <div
-        className="spinner"
-        style={{
-          width: Math.min(Number(width), Number(height)) * 0.3,
-          height: Math.min(Number(width), Number(height)) * 0.3,
-        }}
-      ></div>
-       </div>
+      {title && (
+        <h2
+          style={{
+            fontSize: chartStyle.titleFontSize,
+            fontWeight: 600,
+            color: chartStyle.titleColor,
+            margin: 0,
+            ...resolvedStyle.title,
+          }}
+        >
+          {title}
+        </h2>
+      )}
+
+      {loading ? (
+        <div
+          style={{
+            display: "flex",
+            height: effectiveHeight,
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              height: 32,
+              width: 32,
+              borderRadius: "50%",
+              border: "2px solid #cbd5e1",
+              borderTopColor: "#475569",
+              animation: "chart-widget-spin 0.8s linear infinite",
+            }}
+          />
+          <style>{`@keyframes chart-widget-spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
       ) : error ? (
-         <div style={{
-              fontSize: "25px",
-    display: "flex",           // <-- required
-    justifyContent: "center",
-    alignItems: "center",
-height:"100%",
-paddingRight:"10px",
-paddingLeft:"10px"
+        <div
+          style={{
+            display: "flex",
+            height: effectiveHeight,
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 8px",
           }}
-          >
-            <div
+        >
+          <div
             style={{
-            background: "rgba(255, 0, 0, 0.15)",   // light transparent red
-    border: "1px solid rgba(255, 0, 0, 0.6)", // softer red border
-              boxShadow:'rgba(149, 157, 165, 0.2) 0px 8px 24px',
-          
-              color:"rgba(255, 0, 0, 0.6)",
-              textAlign:"center",
-              borderRadius:"5px",
-              padding:"5px",
-   
+              borderRadius: 6,
+              border: "1px solid #fca5a5",
+              backgroundColor: "#fef2f2",
+              padding: "8px 12px",
+              fontSize: 14,
+              color: "#dc2626",
             }}
-            >
-{error}
-            </div>
-
+          >
+            {error}
           </div>
-      ) : data?.length === 0?
-                  <div style={{
-              fontSize: "25px",
-    display: "flex",           // <-- required
-    justifyContent: "center",
-    alignItems: "center",
-height:"100%",
-paddingRight:"10px",
-paddingLeft:"10px"
+        </div>
+      ) : data.length === 0 ? (
+        <div
+          style={{
+            display: "flex",
+            height: effectiveHeight,
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 8px",
+            fontSize: 14,
+            color: "#94a3b8",
           }}
+        >
+          No data available
+        </div>
+      ) : (
+        // Base UI's Tooltip primitives handle positioning, portaling (so the
+        // popup escapes SVG clipping), and accessibility (focus/hover/ARIA).
+        // They apply zero visual styling themselves — all the look is defined
+        // via the `style` props passed to Tooltip.Popup etc. below.
+        <Tooltip.Provider>
+          <svg
+            viewBox={`0 0 ${effectiveWidth} ${effectiveHeight}`}
+            style={{ width: "100%", maxWidth: "100%", display: "block" }}
+            role="img"
+            aria-label={title}
           >
-            <div
-            style={{
+            <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
+              <defs>
+                <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={chartStyle.gradientColors[0]} stopOpacity={0.5} />
+                  <stop offset="100%" stopColor={chartStyle.gradientColors[1]} stopOpacity={0} />
+                </linearGradient>
+              </defs>
 
-    
-          
-        color:"#757575",
-              textAlign:"center",
-              borderRadius:"5px",
-              padding:"5px",
-   
-            }}
-            >
-{     "No data available"}
-            </div>
+              <path d={areaPath} fill={`url(#${gradientId})`} />
+              <path d={linePath} fill="none" stroke={chartStyle.strokeColor} strokeWidth={chartStyle.strokeWidth} />
 
-          </div>:
-       (
-        <svg
-          ref={svgRef}
-          width={width as number}
-          height={"90%"}
-        ></svg>
+              {/* X axis */}
+              <line
+                x1={0}
+                y1={CHART_H}
+                x2={CHART_W}
+                y2={CHART_H}
+                stroke={chartStyle.axisColor}
+                strokeWidth={1}
+              />
+              {xTicks.map((t, i) => (
+                <text
+                  key={i}
+                  x={t.x}
+                  y={CHART_H + 20}
+                  textAnchor="middle"
+                  fill={chartStyle.tickColor}
+                  fontSize={chartStyle.tickFontSize}
+                >
+                  {t.label}
+                </text>
+              ))}
+
+              {/* Y axis */}
+              {yTicks.map((t, i) => (
+                <text
+                  key={i}
+                  x={-10}
+                  y={t.y}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fill={chartStyle.tickColor}
+                  fontSize={chartStyle.tickFontSize}
+                >
+                  {t.label}
+                </text>
+              ))}
+
+              {points.map(({ cx, cy, point }, i) => (
+                <Tooltip.Root key={i}>
+                  <Tooltip.Trigger
+                    render={
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={chartStyle.dotRadius}
+                        fill={chartStyle.strokeColor}
+                        tabIndex={0}
+                        style={{ cursor: "default", outline: "none" }}
+                      />
+                    }
+                  />
+                  <Tooltip.Portal>
+                    <Tooltip.Positioner sideOffset={8}>
+                      <Tooltip.Popup
+                        style={{
+                          borderRadius: 6,
+                          backgroundColor: "#0f172a",
+                          padding: "4px 8px",
+                          fontSize: 12,
+                          color: "#fff",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+                        }}
+                      >
+                        {tooltipFormat
+                          ? tooltipFormat(point)
+                          : `${toDateSafe(point.timestamp).toLocaleString()}: ${point.value}`}
+                      </Tooltip.Popup>
+                    </Tooltip.Positioner>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              ))}
+            </g>
+          </svg>
+        </Tooltip.Provider>
       )}
     </div>
   );
 };
 
-
-//add customizable toolips, stroke width and color, and title obvs , timestamps for get data request
-//match customization and failsafes to latest data
-//documentation
-//modify anedya client as well
-//adjust rateLimitMs
-//how do i also ensure that the y axis labels dont crpss the container card border , all labels are contained within th container card
-
-//ftick format functions
-//responsiveness
-//frequesncy of ticks
-//show all widgets
-//documentation
-//consistent widget default styling , default color palette and theme
-//beta launch
-//how to add docs in npm --- add them in read me
+// TODO: axis-specific style overrides, per-element font family cascade,
+// dot-decimation on very narrow/dense containers.

@@ -218,6 +218,46 @@ export const LatestDataGauge: React.FC<GaugeWidgetProps> = ({
       ["client", "nodeId", "variable"]
     );
   
+    const streamId="019d3dce-2043-7dbe-86fe-69387b378107"
+    const streamUrl="wss://ZxBpErVPCj.acs-r1.ap-in-1.anedya.io/v1/streams/connect"
+
+    useEffect(() => {
+    if (!client || !nodeId || !streamId || !streamUrl) return;
+    mountedRef.current = true;
+ 
+    const anedya = (client as any)._anedya as Anedya;
+ 
+    const node = anedya.NewNode(client, nodeId);
+ console.log(node,"node")
+    const stream = node.getStream(streamId, streamUrl);
+ 
+    
+    stream.onData((data: any) => {
+      if (!mountedRef.current) return;
+      console.log("Stream Data:", data);
+    });
+ 
+    stream.onError((err: any) => {
+      if (!mountedRef.current) return;
+      console.error("Stream Error:", err);
+    });
+ 
+    stream
+      .connect()
+      .then(() => {
+        if (mountedRef.current) console.log("Stream connected");
+      })
+      .catch((err: any) => {
+        console.error("Stream connect failed:", err);
+      });
+ 
+    return () => {
+      mountedRef.current = false;
+      stream.disconnect();
+      console.log("Stream disconnected");
+    };
+  }, [client, nodeId, streamId, streamUrl]);
+ 
 
  
   const [value,setValue] = useState<any>(null)

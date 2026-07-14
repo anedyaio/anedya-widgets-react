@@ -30,8 +30,8 @@ export function anedyaClientInit(
     return globalClient;
   } // Always create fresh instances
   const anedya = new Anedya();
-  const config = anedya.NewConfig(tokenId, token);
-  const client = anedya.NewClient(config);
+  const config = anedya.newConfig(tokenId, token);
+  const client = anedya.newClient(config);
   if (useGlobal) {
     globalClient = client;
   }
