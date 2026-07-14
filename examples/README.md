@@ -1,4 +1,4 @@
-# Anedya Public SDK — README
+# Anedya Public SDK — Getting Started
 
 ## Overview
 
@@ -6,7 +6,7 @@ The Anedya Public SDK helps you easily fetch data from Anedya and display it usi
 
 This SDK currently provides:
 
-* **LatestDataComponent** — Displays the latest value of a variable.
+* **LatestDataWidget** — Displays the latest value of a variable.
 * **ChartWidget** — Displays timeseries data between given timestamps.
 * **LatestDataGauge** — A gauge‑style visualization of the latest value.
 
@@ -31,59 +31,9 @@ To send (ingest) data into Anedya:
 
 To use the SDK, you must generate an access token. There are two ways:
 
-### **Option A: Create via Platform API**
-
-Use the documentation here:
-
-* [https://docs.anedya.io/platform-api/access-token-create/](https://docs.anedya.io/platform-api/access-token-create/)
-
-### **Option B: Create via Anedya Dashboard**
-
 1. Go to your project dashboard.
 2. Navigate to **Access Tokens**.
 3. Create a token using the UI.
-
-### Token Body (Dashboard)
-
-Below is the JSON body you will submit when creating a token through the dashboard:
-
-```json
-{
-  "resources": {
-    "nodes": [
-      "----ADD YOUR NODES HERE---"
-    ],
-    "variables": [
-      "----ADD YOUR VARIABLES HERE---"
-    ],
-    "vsglobalscopes": [
-      "------ ADD YOUR Namespace HERE----"
-    ],
-    "vskeys": [
-      "----- ADD YOUR KEY -----"
-    ],
-    "streams": [
-      "----- ADD STREAMS HERE ----"
-    ]
-  },
-  "allow": [
-    "data::getsnapshot",
-    "data::getlatest",
-    "data::gethistorical",
-    "cmd::sendcommand",
-    "cmd::listcommands",
-    "cmd::getstatus",
-    "cmd::invalidate",
-    "vs::getvalue",
-    "vs::setvalue",
-    "vs::scankeys",
-    "vs::deletekeys",
-    "streams::connect",
-    "health::gethbstats",
-    "health::getstatus"
-  ]
-}
-```
 
 ### Important
 
@@ -107,7 +57,7 @@ npm install public-sdk
 ## 4. Import the SDK Components
 
 ```javascript
-import initAnedyaClient, { LatestDataComponent, ChartWidget, LatestDataGauge } from "public-sdk";
+import anedyaClientInit, { LatestDataWidget, ChartWidget, LatestDataGauge } from "public-sdk";
 ```
 
 ---
@@ -115,7 +65,7 @@ import initAnedyaClient, { LatestDataComponent, ChartWidget, LatestDataGauge } f
 ## 5. Initialize the Anedya Client
 
 ```javascript
-const client = initAnedyaClient(tokenId, token);
+const client = anedyaClientInit(tokenId, token);
 ```
 
 ---
@@ -168,7 +118,7 @@ function App() {
   const nodeId = "";
   const tokenId = "";
   const token = "";
-  const client = initAnedyaClient(tokenId, token);
+  const client = anedyaClientInit(tokenId, token);
 
 
   const currentTime = Date.now();          // ms timestamp
@@ -192,16 +142,16 @@ const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
           />
         </div>
 
-        {/* Latest Data Component */}
+        {/* Latest Data Widget */}
         <div style={{ display: "flex", alignItems: "center" }}>
-          <LatestDataComponent
+          <LatestDataWidget
             client={client}
             nodeId={nodeId}
             variable="humidity"
           />
         </div>
 
-        {/* Gauge Component */}
+        {/* Gauge Widget */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <LatestDataGauge
             client={client}

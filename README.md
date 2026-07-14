@@ -1,15 +1,30 @@
- 🧩 LatestDataWidget
+[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
-Displays the latest data from an Anedya node.
-Ideal for dashboards that show latest values (like temperature, pressure, humidity, etc.).
+<!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
+<p align="center">
+    <img src="https://cdn.anedya.io/anedya_black_banner.png" alt="Logo">
+</p>
+<!--</div>-->
 
-🚀 Usage Example
+The Anedya Public SDK helps you easily fetch data from Anedya and display it using prebuilt, customizable React widget components. These widgets allow you to quickly visualize IoT data such as latest values and timeseries data.
+
+This SDK currently provides:
+
+- [**LatestDataWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latestdatawidget-latestdatawidget) — Displays the latest value of a variable.
+- [**ChartWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latest-data-guage-latestdatagauge-) — Displays timeseries data between given timestamps.
+- [**LatestDataGauge**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#chart-widget-chartwidget-) — A gauge‑style visualization of the latest value.
+
+# LatestDataWidget `<LatestDataWidget/>`
+
+Displays the latest value of a variable from Anedya.
+
+## Usage Example
 
 ```
-import { initAnedyaClient } from "../utils/anedyaClient";
+import { anedyaClientInit } from "../utils/anedyaClient";
 import { LatestDataWidget } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -36,16 +51,16 @@ value: { fontWeight: 800 },
 ⚙️ Props
 
 | **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
-|--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
-| nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
-| variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.                     |
-| title              | string                                          |       ❌       | Optional label displayed above the value.                                  |
-| unit               | string                                          |       ❌      | Unit of measurement shown after the value.                                 |
-| styles             | StyleSet                                        |       ❌      | Custom style overrides for container, label, value, and unit.              |
-| colorRange         | typeof defaultColorRanges                       |       ❌      | Optional custom color range configuration.                                 |
-| colorRangeCallback | (value: number, defaultColor: string) => string |       ❌     | Callback that lets you overrride the computed color logic for data values. |
-| fontFamily         | string                                          |       ❌      | Global font family applied to all text (defaults to  "Roboto").            |
+| ------------------ | ----------------------------------------------- | :----------: | -------------------------------------------------------------------------- |
+| client             | AnedyaClient                                    |      ✅      | An initialized Anedya client instance, created using anedyaClientInit().   |
+| nodeId             | string                                          |      ✅      | ID of the node whose latest data is to be fetched                          |
+| variable           | string                                          |      ✅      | The variable name (key) to fetch from the node’s data.                     |
+| title              | string                                          |      ❌      | Optional label displayed above the value.                                  |
+| unit               | string                                          |      ❌      | Unit of measurement shown after the value.                                 |
+| styles             | StyleSet                                        |      ❌      | Custom style overrides for container, label, value, and unit.              |
+| colorRange         | typeof defaultColorRanges                       |      ❌      | Optional custom color range configuration.                                 |
+| colorRangeCallback | (value: number, defaultColor: string) => string |      ❌      | Callback that lets you overrride the computed color logic for data values. |
+| fontFamily         | string                                          |      ❌      | Global font family applied to all text (defaults to "Roboto").             |
 
 🎨 Styling
 
@@ -124,7 +139,7 @@ The displayText callback lets you customize:
 
 - what unit text should look like
 
--  here the unit is placed
+- here the unit is placed
 
 - unit formatting style (normal, subscript, superscript)
 
@@ -140,28 +155,30 @@ displayText?: (value: number, unit: string) => {
 ```
 
 ### Usage Example
- ```
- <LatestData
-  ...
-  displayText={(value, unit) => ({
-    text: `${value}`,
-    unitText: unit,
-    position: "right",           // left | right | top | bottom
-    unitStyle: "normal",         // normal | subscript | superscript
-  })}
+
+```
+<LatestDataWidget
+ ...
+ displayText={(value, unit) => ({
+   text: `${value}`,
+   unitText: unit,
+   position: "right",           // left | right | top | bottom
+   unitStyle: "normal",         // normal | subscript | superscript
+ })}
 />
 ```
 
-| Property      | Type |Description                                           |
+| Property      | Type                                       | Description                                           |
 | ------------- | ------------------------------------------ | ----------------------------------------------------- |
 | **text**      | `string`                                   | The formatted value to display                        |
 | **unitText**  | `string`                                   | Custom unit text (optional)                           |
 | **position**  | `"left" \| "right" \| "top" \| "bottom"`   | Where the unit should be placed relative to the value |
 | **unitStyle** | `"normal" \| "subscript" \| "superscript"` | Choose how the unit should appear                     |
 
-
 ### Examples
+
 #### Move unit to the top
+
 ```
 displayText={() => ({ text: "25.3", unitText: "°C", position: "top" })}
 ```
@@ -175,21 +192,23 @@ displayText={(value) => ({
   unitStyle: "subscript",
 })}
 ```
+
 ## 2. onStyleChange Callback (Dynamic Styling)
 
 This callback lets you override widget styling based on live value updates.
 
 It receives the current numeric value and should return partial styles, which will override the base styles.
 
-### What This Callback Looks Like 
+### What This Callback Looks Like
 
 ```
 onStyleChange?: (value: number) => Partial<LatestDataStyles>;
 ```
+
 ### Usage Example
 
 ```
-<LatestData
+<LatestDataWidget
   ...
   onStyleChange={(value) => {
     if (value > 80) {
@@ -203,6 +222,7 @@ onStyleChange?: (value: number) => Partial<LatestDataStyles>;
   }}
 />
 ```
+
 ### What you can style dynamically
 
 You may return overrides for:
@@ -216,25 +236,24 @@ You may return overrides for:
 | `fontFamily` | Override global font family |
 
 Example returning multiple overrides:
- ```
- return {
-  container: { background: "#ffeeee" },
-  value: { color: "#d60000", fontSize: "90px" },
+
+```
+return {
+ container: { background: "#ffeeee" },
+ value: { color: "#d60000", fontSize: "90px" },
 };
 ```
 
+# Latest Data Guage `<LatestDataGauge />`
 
- 🧩 Latest Data Guage
+Displays a variable's latest data from an Anedya node in a guage
 
-Displays the latest sensor or node data from an Anedya network node in a guage
+Usage Example
 
-
-🚀 Usage Example
-
-```import { initAnedyaClient } from "../utils/anedyaClient";
+```import { anedyaClientInit } from "../utils/anedyaClient";
 import { LatestDataGauge } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -244,8 +263,6 @@ return (
           variable="temperature"
           title="Temperature Sensor"
           unit={"°C"}
-    
-          showNeedle={false}
           styles={{
             container: {
               width: 350,
@@ -278,17 +295,16 @@ return (
 
 ⚙️ Props
 
-| **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
-|--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
-| nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
-| variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.                     |
-| title              | string                                          |       ❌       | Optional label displayed above the value.                                  |
-| unit               | string                                          |       ❌      | Unit of measurement shown after the value.                                 |
-| styles             | StyleSet                                        |       ❌      | Custom style overrides for container, label, value, and unit.              |
-| colorRange         | typeof defaultColorRanges                       |       ❌      | Optional custom color range configuration.                                 |
-| fontFamily         | string                                          |       ❌      | Global font family applied to all text (defaults to  "Roboto").            |
-
+| **Prop**   | **Type**                  | **Required** | **Description**                                                          |
+| ---------- | ------------------------- | :----------: | ------------------------------------------------------------------------ |
+| client     | AnedyaClient              |      ✅      | An initialized Anedya client instance, created using anedyaClientInit(). |
+| nodeId     | string                    |      ✅      | ID of the node whose latest data is to be fetched                        |
+| variable   | string                    |      ✅      | The variable name (key) to fetch from the node’s data.                   |
+| title      | string                    |      ❌      | Optional label displayed above the value.                                |
+| unit       | string                    |      ❌      | Unit of measurement shown after the value.                               |
+| styles     | StyleSet                  |      ❌      | Custom style overrides for container, label, value, and unit.            |
+| colorRange | typeof defaultColorRanges |      ❌      | Optional custom color range configuration.                               |
+| fontFamily | string                    |      ❌      | Global font family applied to all text (defaults to "Roboto").           |
 
 📌 Latest Data Gauge Widget — Callback Options
 
@@ -298,11 +314,12 @@ This callback lets you override widget styling based on live value updates.
 
 It receives the current numeric value and should return partial styles, which will override the base styles.
 
-### What This Callback Looks Like 
+### What This Callback Looks Like
 
 ```
 onStyleChange?: (value: number) => Partial<LatestDataSGuageStyles>;
 ```
+
 ### Usage Example
 
 ```
@@ -320,6 +337,7 @@ onStyleChange?: (value: number) => Partial<LatestDataSGuageStyles>;
   }}
 />
 ```
+
 ### What you can style dynamically
 
 You may return overrides for:
@@ -333,25 +351,24 @@ You may return overrides for:
 | `fontFamily` | Override global font family |
 
 Example returning multiple overrides:
- ```
- return {
-  container: { background: "#ffeeee" },
-  value: { color: "#d60000", fontSize: "90px" },
+
+```
+return {
+ container: { background: "#ffeeee" },
+ value: { color: "#d60000", fontSize: "90px" },
 };
 ```
 
-
-🧩 Chart Widget
+# Chart Widget `<ChartWidget />`
 
 Displays the historical time-series data for a given variable in chart form
 
+Usage Example
 
-🚀 Usage Example
-
-```import { initAnedyaClient } from "../utils/anedyaClient";
+```import { anedyaClientInit } from "../utils/anedyaClient";
 import { ChartWidget } from "../components/LatestDataWidget";
 
-const client = initAnedyaClient("TOKEN_ID", "TOKEN");
+const client = anedyaClientInit("TOKEN_ID", "TOKEN");
 
 function App() {
 return (
@@ -404,18 +421,18 @@ return (
 
 ⚙️ Props
 
-| **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
-|--------------------|-------------------------------------------------|:------------:|----------------------------------------------------------------------------|
-| client             | AnedyaClient                                    |       ✅      | An initialized Anedya client instance, created using  initAnedyaClient().  |
-| nodeId             | string                                          |       ✅      | ID of the node whose latest data is to be fetched                          |
-| variable           | string                                          |       ✅      | The variable name (key) to fetch from the node’s data.       
-| from               | number                                          |       ✅      |  earliest timestamp or date from which data should be fetched, in milliseconds epoch  
-| to                 | number                                          |       ✅      |  latest timestamp or date from which data should be fetched, in milliseconds epoch        
-| title              | string                                          |       ❌      | Optional label displayed above the value.                
-| fontFamily         | string                                          |       ❌      | Global font family applied to all text (defaults to  "Roboto").            
-| tickCount          | number                                          |       ❌      | # of X-axis ticks 
-| tooltipFormatter   | `(p)=>string`                                   |       ❌      | Tooltip HTML (p is timestamp in seconds epoch)
-| styles             | StyleSet                                        |       ❌      | Custom style overrides for container
+| **Prop**         | **Type**      | **Required** | **Description**                                                                     |
+| ---------------- | ------------- | :----------: | ----------------------------------------------------------------------------------- |
+| client           | AnedyaClient  |      ✅      | An initialized Anedya client instance, created using anedyaClientInit().            |
+| nodeId           | string        |      ✅      | ID of the node whose latest data is to be fetched                                   |
+| variable         | string        |      ✅      | The variable name (key) to fetch from the node’s data.                              |
+| from             | number        |      ✅      | earliest timestamp or date from which data should be fetched, in milliseconds epoch |
+| to               | number        |      ✅      | latest timestamp or date from which data should be fetched, in milliseconds epoch   |
+| title            | string        |      ❌      | Optional label displayed above the value.                                           |
+| fontFamily       | string        |      ❌      | Global font family applied to all text (defaults to "Roboto").                      |
+| tickCount        | number        |      ❌      | # of X-axis ticks                                                                   |
+| tooltipFormatter | `(p)=>string` |      ❌      | Tooltip HTML (p is timestamp in seconds epoch)                                      |
+| styles           | StyleSet      |      ❌      | Custom style overrides for container                                                |
 
 📊 Chart Widget — Callback Options
 
@@ -433,7 +450,8 @@ xTickFormat?: (value: number | Date | string) => string;
 ```
 
 ### Example
- ```
+
+```
 xTickFormat={(d) => d.toLocaleDateString()}
 
 ```
@@ -446,19 +464,20 @@ xTickFormat={(d) => d.toLocaleDateString()}
 
 - Apply locale-based formats
 
-
 ## 2. yTickFormat (Format Y-Axis Labels)
 
 Use this to format numeric Y-axis values.
 
-### What This Callback Looks Like 
+### What This Callback Looks Like
 
 ```
 yTickFormat?: (value: number) => string;
 
 ```
+
 ### Example
- ```
+
+```
 yTickFormat={(v) => `${v} °C`}
 
 ```
@@ -475,23 +494,26 @@ yTickFormat={(v) => `${v} °C`}
 
 This callback returns the content string used in tooltips when hovering on data points.
 
-### What This Callback Looks Like 
+### What This Callback Looks Like
 
-``` 
+```
 tooltipFormat?: (dataPoint: ChartDataPoint, unit: string) => string;
 ```
+
 Where ChartDataPoint is typically:
 
-``` 
+```
 {
   timestamp: number;
   value: number;
 }
 ```
+
 ### Example
- ```
+
+```
 tooltipFormat={(d, unit) =>
-  `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
+ `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
 }
 ```
 
@@ -504,12 +526,15 @@ tooltipFormat={(d, unit) =>
 - Show multi-line tooltip content
 
 ## 4. onStyleChange (Dynamic Chart Styling)
+
 This callback allows dynamic runtime style overrides based on the current chart data.
 
 ### What This Callback Looks Like
+
 ```
 onStyleChange?: (data: ChartDataPoint[]) => Partial<ChartStyleSet>;
 ```
+
 You can return overrides for any part of the chart:
 
 | Key          | Description                       |
@@ -536,6 +561,7 @@ onStyleChange={(data) => {
 ```
 
 ### Use cases
+
 - Highlight chart when values exceed thresholds
 
 - Change themes based on the data
