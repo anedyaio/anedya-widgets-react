@@ -12,12 +12,11 @@ function App() {
   const token = "";
   const client = anedyaClientInit(tokenId, token);
 
-
-  const currentTime = Date.now();          // ms timestamp
-const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
+  const currentTime = Date.now(); // ms timestamp
+  const twentyFourHoursAgo = currentTime - 86400 * 1000; // ms timestamp
 
   return (
-   <div
+    <div
       style={{
         padding: "2rem",
       }}
@@ -77,19 +76,14 @@ const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
             tooltipFormat={(d, unit) =>
               `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
             }
-
-             onStyleChange={(data) => {
-             
-                return {
-                  title: { color: "red" },
-        container: {
-          
-                background: "rgba(232, 236, 240, 1)",
-                borderRadius: 10,
-         
-              },
-                };
-            
+            onStyleChange={(data) => {
+              return {
+                title: { color: "red" },
+                container: {
+                  background: "rgba(232, 236, 240, 1)",
+                  borderRadius: 10,
+                },
+              };
             }}
           />
         </div>
@@ -107,7 +101,6 @@ const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
             variable="humidity"
             title="Humidity Sensor"
             unit={"°C"}
-           
             styles={{
               container: {
                 // width: 350,

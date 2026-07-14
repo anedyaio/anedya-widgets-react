@@ -4,7 +4,7 @@ import {
   anedyaClientInit,
   ChartWidget,
   LatestDataGauge,
-  StreamWidget
+  // StreamWidget
 } from "public-widget-sdk";
 
 // import {StreamWidget} from "public-widget-sdk"
@@ -181,7 +181,7 @@ function App() {
           />
         </div>
 
-        <div
+        {/* <div
           style={{
             display: "flex",
 
@@ -194,7 +194,7 @@ function App() {
             streamId="019d3dbe-f14f-7365-b339-bcefbcc848a0"
             streamUrl="wss://ZxBpErVPCj.acs-r1.ap-in-1.anedya.io/v1/streams/connect"
           />
-        </div>
+        </div> */}
       </div>
     </div>
   );
