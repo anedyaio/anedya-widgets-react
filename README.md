@@ -1,571 +1,194 @@
-[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
+# ChartWidget
 
-<!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
-<p align="center">
-    <img src="https://cdn.anedya.io/anedya_black_banner.png" alt="Logo">
-</p>
-<!--</div>-->
+A responsive, themeable line chart widget for Anedya data, built on D3 + SVG.
 
-The Anedya Public SDK helps you easily fetch data from Anedya and display it using prebuilt, customizable React widget components. These widgets allow you to quickly visualize IoT data such as latest values and timeseries data.
+## Setup
 
-This SDK currently provides:
+The widget doesn't create its own SDK client — you create it yourself and pass it in:
 
-- [**LatestDataWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latestdatawidget-latestdatawidget) — Displays the latest value of a variable.
-- [**ChartWidget**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#latest-data-guage-latestdatagauge-) — Displays timeseries data between given timestamps.
-- [**LatestDataGauge**](https://github.com/anedyaio/anedya-widgets-react/tree/development?tab=readme-ov-file#chart-widget-chartwidget-) — A gauge‑style visualization of the latest value.
+```jsx
+import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
+import { ChartWidget } from "your-sdk";
 
-# LatestDataWidget `<LatestDataWidget/>`
+const anedya = new Anedya();
+const config = anedya.newConfig(tokenId, token);
+const client = anedya.newClient(config);
 
-Displays the latest value of a variable from Anedya.
-
-## Usage Example
-
-```
-import { anedyaClientInit } from "../utils/anedyaClient";
-import { LatestDataWidget } from "../components/LatestDataWidget";
-
-const client = anedyaClientInit("TOKEN_ID", "TOKEN");
-
-function App() {
-return (
-<LatestDataWidget
-client={client}
-nodeId="NODE123"
-variable="temperature"
-title="Temperature"
-unit="°C"
-colorRangeCallback={(val, def) => {
-if (val < 15) return "#3498db";
-if (val < 30) return "#2ecc71";
-return "#e74c3c";
-}}
-styles={{
-container: { width: 220, height: 220, bgcolor: "#fafafa" },
-value: { fontWeight: 800 },
-}}
+<ChartWidget
+  anedya={anedya}
+  client={client}
+  nodeId={nodeId}
+  variable="humidity"
+  from={twentyFourHoursAgo}
+  to={currentTime}
 />
-);
+```
+
+`anedya` and `client` are both required — node creation is `anedya.newNode(client, nodeId)`, a method on the top-level SDK instance, not on the client.
+
+## Required props
+
+| Prop | Type | Description |
+|---|---|---|
+| `anedya` | `any` | The `new Anedya()` instance |
+| `client` | `any` | `anedya.newClient(config)` |
+| `nodeId` | `string` | Node to fetch from |
+| `variable` | `string` | Variable name to chart |
+| `from` | `number` | Start timestamp (ms) |
+| `to` | `number` | End timestamp (ms) |
+
+## The styling model
+
+Every stylable part of the chart is a named slot, and every value inside it is **plain CSS** — the same properties you'd use in any inline `style` object. Nothing invented, nothing to memorize:
+
+```ts
+interface ChartElementStyles {
+  container?: React.CSSProperties;  // outer card — border, backgroundColor, width, etc.
+  title?: React.CSSProperties;
+  line?: React.CSSProperties;       // stroke, strokeWidth
+  area?: React.CSSProperties;       // fill — base color for the gradient under the line
+  dot?: React.CSSProperties & { r?: number }; // fill for color; r for radius (the one non-CSS exception)
+  axis?: React.CSSProperties;       // stroke
+  tick?: React.CSSProperties;       // fill, fontSize
 }
 ```
 
-⚙️ Props
+These are spread directly onto the corresponding SVG elements (`<path style={{ fill: "none", ...resolved.line }} />`, etc.) — all standard SVG presentation properties (`fill`, `stroke`, `strokeWidth`, `fontSize`, `opacity`, ...) work as real CSS in every modern browser, so there's no translation layer.
 
-| **Prop**           | **Type**                                        | **Required** | **Description**                                                            |
-| ------------------ | ----------------------------------------------- | :----------: | -------------------------------------------------------------------------- |
-| client             | AnedyaClient                                    |      ✅      | An initialized Anedya client instance, created using anedyaClientInit().   |
-| nodeId             | string                                          |      ✅      | ID of the node whose latest data is to be fetched                          |
-| variable           | string                                          |      ✅      | The variable name (key) to fetch from the node’s data.                     |
-| title              | string                                          |      ❌      | Optional label displayed above the value.                                  |
-| unit               | string                                          |      ❌      | Unit of measurement shown after the value.                                 |
-| styles             | StyleSet                                        |      ❌      | Custom style overrides for container, label, value, and unit.              |
-| colorRange         | typeof defaultColorRanges                       |      ❌      | Optional custom color range configuration.                                 |
-| colorRangeCallback | (value: number, defaultColor: string) => string |      ❌      | Callback that lets you overrride the computed color logic for data values. |
-| fontFamily         | string                                          |      ❌      | Global font family applied to all text (defaults to "Roboto").             |
+**One exception:** `dot.r` (circle radius) is a plain number, not a CSS property — SVG geometry attributes like radius aren't stylable via CSS, only settable directly on the element.
 
-🎨 Styling
+## The `styles` prop — everything in one place
 
-The styles prop allows fine-grained control over the look and feel of the widget.
+There's a single `styles` prop. It optionally accepts three *kinds* of keys, all in the same object:
 
-StyleSet Interface
+```jsx
+<ChartWidget
+  styles={{
+    // 1. FLAT keys — apply unconditionally, at every theme and size
+    line: { stroke: "#7c3aed", strokeWidth: 3 },
 
-```
-interface StyleSet {
-container?: SxProps<Theme>;
-label?: SxProps<Theme>;
-value?: SxProps<Theme>;
-unit?: SxProps<Theme>;
-fontFamily?: string; // Optional global font for all texts
-}
-```
+    // 2. THEME keys ("light" / "dark") — only apply when that theme is active
+    dark: { container: { backgroundColor: "#111827" } },
 
-Default Styles
-
-```
-const defaultStyles = {
-container: {
-bgcolor: "#f4f4f4",
-borderRadius: 2,
-p: 2,
-display: "flex",
-flexDirection: "column",
-justifyContent: "center",
-alignItems: "center",
-textAlign: "center",
-width: 200,
-height: 200,
-gap: 10,
-},
-label: { fontWeight: 500, color: "#666" },
-value: { fontWeight: 700, color: "#333" },
-unit: { fontWeight: 400, color: "#888" },
-};
-```
-
-You can override any of these:
-
-```
-<LatestDataWidget
-styles={{
-container: { bgcolor: "#fff3cd", width: 250, height: 250 },
-value: { color: "#ff9900", fontSize: 32 },
-}}
-/>
-```
-
-🎨 Color Customization
-
-Use colorRangeCallback to apply dynamic colors based on value:
-
-```
-colorRangeCallback={(val, def) => {
-if (val < 30) return "#2ecc71"; // green
-if (val < 70) return "#f1c40f"; // yellow
-if (val <= 100) return "#e74c3c"; // red
-return def;
-}}
-```
-
-You can also provide your own static colorRange set if you want total control.
-
-📌 LatestData Widget — Callback Options
-
-The LatestData widget supports two optional callbacks that allow you to fully customize how the displayed value and styling behave.
-
-## 1. displayText Callback (Value + Unit Formatter)
-
-The displayText callback lets you customize:
-
-- how the value is displayed
-
-- what unit text should look like
-
-- here the unit is placed
-
-- unit formatting style (normal, subscript, superscript)
-
-### What This Callback Looks Like
-
-```
-displayText?: (value: number, unit: string) => {
-  text: string;
-  unitText?: string;
-  position?: "left" | "right" | "top" | "bottom";
-  unitStyle?: "normal" | "subscript" | "superscript";
-};
-```
-
-### Usage Example
-
-```
-<LatestDataWidget
- ...
- displayText={(value, unit) => ({
-   text: `${value}`,
-   unitText: unit,
-   position: "right",           // left | right | top | bottom
-   unitStyle: "normal",         // normal | subscript | superscript
- })}
-/>
-```
-
-| Property      | Type                                       | Description                                           |
-| ------------- | ------------------------------------------ | ----------------------------------------------------- |
-| **text**      | `string`                                   | The formatted value to display                        |
-| **unitText**  | `string`                                   | Custom unit text (optional)                           |
-| **position**  | `"left" \| "right" \| "top" \| "bottom"`   | Where the unit should be placed relative to the value |
-| **unitStyle** | `"normal" \| "subscript" \| "superscript"` | Choose how the unit should appear                     |
-
-### Examples
-
-#### Move unit to the top
-
-```
-displayText={() => ({ text: "25.3", unitText: "°C", position: "top" })}
-```
-
-#### Show unit as subscript
-
-```
-displayText={(value) => ({
-  text: value.toFixed(1),
-  unitText: "ppm",
-  unitStyle: "subscript",
-})}
-```
-
-## 2. onStyleChange Callback (Dynamic Styling)
-
-This callback lets you override widget styling based on live value updates.
-
-It receives the current numeric value and should return partial styles, which will override the base styles.
-
-### What This Callback Looks Like
-
-```
-onStyleChange?: (value: number) => Partial<LatestDataStyles>;
-```
-
-### Usage Example
-
-```
-<LatestDataWidget
-  ...
-  onStyleChange={(value) => {
-    if (value > 80) {
-      return {
-        value: { color: "red", fontWeight: 700 },
-        unit: { color: "red" },
-      };
-    }
-
-    return {}; // keep original styling
+    // 3. BREAKPOINT keys ("sm" / "md" / "lg" / "xl") — only apply once the
+    //    widget's own measured width crosses that threshold
+    sm: { tick: { fontSize: 8 } },
+    lg: { tick: { fontSize: 12 } },
   }}
 />
 ```
 
-### What you can style dynamically
+`styles` can also be a function of the widget's current state, if styling needs to depend on load/error status rather than just data:
 
-You may return overrides for:
-
-| Key          | Description                 |
-| ------------ | --------------------------- |
-| `container`  | Outer wrapper styles        |
-| `label`      | Title text styles           |
-| `value`      | Value text styles           |
-| `unit`       | Unit text styles            |
-| `fontFamily` | Override global font family |
-
-Example returning multiple overrides:
-
-```
-return {
- container: { background: "#ffeeee" },
- value: { color: "#d60000", fontSize: "90px" },
-};
+```jsx
+styles={(state) => (state.error ? { container: { border: "1px solid red" } } : {})}
 ```
 
-# Latest Data Guage `<LatestDataGauge />`
+### Theme defaults
 
-Displays a variable's latest data from an Anedya node in a guage
-
-Usage Example
-
-```import { anedyaClientInit } from "../utils/anedyaClient";
-import { LatestDataGauge } from "../components/LatestDataWidget";
-
-const client = anedyaClientInit("TOKEN_ID", "TOKEN");
-
-function App() {
-return (
-     <LatestDataGauge
-          client={client}
-          nodeId={nodeId}
-          variable="temperature"
-          title="Temperature Sensor"
-          unit={"°C"}
-          styles={{
-            container: {
-              width: 350,
-              height: 200,
-              background:
-                "linear-gradient(to right, rgb(47, 99, 255), rgb(20, 110, 180))",
-              borderRadius: 10,
-              gap: 1,
-            },
-            label: { fontWeight: 500, color: "#ffffff", fontSize: "20px" },
-            value: { fontWeight: 700, fontSize: "30px", color: "#ffffff" },
-            unit: { fontWeight: 400, color: "#ffffff", fontSize: "30px" },
-            fontFamily: "Arial, sans-serif", // global font
-          }}
-
-            onStyleChange={(value) => {
-              if (value > 80) {
-                return {
-                  value: { color: "black" },
-                  label: { color: "orange" },
-                };
-              }
-
-              return {}; // keep original styling
-            }}
-        />
-);
-}
+```jsx
+<ChartWidget theme="dark" />   // or "light" (default)
 ```
 
-⚙️ Props
+`lightTheme` and `darkTheme` (exported from the package) are just `ChartElementStyles` objects with sensible default colors — nothing special about them. Setting `theme` picks which one seeds the chart.
 
-| **Prop**   | **Type**                  | **Required** | **Description**                                                          |
-| ---------- | ------------------------- | :----------: | ------------------------------------------------------------------------ |
-| client     | AnedyaClient              |      ✅      | An initialized Anedya client instance, created using anedyaClientInit(). |
-| nodeId     | string                    |      ✅      | ID of the node whose latest data is to be fetched                        |
-| variable   | string                    |      ✅      | The variable name (key) to fetch from the node’s data.                   |
-| title      | string                    |      ❌      | Optional label displayed above the value.                                |
-| unit       | string                    |      ❌      | Unit of measurement shown after the value.                               |
-| styles     | StyleSet                  |      ❌      | Custom style overrides for container, label, value, and unit.            |
-| colorRange | typeof defaultColorRanges |      ❌      | Optional custom color range configuration.                               |
-| fontFamily | string                    |      ❌      | Global font family applied to all text (defaults to "Roboto").           |
+### Breakpoints
 
-📌 Latest Data Gauge Widget — Callback Options
+Breakpoints are measured against the **widget's own rendered width** via `ResizeObserver` — container-query semantics, not the browser window. This means the chart responds correctly no matter where it's embedded (a sidebar, a dashboard tile, a modal), regardless of how wide the actual browser window is.
 
-## 1. onStyleChange Callback (Dynamic Styling)
+| Breakpoint | Min width |
+|---|---|
+| `sm` | 640px |
+| `md` | 768px |
+| `lg` | 1024px |
+| `xl` | 1280px |
 
-This callback lets you override widget styling based on live value updates.
+Resolution is mobile-first: each breakpoint the container has reached merges on top of smaller ones, same as Tailwind's `sm:`/`md:`/`lg:`/`xl:` prefixes.
 
-It receives the current numeric value and should return partial styles, which will override the base styles.
+## Sizing — the same system, not a separate one
 
-### What This Callback Looks Like
+`width`, `minWidth`, `maxWidth`, `height`, `minHeight`, `maxHeight` are just CSS properties living on `container`. That means sizing goes through the *exact same* flat → theme → breakpoint pipeline as everything else — which is what makes the following four cases fall out naturally, with no special-case logic:
 
+```jsx
+// Fully fixed — no breakpoint overrides anywhere, so it never changes
+<ChartWidget width={500} height={300} />
+
+// Fixed by default, but steps to a new size at a breakpoint (opt-in responsiveness)
+<ChartWidget
+  width={500}
+  styles={{ lg: { container: { width: 900 } } }}
+/>
+
+// Fluid — continuously follows the container, clamped between bounds
+<ChartWidget minWidth={300} maxWidth={900} />
+
+// Fluid, where the clamp bounds themselves step at a breakpoint
+<ChartWidget
+  minWidth={280} maxWidth={600}
+  styles={{ lg: { container: { minWidth: 600, maxWidth: 1200 } } }}
+/>
+
+// Nothing passed at all — fully responsive with built-in defaults
+// (clamped between 280–1200px wide, 200–700px tall)
+<ChartWidget />
 ```
-onStyleChange?: (value: number) => Partial<LatestDataSGuageStyles>;
-```
 
-### Usage Example
+The `width`/`height`/`minWidth`/`maxWidth`/`minHeight`/`maxHeight` **props** are shorthand for setting these same properties unconditionally on `styles.container` — if you also set them explicitly inside `styles`, the `styles` value wins.
 
-```
-<LatestDataGauge
-  ...
-  onStyleChange={(value) => {
-    if (value > 80) {
-      return {
-        value: { color: "red", fontWeight: 700 },
-        unit: { color: "red" },
-      };
-    }
+If the container ever gets smaller than the resolved `minWidth`, the chart doesn't get crushed — the outer wrapper scrolls horizontally (`overflowX: auto`) instead of squishing the content.
 
-    return {}; // keep original styling
+## Callbacks — data-driven styling
+
+`onStyleChange` runs whenever the fetched data changes, and returns a `ChartElementStyles` object — the same flat shape as `styles`:
+
+```jsx
+<ChartWidget
+  onStyleChange={(data) => {
+    const latest = data[data.length - 1];
+    return latest?.value > 80 ? { line: { stroke: "#dc2626" } } : {};
   }}
 />
 ```
 
-### What you can style dynamically
+`defineStyleRules` is sugar for the common "if a threshold is crossed, change the styling" pattern, so you don't have to hand-write the callback above:
 
-You may return overrides for:
+```jsx
+import { ChartWidget, defineStyleRules } from "your-sdk";
 
-| Key          | Description                 |
-| ------------ | --------------------------- |
-| `container`  | Outer wrapper styles        |
-| `label`      | Title text styles           |
-| `value`      | Value text styles           |
-| `unit`       | Unit text styles            |
-| `fontFamily` | Override global font family |
-
-Example returning multiple overrides:
-
-```
-return {
- container: { background: "#ffeeee" },
- value: { color: "#d60000", fontSize: "90px" },
-};
+<ChartWidget
+  onStyleChange={defineStyleRules([
+    { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
+    { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
+  ])}
+/>
 ```
 
-# Chart Widget `<ChartWidget />`
+If multiple rules match, their styles merge in array order (later rules win on overlapping keys), so rules can stack — e.g. a broad "warning" rule plus a narrower "critical" rule.
 
-Displays the historical time-series data for a given variable in chart form
+## Full resolution order
 
-Usage Example
+Low to high precedence — later layers win on any overlapping property:
 
-```import { anedyaClientInit } from "../utils/anedyaClient";
-import { ChartWidget } from "../components/LatestDataWidget";
+1. **Theme preset** (`lightTheme` / `darkTheme`)
+2. **Sizing shorthand props** (`width`, `minWidth`, etc.)
+3. **`styles`' flat keys**
+4. **`styles`' active theme key** (`styles.light` or `styles.dark`)
+5. **`styles`' active breakpoint keys** (mobile-first cascade)
+6. **`onStyleChange` result** — always wins, since it's live and data-driven
 
-const client = anedyaClientInit("TOKEN_ID", "TOKEN");
+## Other props
 
-function App() {
-return (
-       <ChartWidget
-            client={client}
-            nodeId={nodeId}
-            variable="humidity"
-            title="Humidity Trend"
-            styles={{
-              container: {
-                width: 450,
-                height: 300,
-                //rgb(248, 249, 250)
-                background: "rgb(248, 249, 250)",
-                borderRadius: 6,
-                border: "1px solid rgba(211, 216, 220, 1)",
-                padding: 10,
-              },
-              title: { color: "#000000", fontSize: "18px" },
-              chart: {
-                strokeColor: "rgba(0, 143, 251, 0.85)",
-                strokeWidth: 3,
-                gradientColors: ["rgba(0, 143, 251, 0.85)", "#ffe0b2"],
-              },
-              tooltip: {
-                backgroundColor: "rgba(0,0,0,0.75)",
-                color: "#fff",
-                fontSize: "13px",
-              },
-            }}
-            tickCount={5}
-              xTickFormat={(d) => d.toLocaleDateString()}
-            yTickFormat={(v) => `${v} °C`}
-            tooltipFormat={(d, unit) =>
-              `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
-            }
-            onStyleChange={(data) => {
-              return {
-                title: { color: "red" },
-                container: {
-                  background: "rgba(232, 236, 240, 1)",
-                  borderRadius: 10,
-                },
-              };
-            }}
-          />
-);
-}
-```
+| Prop | Type | Description |
+|---|---|---|
+| `title` | `string` | Chart title. Default: `"Latest Data"` |
+| `limit` | `number` | Max data points fetched. Default: `20` |
+| `tickCount` | `number` | X-axis tick count (auto-reduced on narrow containers) |
+| `xTickFormat` / `yTickFormat` | `string \| function` | Custom tick label formatting |
+| `tooltipFormat` | `(point) => React.ReactNode` | Custom tooltip content — can return a string or rich JSX |
+| `aspectRatio` | `number` | Width-to-height ratio used to derive height when no fixed/resolved height is set. Default: `1.6` |
 
-⚙️ Props
+## Known follow-ups
 
-| **Prop**         | **Type**      | **Required** | **Description**                                                                     |
-| ---------------- | ------------- | :----------: | ----------------------------------------------------------------------------------- |
-| client           | AnedyaClient  |      ✅      | An initialized Anedya client instance, created using anedyaClientInit().            |
-| nodeId           | string        |      ✅      | ID of the node whose latest data is to be fetched                                   |
-| variable         | string        |      ✅      | The variable name (key) to fetch from the node’s data.                              |
-| from             | number        |      ✅      | earliest timestamp or date from which data should be fetched, in milliseconds epoch |
-| to               | number        |      ✅      | latest timestamp or date from which data should be fetched, in milliseconds epoch   |
-| title            | string        |      ❌      | Optional label displayed above the value.                                           |
-| fontFamily       | string        |      ❌      | Global font family applied to all text (defaults to "Roboto").                      |
-| tickCount        | number        |      ❌      | # of X-axis ticks                                                                   |
-| tooltipFormatter | `(p)=>string` |      ❌      | Tooltip HTML (p is timestamp in seconds epoch)                                      |
-| styles           | StyleSet      |      ❌      | Custom style overrides for container                                                |
-
-📊 Chart Widget — Callback Options
-
-The Chart widget allows you to customize tick labels, tooltip content, and dynamic runtime styles through several optional callbacks.
-
-## 1. xTickFormat (Format X-Axis Labels)
-
-Use this to control how X-axis values are displayed.
-
-### What This Callback Looks Like
-
-```
-xTickFormat?: (value: number | Date | string) => string;
-
-```
-
-### Example
-
-```
-xTickFormat={(d) => d.toLocaleDateString()}
-
-```
-
-### Usage
-
-- Format timestamps
-
-- Turn raw numbers into readable labels
-
-- Apply locale-based formats
-
-## 2. yTickFormat (Format Y-Axis Labels)
-
-Use this to format numeric Y-axis values.
-
-### What This Callback Looks Like
-
-```
-yTickFormat?: (value: number) => string;
-
-```
-
-### Example
-
-```
-yTickFormat={(v) => `${v} °C`}
-
-```
-
-### Usage
-
-- Add units
-
-- Round or scale numbers
-
-- Convert to % or fixed decimals
-
-## 3. tooltipFormat (Customize Tooltip Text)
-
-This callback returns the content string used in tooltips when hovering on data points.
-
-### What This Callback Looks Like
-
-```
-tooltipFormat?: (dataPoint: ChartDataPoint, unit: string) => string;
-```
-
-Where ChartDataPoint is typically:
-
-```
-{
-  timestamp: number;
-  value: number;
-}
-```
-
-### Example
-
-```
-tooltipFormat={(d, unit) =>
- `${new Date(d.timestamp * 1000)} : ${d.value} Celsius`
-}
-```
-
-### Usage
-
-- Format date/time for tooltips
-
-- Add units, custom labels, or metadata
-
-- Show multi-line tooltip content
-
-## 4. onStyleChange (Dynamic Chart Styling)
-
-This callback allows dynamic runtime style overrides based on the current chart data.
-
-### What This Callback Looks Like
-
-```
-onStyleChange?: (data: ChartDataPoint[]) => Partial<ChartStyleSet>;
-```
-
-You can return overrides for any part of the chart:
-
-| Key          | Description                       |
-| ------------ | --------------------------------- |
-| `container`  | Wrapper style                     |
-| `title`      | Title text                        |
-| `axis`       | Axis text & tick style            |
-| `tooltip`    | Tooltip background, color, radius |
-| `chart`      | Stroke, width, dot radius         |
-| `fontFamily` | Global font override              |
-
-### Example
-
-```
-onStyleChange={(data) => {
-  return {
-    title: { color: "red" },
-    container: {
-      background: "rgba(232, 236, 240, 1)",
-      borderRadius: 10,
-    },
-  };
-}}
-```
-
-### Use cases
-
-- Highlight chart when values exceed thresholds
-
-- Change themes based on the data
-
-- Dim colors when dataset is small
-
-- Respond to live-updating data streams
+- Tooltips currently use Base UI (`@base-ui/react/tooltip`); a swap to a D3-based tooltip is planned separately.
+- Axis styling currently supports a single stroke color/width, not per-axis-segment overrides.
+- No dot-decimation yet on very narrow/dense containers (many points can visually overlap).

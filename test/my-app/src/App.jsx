@@ -1,7 +1,8 @@
 import React from "react";
+import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import {
   LatestDataWidget,
-  anedyaClientInit,
+  // anedyaClientInit,
   ChartWidget,
   LatestDataGauge,
 } from "../../../src/index";
@@ -10,7 +11,13 @@ function App() {
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
 const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
 const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
-  const client = anedyaClientInit(tokenId, token);
+
+
+const anedya = new Anedya();
+const config = anedya.newConfig(tokenId, token);
+const client = anedya.newClient(config);
+
+  // const client = anedyaClientInit(tokenId, token);
 //default min and max 
 //client ki implementatrion bahar lelo
 
@@ -45,104 +52,19 @@ const twentyFourHoursAgo = currentTime - 86400 * 1000;  // ms timestamp
  
           }}
         >
-       <ChartWidget
+<ChartWidget
+  anedya={anedya}
   client={client}
   nodeId={nodeId}
   variable="humidity"
   from={twentyFourHoursAgo}
   to={currentTime}
- width={800}
- height={500}
+  width={800}
+  height={500}
 />
         </div>
 
-        {/* <div
-          style={{
-            display: "flex",
-
-            alignItems: "center",
-          }}
-        >
-          <LatestDataWidget
-            client={client}
-            nodeId={nodeId}
-            variable="humidity"
-            title="Humidity Sensor"
-            unit={"°C"}
-           
-            styles={{
-              container: {
-                // width: 350,
-                // height: 200,
-                // background:
-                //   "linear-gradient(to right, rgb(47, 99, 255), rgb(20, 110, 180))",
-
-                borderRadius: 10,
-                gap: 1,
-              },
-              label: { fontWeight: 500, color: "#000000", fontSize: "20px" },
-              value: { fontWeight: 700, fontSize: "100px" },
-              unit: { fontWeight: 400, color: "#000000", fontSize: "40px" },
-            }}
-            displayText={(value, unit) => {
-              return {
-                text: `${value}`,
-                unitText: unit,
-                position: "right", // "left" | "right" | "top" | "bottom"
-                unitStyle: "subscript", // "normal" | "subscript" | "superscript"
-              };
-            }}
-            onStyleChange={(value) => {
-              if (value > 80) {
-                return {
-                  value: { color: "black" },
-                  label: { color: "orange" },
-                };
-              }
-
-              return {}; // keep original styling
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-
-            alignItems: "center",
-          }}
-        >
-          <LatestDataGauge
-            client={client}
-            nodeId={nodeId}
-            variable="humidity"
-            title="Humidity Sensor"
-            unit={"°C"}
-            showNeedle={false}
-            styles={{
-              container: {
-                // width: 350,
-                // height: 200,
-                // background:
-                //   "linear-gradient(to right, rgb(47, 99, 255), rgb(20, 110, 180))",
-                borderRadius: 10,
-              },
-              label: { fontWeight: 500, color: "#000000", fontSize: "20px" },
-              value: { fontWeight: 700, fontSize: "30px", color: "#ffffff" },
-              unit: { fontWeight: 400, color: "#ffffff", fontSize: "300px" },
-            }}
-            onStyleChange={(value) => {
-              if (value > 80) {
-                return {
-                  value: { color: "red" },
-                  label: { color: "orange" },
-                };
-              }
-
-              return {}; // keep original styling
-            }}
-          />
-        </div> */}
+      
       </div>
     </div>
   );

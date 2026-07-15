@@ -1,136 +1,61 @@
 import type { ChartDataPoint } from "./ChartWidget";
 
 /* ============================================================
- * ChartColors
+ * ChartElementStyles
  * ------------------------------------------------------------
- * Every color/visual token the chart actually renders with.
- * This is intentionally a flat object of *required* fields so
- * that `themes.light` / `themes.dark` are guaranteed complete —
- * no risk of an undefined color slipping through at render time.
- * ============================================================ */
-export interface ChartColors {
-  strokeColor: string;
-  strokeWidth: number;
-  gradientColors: [string, string];
-  dotRadius: number;
-  axisColor: string;
-  tickColor: string;
-  backgroundColor: string;
-  borderColor: string;
-  titleColor: string;
-  /** Font size (px) for axis tick labels. Exposed so responsiveStyles can shrink it on small screens. */
-  tickFontSize: number;
-  /** Font size (px) for the chart title. Exposed so responsiveStyles can shrink it on small screens. */
-  titleFontSize: number;
-}
-
-/* ============================================================
- * ChartStyleSet
- * ------------------------------------------------------------
- * This is the shape every styling entry point accepts:
- *   - the `styles` prop (static or a function of widget state)
- *   - the return value of `onStyleChange`
- *   - each `style` inside a `defineStyleRules` rule
+ * Every stylable part of the chart, each taking REAL CSS
+ * properties (the same ones you'd use in any inline `style`
+ * object) instead of invented names. This is the "just like
+ * inline styling" shape your boss asked for — no new vocabulary
+ * to learn: `stroke`, `fill`, `strokeWidth`, `fontSize`, `color`,
+ * `border`, `backgroundColor`, etc. all work exactly as they do
+ * anywhere else in React.
  *
- * `chart` is `Partial<ChartColors>` because callers should be
- * able to override just one or two tokens (e.g. only strokeColor
- * when a threshold is crossed) without having to restate every
- * other color.
+ * All standard SVG presentation properties (fill, stroke,
+ * strokeWidth, fontSize, opacity, ...) are valid inside a plain
+ * `style` object on an SVG element in every modern browser — so
+ * these get spread directly onto the corresponding <path>/<line>/
+ * <text> elements with no translation layer.
+ *
+ * The one exception is `dot.r` (circle radius): SVG geometry
+ * properties like radius aren't stylable via CSS, only settable
+ * as an element attribute — so it's a plain number, not part of
+ * CSSProperties.
  * ============================================================ */
-export interface ChartStyleSet {
+export interface ChartElementStyles {
+  /** The outer card wrapper. */
   container?: React.CSSProperties;
+  /** The chart title text. */
   title?: React.CSSProperties;
-  chart?: Partial<ChartColors>;
+  /** The line stroke itself. Use `stroke` and `strokeWidth`. */
+  line?: React.CSSProperties;
+  /** The filled area under the line. Use `fill` for the gradient's base color. */
+  area?: React.CSSProperties;
+  /** Data point markers. Use `fill` for color; `r` for radius (plain number, not stylable via CSS). */
+  dot?: React.CSSProperties & { r?: number };
+  /** The x-axis baseline. Use `stroke`. */
+  axis?: React.CSSProperties;
+  /** Axis tick labels. Use `fill` for color, `fontSize` for size. */
+  tick?: React.CSSProperties;
 }
 
-/* ============================================================
- * Theme presets
- * ------------------------------------------------------------
- * These are the *base layer* of styling — applied before the
- * user's `styles` prop and before any `onStyleChange` result.
- * Add more presets here (e.g. "minimal") as needed; just make
- * sure they satisfy ChartColors fully.
- * ============================================================ */
-export const lightTheme: ChartColors = {
-  strokeColor: "#1e88e5",
-  strokeWidth: 2,
-  gradientColors: ["#1e88e5", "#90caf9"],
-  dotRadius: 3.5,
-  axisColor: "#cbd5e1",
-  tickColor: "#64748b",
-  backgroundColor: "#f8fafc",
-  borderColor: "#e2e8f0",
-  titleColor: "#0f172a",
-  tickFontSize: 10,
-  titleFontSize: 16,
-};
-
-export const darkTheme: ChartColors = {
-  strokeColor: "#60a5fa",
-  strokeWidth: 2,
-  gradientColors: ["#60a5fa", "#1e3a8a"],
-  dotRadius: 3.5,
-  axisColor: "#334155",
-  tickColor: "#94a3b8",
-  backgroundColor: "#0f172a",
-  borderColor: "#1e293b",
-  titleColor: "#f1f5f9",
-  tickFontSize: 10,
-  titleFontSize: 16,
-};
-
-export const themes = {
-  light: lightTheme,
-  dark: darkTheme,
-} as const;
-
-export type ThemeName = keyof typeof themes;
-
-/** Default theme for every ChartWidget instance unless overridden via the `theme` prop. */
-export const DEFAULT_THEME: ThemeName = "light";
+const ELEMENT_KEYS = [
+  "container",
+  "title",
+  "line",
+  "area",
+  "dot",
+  "axis",
+  "tick",
+] as const;
 
 /* ============================================================
- * mergeStyleSets
+ * Breakpoints & themes
  * ------------------------------------------------------------
- * Combines any number of ChartStyleSet objects, left to right,
- * where later sets win. Each of container/title/chart is merged
- * independently (shallow per-key), so passing only
- * `{ chart: { strokeColor: "red" } }` never wipes out the other
- * chart tokens that came from an earlier layer (e.g. the theme).
- *
- * Overall precedence used by ChartWidget (lowest to highest):
- *   1. theme preset (light/dark)
- *   2. `styles` prop (static object or function of widget state)
- *   3. `onStyleChange` result (re-evaluated whenever data changes)
- * ============================================================ */
-export function mergeStyleSets(
-  ...sets: (ChartStyleSet | undefined | null)[]
-): ChartStyleSet {
-  const result: ChartStyleSet = {};
-  for (const set of sets) {
-    if (!set) continue;
-    result.container = { ...result.container, ...set.container };
-    result.title = { ...result.title, ...set.title };
-    result.chart = { ...result.chart, ...set.chart };
-  }
-  return result;
-}
-
-/* ============================================================
- * Responsive breakpoints
- * ------------------------------------------------------------
- * These are CONTAINER-width breakpoints (measured via
- * ResizeObserver on the widget's own wrapper), not viewport/
- * window breakpoints — matching CSS container-query semantics
- * rather than media-query semantics. That's the right behavior
- * for an embeddable widget: it should adapt to the box it's
- * placed in (a sidebar, a dashboard tile, a modal), not to the
- * size of the browser window, which may be much larger than the
- * space actually given to the widget.
- *
- * Thresholds mirror Tailwind's default breakpoints so the mental
- * model transfers directly for anyone used to Tailwind's
- * sm:/md:/lg:/xl: prefixes.
+ * Container-width breakpoints (measured via ResizeObserver on
+ * the widget's own box — container-query semantics, not
+ * viewport/media-query semantics), matching Tailwind's default
+ * thresholds so the mental model transfers directly.
  * ============================================================ */
 export type Breakpoint = "sm" | "md" | "lg" | "xl";
 
@@ -141,82 +66,156 @@ export const BREAKPOINTS: Record<Breakpoint, number> = {
   xl: 1280,
 };
 
-/**
- * Responsive style map. `base` always applies; each named
- * breakpoint applies *in addition*, once the container's
- * measured width is >= that breakpoint's threshold — mobile
- * first, same cascade model as Tailwind's responsive prefixes.
+export type ThemeName = "light" | "dark";
+export const DEFAULT_THEME: ThemeName = "light";
+
+/* ============================================================
+ * ChartStyles — the full shape of the `styles` prop
+ * ------------------------------------------------------------
+ * ONE prop carries everything: unconditional styling (the flat
+ * keys), per-theme overrides (`light`/`dark`), and per-breakpoint
+ * overrides (`sm`/`md`/`lg`/`xl`) — all optional, all composable.
+ * There's no separate "responsiveStyles" prop; responsiveness is
+ * just additional keys on this same object.
  *
- * This is a SEPARATE prop from `styles` on purpose: `styles`
- * (or a static object) is unconditional fixed styling that
- * applies identically at every screen size, while
- * `responsiveStyles` is only ever consulted per-breakpoint.
- * Passing one doesn't affect how the other behaves.
- */
-export type ResponsiveStyleSet = Partial<Record<"base" | Breakpoint, ChartStyleSet>>;
+ *   styles={{
+ *     // flat keys: apply unconditionally, at every theme/size
+ *     line: { stroke: "#7c3aed" },
+ *
+ *     // theme-specific: only applies when that theme is active
+ *     dark: { container: { backgroundColor: "#111827" } },
+ *
+ *     // breakpoint-specific: only applies once the widget's
+ *     // measured width crosses that threshold (mobile-first —
+ *     // each larger breakpoint layers on top of smaller ones)
+ *     sm: { tick: { fontSize: 8 } },
+ *     lg: { tick: { fontSize: 12 } },
+ *   }}
+ * ============================================================ */
+export type ChartStyles = ChartElementStyles &
+  Partial<Record<ThemeName, ChartElementStyles>> &
+  Partial<Record<Breakpoint, ChartElementStyles>>;
+
+/* ============================================================
+ * Theme presets
+ * ------------------------------------------------------------
+ * The base layer, selected via the `theme` prop. Every value is
+ * plain CSS, so overriding any single token from `styles` is a
+ * one-line change — no custom shape to match.
+ * ============================================================ */
+export const lightTheme: ChartElementStyles = {
+  container: { border: "1px solid #e2e8f0", backgroundColor: "#f8fafc" },
+  title: { color: "#0f172a", fontSize: 16, fontWeight: 600 },
+  line: { stroke: "#1e88e5", strokeWidth: 2 },
+  area: { fill: "#1e88e5" },
+  dot: { fill: "#1e88e5", r: 3.5 },
+  axis: { stroke: "#cbd5e1" },
+  tick: { fill: "#64748b", fontSize: 10 },
+};
+
+export const darkTheme: ChartElementStyles = {
+  container: { border: "1px solid #1e293b", backgroundColor: "#0f172a" },
+  title: { color: "#f1f5f9", fontSize: 16, fontWeight: 600 },
+  line: { stroke: "#60a5fa", strokeWidth: 2 },
+  area: { fill: "#60a5fa" },
+  dot: { fill: "#60a5fa", r: 3.5 },
+  axis: { stroke: "#334155" },
+  tick: { fill: "#94a3b8", fontSize: 10 },
+};
+
+export const themes: Record<ThemeName, ChartElementStyles> = {
+  light: lightTheme,
+  dark: darkTheme,
+};
+
+/* ============================================================
+ * mergeElementStyles
+ * ------------------------------------------------------------
+ * Combines any number of ChartElementStyles, left to right,
+ * later sets winning per-key within each part. Because every
+ * part is now just a plain CSSProperties object, merging is a
+ * simple per-part spread — no custom-shape bookkeeping needed.
+ * ============================================================ */
+export function mergeElementStyles(
+  ...sets: (ChartElementStyles | undefined | null)[]
+): ChartElementStyles {
+  const result: ChartElementStyles = {};
+  for (const set of sets) {
+    if (!set) continue;
+    for (const key of ELEMENT_KEYS) {
+      if (set[key]) {
+        result[key] = { ...result[key], ...set[key] } as any;
+      }
+    }
+  }
+  return result;
+}
 
 /**
- * Resolves a ResponsiveStyleSet down to a single flat
- * ChartStyleSet for the widget's current measured container
- * width. Layers are merged in ascending breakpoint order so
- * larger breakpoints override smaller ones on overlapping keys,
- * exactly like cascading CSS media queries.
+ * Pulls out just the unconditional/flat part of a ChartStyles
+ * object — i.e. everything EXCEPT the theme-name and breakpoint
+ * keys. This is what applies regardless of active theme or size.
  */
-export function resolveResponsiveStyle(
-  responsiveStyles: ResponsiveStyleSet | undefined,
+export function extractFlatStyles(styles: ChartStyles): ChartElementStyles {
+  const result: ChartElementStyles = {};
+  for (const key of ELEMENT_KEYS) {
+    if (styles[key]) (result as any)[key] = styles[key];
+  }
+  return result;
+}
+
+/**
+ * Resolves the breakpoint-specific layers of a ChartStyles object
+ * for the widget's current measured width. Mobile-first cascade:
+ * each breakpoint the container has reached applies on top of
+ * smaller ones, same model as Tailwind's sm:/md:/lg:/xl: prefixes.
+ */
+export function resolveResponsiveStyles(
+  styles: ChartStyles,
   containerWidth: number
-): ChartStyleSet {
-  if (!responsiveStyles) return {};
-
-  const layers: ChartStyleSet[] = [];
-  if (responsiveStyles.base) layers.push(responsiveStyles.base);
-
+): ChartElementStyles {
+  const layers: ChartElementStyles[] = [];
   (Object.keys(BREAKPOINTS) as Breakpoint[])
     .sort((a, b) => BREAKPOINTS[a] - BREAKPOINTS[b])
     .forEach((bp) => {
-      if (containerWidth >= BREAKPOINTS[bp] && responsiveStyles[bp]) {
-        layers.push(responsiveStyles[bp]!);
+      if (containerWidth >= BREAKPOINTS[bp] && styles[bp]) {
+        layers.push(styles[bp]!);
       }
     });
-
-  return mergeStyleSets(...layers);
+  return mergeElementStyles(...layers);
 }
 
 /* ============================================================
  * StyleRule / defineStyleRules
  * ------------------------------------------------------------
- * Sugar for the common "if value crosses some threshold, change
- * the styling" pattern, without writing a raw onStyleChange
- * callback by hand every time.
+ * Sugar for "if the latest value crosses a threshold, change the
+ * styling," without hand-writing a raw onStyleChange callback.
+ * Returns the same flat ChartElementStyles shape used everywhere
+ * else, so there's nothing new to learn here either.
  *
- * `when` is evaluated against the *latest* data point (most
- * recent value) plus the full data array, in case a rule needs
- * more context (e.g. comparing against an average).
- *
- * If multiple rules match, their styles are merged in array
- * order (later matching rules win on overlapping keys) — this
- * lets you stack rules like "base warning color" + "critical
- * override" instead of only ever applying one.
- *
- * Usage:
  *   onStyleChange={defineStyleRules([
- *     { when: (d) => d.value > 80, style: { chart: { strokeColor: "#dc2626" } } },
- *     { when: (d) => d.value < 20, style: { chart: { strokeColor: "#2563eb" } } },
+ *     { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
+ *     { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
  *   ])}
+ *
+ * If multiple rules match, their styles are merged in array order
+ * (later matching rules win on overlapping keys), so rules can be
+ * stacked (e.g. a broad "warning" rule plus a narrower "critical"
+ * rule) instead of only ever applying a single match.
  * ============================================================ */
 export interface StyleRule {
   when: (latest: ChartDataPoint, allData: ChartDataPoint[]) => boolean;
-  style: ChartStyleSet;
+  style: ChartElementStyles;
 }
 
 export function defineStyleRules(
   rules: StyleRule[]
-): (data: ChartDataPoint[]) => ChartStyleSet {
+): (data: ChartDataPoint[]) => ChartElementStyles {
   return (data: ChartDataPoint[]) => {
     const latest = data[data.length - 1];
     if (!latest) return {};
 
     const matched = rules.filter((rule) => rule.when(latest, data));
-    return mergeStyleSets(...matched.map((rule) => rule.style));
+    return mergeElementStyles(...matched.map((rule) => rule.style));
   };
 }
