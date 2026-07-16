@@ -139,31 +139,32 @@ If the container ever gets smaller than the resolved `minWidth`, the chart doesn
 
 ## Callbacks — data-driven styling
 
-`onStyleChange` runs whenever the fetched data changes, and returns a `ChartElementStyles` object — the same flat shape as `styles`:
+For simple "if a threshold is crossed, change the styling" logic, pass `styleRules` directly — no wrapping function needed, the widget evaluates it internally against the latest data point:
+
+```jsx
+<ChartWidget
+  styleRules={[
+    { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
+    { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
+  ]}
+/>
+```
+
+If multiple rules match, their styles merge in array order (later rules win on overlapping keys), so rules can stack — e.g. a broad "warning" rule plus a narrower "critical" rule.
+
+For anything beyond simple threshold matching, `onStyleChange` runs whenever the fetched data changes and returns a `ChartElementStyles` object (the same flat shape as `styles`) for full custom logic:
 
 ```jsx
 <ChartWidget
   onStyleChange={(data) => {
     const latest = data[data.length - 1];
-    return latest?.value > 80 ? { line: { stroke: "#dc2626" } } : {};
+    const avg = data.reduce((sum, d) => sum + d.value, 0) / data.length;
+    return latest?.value > avg * 1.5 ? { line: { stroke: "#dc2626" } } : {};
   }}
 />
 ```
 
-`defineStyleRules` is sugar for the common "if a threshold is crossed, change the styling" pattern, so you don't have to hand-write the callback above:
-
-```jsx
-import { ChartWidget, defineStyleRules } from "your-sdk";
-
-<ChartWidget
-  onStyleChange={defineStyleRules([
-    { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
-    { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
-  ])}
-/>
-```
-
-If multiple rules match, their styles merge in array order (later rules win on overlapping keys), so rules can stack — e.g. a broad "warning" rule plus a narrower "critical" rule.
+If both `styleRules` and `onStyleChange` are used together, `styleRules` resolves first and `onStyleChange` applies on top — so custom logic can still override a rule if needed.
 
 ## Full resolution order
 
@@ -174,7 +175,7 @@ Low to high precedence — later layers win on any overlapping property:
 3. **`styles`' flat keys**
 4. **`styles`' active theme key** (`styles.light` or `styles.dark`)
 5. **`styles`' active breakpoint keys** (mobile-first cascade)
-6. **`onStyleChange` result** — always wins, since it's live and data-driven
+6. **`styleRules` + `onStyleChange` result** — always wins, since it's live and data-driven (`styleRules` resolves first, `onStyleChange` on top)
 
 ## Other props
 

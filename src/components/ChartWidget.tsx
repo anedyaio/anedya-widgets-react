@@ -12,13 +12,15 @@ import {
   mergeElementStyles,
   extractFlatStyles,
   resolveResponsiveStyles,
+  resolveStyleRules,
+  StyleRule,
   Breakpoint,
 } from "./chartTheme";
 
 // Re-exported so consumers only ever need to import from ChartWidget,
-// e.g. `import { ChartWidget, defineStyleRules } from "your-sdk"`.
-export type { ChartElementStyles, ChartStyles, ThemeName, Breakpoint } from "./chartTheme";
-export { defineStyleRules, lightTheme, darkTheme, themes, BREAKPOINTS } from "./chartTheme";
+// e.g. `import { ChartWidget } from "your-sdk"`.
+export type { ChartElementStyles, ChartStyles, ThemeName, Breakpoint, StyleRule } from "./chartTheme";
+export { lightTheme, darkTheme, themes, BREAKPOINTS, defineStyleRules } from "./chartTheme";
 
 /* ------------------------ Types ------------------------ */
 export interface ChartDataPoint {
@@ -101,6 +103,22 @@ export interface ChartWidgetProps {
    * same property explicitly inside `styles`, the `styles` value wins.
    */
   styles?: StylesInput;
+  /**
+   * Declarative threshold styling — no callback to write. Pass an array
+   * of rules; the widget checks each one against the latest data point
+   * and merges the styles of every rule that matches (later rules win
+   * on overlapping keys, so rules can stack):
+   *
+   *   styleRules={[
+   *     { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
+   *     { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
+   *   ]}
+   *
+   * This is the recommended way to do "if value crosses X, change the
+   * styling." Use `onStyleChange` instead only if you need logic beyond
+   * simple threshold matching.
+   */
+  styleRules?: StyleRule[];
   tooltipFormat?: (d: ChartDataPoint) => React.ReactNode;
   tickCount?: number;
   xTickFormat?: string | ((d: Date) => string);
@@ -108,14 +126,9 @@ export interface ChartWidgetProps {
   /**
    * Called with the fetched data whenever it changes. Return a
    * ChartElementStyles object (the same flat CSS-property shape as
-   * `styles`) to override styling conditionally — e.g. recolor the line
-   * when the latest value crosses a threshold. Pair with
-   * `defineStyleRules(...)` for a declarative shorthand:
-   *
-   *   onStyleChange={defineStyleRules([
-   *     { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
-   *     { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
-   *   ])}
+   * `styles`) to override styling conditionally. For simple threshold
+   * checks, prefer `styleRules` above — reach for this only when you
+   * need arbitrary logic that rules alone can't express.
    */
   onStyleChange?: (data: ChartDataPoint[]) => ChartElementStyles | void;
   /** Shorthand for `styles.container.width` (unconditional, unless you also override it at a breakpoint — see the SIZING MODEL note on `styles`). */
@@ -171,6 +184,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
   title = "Latest Data",
   theme = DEFAULT_THEME,
   styles = {},
+  styleRules,
   tooltipFormat,
   tickCount = 4,
   xTickFormat,
@@ -225,10 +239,11 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Holds only the *data-driven* layer (onStyleChange result). Everything
-  // else (theme, shorthand-prop sizing, flat/theme-specific/breakpoint
-  // `styles`) is resolved separately below so resizing/theme-switching
-  // never waits on a data-fetch round trip.
+  // Holds only the *data-driven* layer (styleRules + onStyleChange,
+  // merged). Everything else (theme, shorthand-prop sizing,
+  // flat/theme-specific/breakpoint `styles`) is resolved separately
+  // below so resizing/theme-switching never waits on a data-fetch
+  // round trip.
   const [callbackStyle, setCallbackStyle] = useState<ChartElementStyles>({});
 
   const mountedRef = useRef(false);
@@ -280,11 +295,16 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
     };
   }, [node, variable, from, to, limit]);
 
-  // Resolve onStyleChange whenever the data changes.
+  // Resolve the data-driven layer whenever data changes: styleRules
+  // first (declarative threshold matching), then onStyleChange on top
+  // (so arbitrary custom logic can still override a rule if both are
+  // used together).
   useEffect(() => {
-    setCallbackStyle(onStyleChange?.(data) ?? {});
+    const fromRules = resolveStyleRules(styleRules, data);
+    const fromCallback = onStyleChange?.(data) ?? {};
+    setCallbackStyle(mergeElementStyles(fromRules, fromCallback));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [data, styleRules]);
 
   // Resolve the static/functional `styles` prop (may depend on
   // loading/error/data if passed as a function).
@@ -681,6 +701,6 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({
   );
 };
 
-// TODO: swap Base UI tooltip for a d3-based one. Also:
+// TODO: swap Base UI tooltip for a d3-based one (per plan). Also:
 // axis-specific style overrides beyond a single stroke, dot-decimation
 // on very narrow/dense containers.

@@ -186,17 +186,17 @@ export function resolveResponsiveStyles(
 }
 
 /* ============================================================
- * StyleRule / defineStyleRules
+ * StyleRule / resolveStyleRules
  * ------------------------------------------------------------
- * Sugar for "if the latest value crosses a threshold, change the
- * styling," without hand-writing a raw onStyleChange callback.
- * Returns the same flat ChartElementStyles shape used everywhere
- * else, so there's nothing new to learn here either.
+ * Declarative "if the latest value crosses a threshold, change
+ * the styling" rules. Pass these straight to the widget's
+ * `styleRules` prop — no wrapping needed, the widget evaluates
+ * them internally against the latest data point:
  *
- *   onStyleChange={defineStyleRules([
+ *   styleRules={[
  *     { when: (d) => d.value > 80, style: { line: { stroke: "#dc2626" } } },
  *     { when: (d) => d.value < 20, style: { line: { stroke: "#2563eb" } } },
- *   ])}
+ *   ]}
  *
  * If multiple rules match, their styles are merged in array order
  * (later matching rules win on overlapping keys), so rules can be
@@ -208,14 +208,32 @@ export interface StyleRule {
   style: ChartElementStyles;
 }
 
+/**
+ * Evaluates a set of StyleRules against the latest data point and
+ * returns the merged style of every rule that matched. This is what
+ * the widget's `styleRules` prop calls directly — no import needed
+ * on the consumer's side beyond the `StyleRule` type itself.
+ */
+export function resolveStyleRules(
+  rules: StyleRule[] | undefined,
+  data: ChartDataPoint[]
+): ChartElementStyles {
+  if (!rules || !rules.length) return {};
+  const latest = data[data.length - 1];
+  if (!latest) return {};
+
+  const matched = rules.filter((rule) => rule.when(latest, data));
+  return mergeElementStyles(...matched.map((rule) => rule.style));
+}
+
+/**
+ * @deprecated Prefer passing rules directly to the widget's
+ * `styleRules` prop — no wrapping required. This still works and is
+ * kept for anyone composing rule-based logic into their own custom
+ * `onStyleChange` callback by hand.
+ */
 export function defineStyleRules(
   rules: StyleRule[]
 ): (data: ChartDataPoint[]) => ChartElementStyles {
-  return (data: ChartDataPoint[]) => {
-    const latest = data[data.length - 1];
-    if (!latest) return {};
-
-    const matched = rules.filter((rule) => rule.when(latest, data));
-    return mergeElementStyles(...matched.map((rule) => rule.style));
-  };
+  return (data: ChartDataPoint[]) => resolveStyleRules(rules, data);
 }
