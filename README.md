@@ -15,7 +15,7 @@ const config = anedya.newConfig(tokenId, token);
 const client = anedya.newClient(config);
 
 <ChartWidget
-  anedya={anedya}
+  anedya={anedya} // remove
   client={client}
   nodeId={nodeId}
   variable="humidity"
@@ -60,7 +60,7 @@ These are spread directly onto the corresponding SVG elements (`<path style={{ f
 ## The `styles` prop — everything in one place
 
 There's a single `styles` prop. It optionally accepts three *kinds* of keys, all in the same object:
-
+// class definition 
 ```jsx
 <ChartWidget
   styles={{
@@ -95,7 +95,7 @@ styles={(state) => (state.error ? { container: { border: "1px solid red" } } : {
 ### Breakpoints
 
 Breakpoints are measured against the **widget's own rendered width** via `ResizeObserver` — container-query semantics, not the browser window. This means the chart responds correctly no matter where it's embedded (a sidebar, a dashboard tile, a modal), regardless of how wide the actual browser window is.
-
+//take definitrion from user for breakpoints 
 | Breakpoint | Min width |
 |---|---|
 | `sm` | 640px |
@@ -140,7 +140,7 @@ If the container ever gets smaller than the resolved `minWidth`, the chart doesn
 ## Callbacks — data-driven styling
 
 For simple "if a threshold is crossed, change the styling" logic, pass `styleRules` directly — no wrapping function needed, the widget evaluates it internally against the latest data point:
-
+//update this 
 ```jsx
 <ChartWidget
   styleRules={[
@@ -185,7 +185,7 @@ Low to high precedence — later layers win on any overlapping property:
 | `limit` | `number` | Max data points fetched. Default: `20` |
 | `tickCount` | `number` | X-axis tick count (auto-reduced on narrow containers) |
 | `xTickFormat` / `yTickFormat` | `string \| function` | Custom tick label formatting |
-| `tooltipFormat` | `(point) => React.ReactNode` | Custom tooltip content — can return a string or rich JSX |
+| `tooltipFormat` | `(point) => React.ReactNode` | Custom tooltip content — can return a string or rich JSX | 
 | `aspectRatio` | `number` | Width-to-height ratio used to derive height when no fixed/resolved height is set. Default: `1.6` |
 
 ## Known follow-ups
@@ -193,3 +193,4 @@ Low to high precedence — later layers win on any overlapping property:
 - Tooltips currently use Base UI (`@base-ui/react/tooltip`); a swap to a D3-based tooltip is planned separately.
 - Axis styling currently supports a single stroke color/width, not per-axis-segment overrides.
 - No dot-decimation yet on very narrow/dense containers (many points can visually overlap).
+
