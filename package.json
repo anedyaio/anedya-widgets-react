@@ -32,7 +32,9 @@
   "dependencies": {
     "@anedyasystems/anedya-frontend-sdk": "^0.1.1",
     "@types/d3": "^7.4.3",
-    "d3": "^7.9.0"
+    "clsx": "^2.1.1",
+    "d3": "^7.9.0",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "@base-ui/react": "^1.0.0",
