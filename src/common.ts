@@ -36,7 +36,6 @@ theme?: WidgetTheme<CardSlot> | BuiltInTheme;
 
   /** Applied to the widget's outermost element, on top of everything else. */
   className?: string;
-  style?: React.CSSProperties;
 
   // Sizing — stay as direct props (shorthand for the container's
   // width/height), matching the existing ChartWidget convention.

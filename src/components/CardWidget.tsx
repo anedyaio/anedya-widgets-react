@@ -44,7 +44,7 @@ export function CardWidget({
   theme,
   classNames = {},
   className,
-  style,
+
   width,
   height,
   minWidth = DEFAULT_MIN_WIDTH,
@@ -150,7 +150,7 @@ const resolveSlot = (slot: CardSlot) =>
     maxWidth,
     height,
     boxSizing: "border-box",
-    ...style,
+
 }}
     >
       <span className={
