@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import clsx from "clsx";
 import { twMerge } from "tailwind-merge";
 import { AnedyaWidgetBaseProps } from "../common";
 import { SlotClassNames, WidgetTheme } from "../types/root";
 
-import { CARD_DEFAULT_CLASSES, darkTheme, lightTheme } from "../themes/defaultTheme";
+import {
+  CARD_DEFAULT_CLASSES,
+  darkTheme,
+  lightTheme,
+} from "../themes/defaultTheme";
 
 export type CardSlot = "container" | "title" | "value" | "unit" | "label";
 
+/** The raw data this widget fetched — exactly what comes back from the request, not yet formatted. */
+export interface CardData {
+  value: number;
+  timestamp: number;
+}
+export type CardWidgetUpdate = Partial<
+  Omit<
+    CardWidgetProps,
+    "node"  | "variable" | "onDataChange"
+  >
+>;
 export interface CardWidgetProps extends AnedyaWidgetBaseProps {
   unit?: string;
   /** Decimal places for the displayed value. Omit to show the raw value as-is. */
@@ -18,20 +32,47 @@ export interface CardWidgetProps extends AnedyaWidgetBaseProps {
 
   /**
    * Per-slot CSS class overrides — Tailwind, a shadcn-generated class,
-   * CSS Modules, plain hand-written CSS, anything. When a slot ends up
-   * with a class from here AND/OR a matched `styleRules`/
-   * `onStyleChange` result, this widget's own inline theme styling for
-   * that slot is skipped entirely, so your class(es) have full,
-   * uncontested control.
+   * CSS Modules, plain hand-written CSS, or any other CSS classes.
+   *
+   * Layers on top of the widget's active theme and built-in defaults.
+   * Tailwind conflicts are resolved via `twMerge`, so later overrides
+   * replace earlier utilities within the same Tailwind class group.
    */
   classNames?: SlotClassNames<CardSlot>;
-
+  /**
+   * Called whenever the latest fetched data changes.
+   *
+   * Return a partial set of this widget's optional props to
+   * temporarily override how it is rendered.
+   *
+   * Any returned props are applied until this callback is
+   * called again.
+   *
+   * Returning `undefined` (or nothing) clears any previous
+   * overrides and restores the widget's original props.
+   *
+   * Example:
+   *
+   * onDataChange={(data) => {
+   *   if (!data) return;
+   *
+   *   if (data.value > 80) {
+   *     return {
+   *       title: "High Humidity",
+   *       theme: "dark",
+   *       classNames: {
+   *         value: "text-red-500",
+   *       },
+   *     };
+   *   }
+   * }}
+   */
+  onDataChange?: (data: CardData | null) => CardWidgetUpdate | void;
 }
 
 const DEFAULT_WIDTH = 240;
 const DEFAULT_MIN_WIDTH = 180;
 const DEFAULT_MAX_WIDTH = 480;
-
 
 export function CardWidget({
   node,
@@ -41,8 +82,9 @@ export function CardWidget({
   precision,
   formatValue,
   labelText,
-  theme,
   classNames = {},
+  onDataChange,
+  theme,
   className,
 
   width,
@@ -55,7 +97,11 @@ export function CardWidget({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  
+  // Holds the temporary prop overrides returned by onDataChange.
+  // Whenever the callback returns nothing (or the condition no longer
+  // matches), this resets back to {} so the widget falls back to the
+  // original props it was created with.
+  const [dynamicProps, setDynamicProps] = useState<CardWidgetUpdate>({});
 
   const mountedRef = useRef(false);
   const isFetchingRef = useRef(false);
@@ -99,63 +145,99 @@ export function CardWidget({
     };
   }, [node, variable]);
 
-const resolvedTheme: WidgetTheme<CardSlot> =
-  theme === "dark"
-    ? darkTheme
-    : theme === "light"
-      ? lightTheme
-      : theme ?? lightTheme;
+  // Resolve onDataChange whenever the fetched data changes.
+  // The callback returns temporary prop overrides which layer on top
+  // of the widget's original props.
+  useEffect(() => {
+    if (!onDataChange) {
+      setDynamicProps({});
+      return;
+    }
 
-  // Per-slot resolution:
-  //   - className: static `classNames` prop + rule-driven classes,
-  //     combined via clsx then twMerge — resolves real Tailwind
-  //     conflicts between the two sources (e.g. a static text color
-  //     class and a rule-matched one) rather than leaving both in the
-  //     DOM with an unpredictable winner based on stylesheet order.
-  //   - style: the theme's default inline style for that slot —
-  //     skipped ENTIRELY if any class exists for that slot (from either
-  //     source), so the class has full control. An inline style would
-  //     otherwise silently win over a class regardless of source, since
-  //     that's just how CSS specificity works.
-const resolveSlot = (slot: CardSlot) =>
-  twMerge(
-    CARD_DEFAULT_CLASSES[slot],
-    resolvedTheme.classNames[slot],
-    classNames[slot]
-  );
+    const data =
+      value != null && timestamp != null ? { value, timestamp } : null;
+
+    setDynamicProps(onDataChange(data) ?? {});
+  }, [value, timestamp, onDataChange]);
+  const resolvedProps = {
+    title,
+    unit,
+    precision,
+    formatValue,
+    labelText,
+    width: width ?? DEFAULT_WIDTH,
+    height,
+    minWidth,
+    maxWidth,
+    className,
+    theme,
+    ...dynamicProps,
+
+    classNames: {
+      ...(classNames ?? {}),
+      ...(dynamicProps.classNames ?? {}),
+    },
+  };
+
+  const resolvedTheme: WidgetTheme<CardSlot> =
+    resolvedProps.theme === "dark"
+      ? darkTheme
+      : resolvedProps.theme === "light"
+        ? lightTheme
+        : (resolvedProps.theme ?? lightTheme);
+
+  // Per-slot resolution, lowest to highest precedence:
+  //   1. CARD_DEFAULT_CLASSES[slot]      — built-in baseline
+  //   2. resolvedTheme.classNames[slot]  — active theme's classes
+  // 3. resolvedProps.classNames
+  //    (original classNames merged with any returned by onDataChange)
+
+  // twMerge resolves any real Tailwind conflicts between these layers
+  // based on actual utility groups, not the order they're written in.
+  const resolveSlot = (slot: CardSlot) =>
+    twMerge(
+      CARD_DEFAULT_CLASSES[slot],
+      resolvedTheme.classNames[slot],
+      resolvedProps.classNames[slot],
+    );
 
   const displayValue = useMemo(() => {
     if (value == null) return null;
-    if (formatValue) return formatValue(value);
-    if (precision != null) return value.toFixed(precision);
-    return String(value);
-  }, [value, precision, formatValue]);
 
+    if (resolvedProps.formatValue) return resolvedProps.formatValue(value);
+
+    if (resolvedProps.precision != null)
+      return value.toFixed(resolvedProps.precision);
+
+    return String(value);
+  }, [value, resolvedProps.formatValue, resolvedProps.precision]);
   const displayLabel = useMemo(() => {
     if (timestamp == null) return null;
-    if (labelText) return labelText(timestamp);
-    const d = timestamp < 1e12 ? new Date(timestamp * 1000) : new Date(timestamp);
-    return `Updated ${d.toLocaleTimeString()}`;
-  }, [timestamp, labelText]);
 
+    if (resolvedProps.labelText) return resolvedProps.labelText(timestamp);
+
+    const d =
+      timestamp < 1e12 ? new Date(timestamp * 1000) : new Date(timestamp);
+
+    return `Updated ${d.toLocaleTimeString()}`;
+  }, [timestamp, resolvedProps.labelText]);
   return (
     <div
-    className={twMerge(
+     className={twMerge(
+    "anedya-card",
     resolveSlot("container"),
-    className
+    resolvedProps.className,
 )}
-     style={{
-    width: width ?? DEFAULT_WIDTH,
-    minWidth,
-    maxWidth,
-    height,
-    boxSizing: "border-box",
-
-}}
+      style={{
+        width: resolvedProps.width,
+        minWidth: resolvedProps.minWidth,
+        maxWidth: resolvedProps.maxWidth,
+        height: resolvedProps.height,
+        boxSizing: "border-box",
+      }}
     >
-      <span className={
-        resolveSlot("title")}>
-        {title}
+      <span className={ resolveSlot("title")}>
+        {resolvedProps.title}
       </span>
 
       {loading ? (
@@ -172,22 +254,23 @@ const resolveSlot = (slot: CardSlot) =>
           <style>{`@keyframes anedya-card-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : error ? (
-       <span className="text-red-600 text-sm">{error}</span>
+        <span className="text-red-600 text-sm">{error}</span>
       ) : (
         <>
-          <span    className={resolveSlot("value")}>
+          <span className={resolveSlot("value")}>
             {displayValue}
-            {unit && (
+            {resolvedProps.unit && (
               <span
-              className={resolveSlot("unit")}
-      
+                className={resolveSlot("unit")}
               >
-                {unit}
+                {resolvedProps.unit}
               </span>
             )}
           </span>
           {displayLabel && (
-            <span   className={resolveSlot("label")}>
+            <span
+              className={resolveSlot("label")}
+            >
               {displayLabel}
             </span>
           )}
