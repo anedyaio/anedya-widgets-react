@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* Explicit @source directives, so Tailwind scans exactly the folders
+   that actually contain our class strings (CARD_DEFAULT_CLASSES,
+   lightTheme, darkTheme, and any future widget's defaults), rather
+   than relying purely on automatic content detection. Paths are
+   relative to THIS file's location (src/styles/base.css). */
+@source "../widgets/**/*.{ts,tsx}";
+@source "../themes/**/*.{ts,tsx}";
+@source "../common.ts";
+
+/* ---------- Widget defaults ---------- */
+
+.anedya-card {
+  container-type: inline-size;
+container-name: anedya-card;
+
+  --anedya-card-padding: 1rem;
+
+  --anedya-card-title-size: .875rem;
+  --anedya-card-value-size: 2.25rem;
+  --anedya-card-unit-size: 1rem;
+  --anedya-card-label-size: .75rem;
+
+  --anedya-card-gap: .5rem;
+}
+
+
+@container anedya-card(min-width: 320px) {
+  .anedya-card {
+    --anedya-card-padding: 1.25rem;
+
+    --anedya-card-title-size: 1rem;
+    --anedya-card-value-size: 2.75rem;
+    --anedya-card-unit-size: 1.125rem;
+    --anedya-card-label-size: 0.875rem;
+
+    --anedya-card-gap: 0.75rem;
+  }
+}
+
+@container anedya-card(min-width: 420px) {
+  .anedya-card {
+    --anedya-card-padding: 1.5rem;
+
+    --anedya-card-title-size: 1.125rem;
+    --anedya-card-value-size: 3.5rem;
+    --anedya-card-unit-size: 1.25rem;
+    --anedya-card-label-size: 1rem;
+
+    --anedya-card-gap: 1rem;
+  }
+}

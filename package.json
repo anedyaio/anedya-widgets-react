@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@base-ui/react": "^1.6.0",
-    "@tailwindcss/cli": "^4.3.2",
+    "@tailwindcss/cli": "^4.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.3.2",

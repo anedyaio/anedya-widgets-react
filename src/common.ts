@@ -15,8 +15,6 @@ import { WidgetTheme } from "./types/root";
  */
 export interface AnedyaWidgetBaseProps {
   node: any;
-  client: any;
-  nodeId: string;
   variable: string;
   /** Not every widget needs a range (e.g. Card shows only the latest value) — optional here, required by widgets that do. */
   from?: number;

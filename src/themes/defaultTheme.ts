@@ -3,11 +3,21 @@ import { WidgetTheme } from "../types/root";
 
 
 export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {
-  container: "flex flex-col gap-1 rounded-xl border p-4",
-  title: "text-sm font-medium",
-  value: "text-4xl font-bold",
-  unit: "text-[0.5em] font-normal ml-1",
-  label: "text-xs",
+
+  title:
+  "text-[length:var(--anedya-card-title-size)] font-medium",
+
+value:
+  "text-[length:var(--anedya-card-value-size)] font-bold",
+
+unit:
+  "text-[length:var(--anedya-card-unit-size)]",
+
+label:
+  "text-[length:var(--anedya-card-label-size)]",
+
+container:
+  "flex flex-col border rounded-xl justify-center items-center p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)]"
 };
 
 
