@@ -51,3 +51,68 @@ container-name: anedya-card;
     --anedya-card-gap: 1rem;
   }
 }
+
+.anedya-gauge {
+  container-type: inline-size;
+  container-name: anedya-gauge;
+
+  /* Sizing */
+  --anedya-gauge-padding: 1rem;
+  --anedya-gauge-title-size: 0.875rem;
+
+  /* Arc */
+  --anedya-gauge-track-stroke: #e2e8f0;
+  --anedya-gauge-track-fill: transparent;
+  --anedya-gauge-bar-stroke: #3b82f6;
+  --anedya-gauge-bar-fill: transparent;
+  --anedya-gauge-thickness: 12;
+
+  /* Needle */
+  --anedya-gauge-needle-color: #334155;
+  --anedya-gauge-needle-cap-color: #334155;
+
+  /* Center value */
+  --anedya-gauge-center-value-size: 2rem;
+  --anedya-gauge-center-value-weight: 700;
+  --anedya-gauge-center-value-color: #1e293b;
+
+  /* Needle label */
+  --anedya-gauge-needle-label-size: 0.75rem;
+  --anedya-gauge-needle-label-color: #64748b;
+
+  /* Ticks */
+  --anedya-gauge-tick-stroke: #94a3b8;
+  --anedya-gauge-tick-label-size: 0.625rem;
+  --anedya-gauge-tick-label-color: #64748b;
+
+  /* Segments */
+  --anedya-gauge-segment-stroke: #e2e8f0;
+
+  --anedya-gauge-gap: 0.5rem;
+}
+
+/* Container queries scale typography (like Card) */
+@container anedya-gauge(min-width: 280px) {
+  .anedya-gauge {
+    --anedya-gauge-title-size: 0.9375rem;
+    --anedya-gauge-center-value-size: 2.25rem;
+    --anedya-gauge-needle-label-size: 0.8125rem;
+    --anedya-gauge-tick-label-size: 0.6875rem;
+  }
+}
+@container anedya-gauge(min-width: 400px) {
+  .anedya-gauge {
+    --anedya-gauge-title-size: 1.0625rem;
+    --anedya-gauge-center-value-size: 2.75rem;
+    --anedya-gauge-needle-label-size: 0.875rem;
+    --anedya-gauge-tick-label-size: 0.75rem;
+  }
+}
+@container anedya-gauge(min-width: 560px) {
+  .anedya-gauge {
+    --anedya-gauge-title-size: 1.1875rem;
+    --anedya-gauge-center-value-size: 3.25rem;
+    --anedya-gauge-needle-label-size: 1rem;
+    --anedya-gauge-tick-label-size: 0.875rem;
+  }
+}

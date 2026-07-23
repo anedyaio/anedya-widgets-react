@@ -1,11 +1,7 @@
-
-
-
-
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
-
+import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
 
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
 const token =
@@ -22,7 +18,7 @@ const node = anedya.newNode(client, nodeId);
  * app. Only specify the slots you actually want to change from the
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
-const emeraldTheme= {
+const emeraldTheme = {
   classNames: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
@@ -35,21 +31,35 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-    <div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}>
+    <div
+      style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}
+    >
       {/* ============================================================
        * 1. Default appearance — no theme, no classNames, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}  title="Default" unit="%" precision={1} />
+      <CardWidget {...commonProps} title="Default" unit="%" precision={1} />
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Emerald Theme" unit="%" precision={1} theme={emeraldTheme} />
+      <CardWidget
+        {...commonProps}
+        title="Emerald Theme"
+        unit="%"
+        precision={1}
+        theme={emeraldTheme}
+      />
 
       {/* Built-in preset names also work directly: */}
-      <CardWidget {...commonProps} title="Dark Preset" unit="%" precision={1} theme="dark" />
+      <CardWidget
+        {...commonProps}
+        title="Dark Preset"
+        unit="%"
+        precision={1}
+        theme="dark"
+      />
 
       {/* ============================================================
        * 3. classNames vs className — THE distinction to understand:
@@ -121,6 +131,47 @@ export default function App() {
           value: "my-card-value",
         }}
       />
+
+      {/* <GaugeWidget {...commonProps} title="Temp" unit="°C" precision={1} /> */}
+
+      {/* Needle gauge with threshold colors */}
+      {/* <GaugeWidget
+        {...commonProps}
+        variant="needle"
+        title="CPU"
+        needle={{ show: true }}
+        thresholds={[
+          { value: 50, color: "#10b981" },
+          { value: 80, color: "#f59e0b" },
+          { value: 100, color: "#ef4444" },
+        ]}
+      /> */}
+
+      {/* Segmented gauge */}
+      {/* <GaugeWidget
+        {...commonProps}
+        variant="segmented"
+        segments={[
+          { from: 0, to: 30, color: "#ef4444" },
+          { from: 30, to: 70, color: "#f59e0b" },
+          { from: 70, to: 100, color: "#10b981" },
+        ]}
+      /> */}
+
+      {/* Multi-bar */}
+      {/* <GaugeWidget
+        {...commonProps}
+        variant="multiBar"
+        bars={[
+          { value: 25, color: "#3b82f6", label: "CPU" },
+          { value: 65, color: "#8b5cf6", label: "Memory" },
+        ]}
+      /> */}
+
+      {/* Responsive – will resize to its container */}
+      {/* <div style={{ width: "50%", height: "250px" }}>
+        <GaugeWidget {...commonProps} variant="needle" />
+      </div> */}
     </div>
   );
 }
