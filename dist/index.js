@@ -161,14 +161,10 @@ function CardWidget({
     const d = timestamp < 1e12 ? new Date(timestamp * 1e3) : new Date(timestamp);
     return `Updated ${d.toLocaleTimeString()}`;
   }, [timestamp, resolvedProps.labelText]);
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
     "div",
     {
-      className: (0, import_tailwind_merge.twMerge)(
-        "anedya-card",
-        resolveSlot("container"),
-        resolvedProps.className
-      ),
+      className: "anedya-card-container",
       style: {
         width: resolvedProps.width,
         minWidth: resolvedProps.minWidth,
@@ -176,44 +172,55 @@ function CardWidget({
         height: resolvedProps.height,
         boxSizing: "border-box"
       },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: resolveSlot("title"), children: resolvedProps.title }),
-        loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          "div",
-          {
-            style: {
-              height: 36,
-              width: 36,
-              borderRadius: "50%",
-              border: "2px solid #cbd5e1",
-              borderTopColor: "#475569",
-              animation: "anedya-card-spin 0.8s linear infinite"
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", { children: `@keyframes anedya-card-spin { to { transform: rotate(360deg); } }` })
-          }
-        ) : error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-red-600 text-sm", children: error }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-            "span",
-            {
-              className: (0, import_tailwind_merge.twMerge)(
-                "inline-flex items-end justify-center gap-1",
-                resolveSlot("value")
-              ),
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: displayValue }),
-                resolvedProps.unit && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: resolveSlot("unit"), children: resolvedProps.unit })
-              ]
-            }
+      children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+        "div",
+        {
+          className: (0, import_tailwind_merge.twMerge)(
+            "anedya-card",
+            resolveSlot("container"),
+            resolvedProps.className
           ),
-          displayLabel && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "span",
-            {
-              className: resolveSlot("label"),
-              children: displayLabel
-            }
-          )
-        ] })
-      ]
+          style: { height: "100%" },
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: resolveSlot("title"), children: resolvedProps.title }),
+            loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "div",
+              {
+                style: {
+                  height: 36,
+                  width: 36,
+                  borderRadius: "50%",
+                  border: "2px solid #cbd5e1",
+                  borderTopColor: "#475569",
+                  animation: "anedya-card-spin 0.8s linear infinite"
+                },
+                children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", { children: `@keyframes anedya-card-spin { to { transform: rotate(360deg); } }` })
+              }
+            ) : error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-red-600 text-sm", children: error }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+                "span",
+                {
+                  className: (0, import_tailwind_merge.twMerge)(
+                    "inline-flex items-end justify-center gap-1",
+                    resolveSlot("value")
+                  ),
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: displayValue }),
+                    resolvedProps.unit && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: resolveSlot("unit"), children: resolvedProps.unit })
+                  ]
+                }
+              ),
+              displayLabel && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                "span",
+                {
+                  className: resolveSlot("label"),
+                  children: displayLabel
+                }
+              )
+            ] })
+          ]
+        }
+      )
     }
   );
 }

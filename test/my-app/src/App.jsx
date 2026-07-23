@@ -39,7 +39,8 @@ export default function App() {
        * 1. Default appearance — no theme, no classNames, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}  title="Default" unit="%" precision={1} />
+      <CardWidget {...commonProps} height={300} width={700}  title="Default" unit="%" precision={1} />
+
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
@@ -79,6 +80,7 @@ export default function App() {
           value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
           title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
         }}
+        
       />
 
       {/* ============================================================

@@ -223,18 +223,23 @@ export function CardWidget({
   }, [timestamp, resolvedProps.labelText]);
   return (
     <div
+  className="anedya-card-container"
+  style={{
+    width: resolvedProps.width,
+    minWidth: resolvedProps.minWidth,
+    maxWidth: resolvedProps.maxWidth,
+    height: resolvedProps.height,
+    boxSizing: "border-box",
+  }}
+  >
+    <div
      className={twMerge(
     "anedya-card",
     resolveSlot("container"),
     resolvedProps.className,
 )}
-      style={{
-        width: resolvedProps.width,
-        minWidth: resolvedProps.minWidth,
-        maxWidth: resolvedProps.maxWidth,
-        height: resolvedProps.height,
-        boxSizing: "border-box",
-      }}
+ style={{ height: "100%" }}
+ 
     >
       <span className={ resolveSlot("title")}>
         {resolvedProps.title}
@@ -291,5 +296,6 @@ export function CardWidget({
         </>
       )}
     </div>
+</div>
   );
 }
