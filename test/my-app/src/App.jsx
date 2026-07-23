@@ -36,7 +36,40 @@ const commonProps = { node, variable: "humidity" };
 export default function App() {
   return (
     <div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}>
-      {/* Default appearance */}
+      {/* ============================================================
+       * 1. Default appearance — no theme, no classNames, no
+       * formatting props. Every fallback in the widget in one place.
+       * ============================================================ */}
+      <CardWidget {...commonProps}  title="Default" unit="%" precision={1} />
+
+      {/* ============================================================
+       * 2. theme — a reusable, shareable WidgetTheme object. Same
+       * effect across every widget instance that uses it.
+       * ============================================================ */}
+      <CardWidget {...commonProps} title="Emerald Theme" unit="%" precision={1} theme={emeraldTheme} />
+
+      {/* Built-in preset names also work directly: */}
+      <CardWidget {...commonProps} title="Dark Preset" unit="%" precision={1} theme="dark" />
+
+      {/* ============================================================
+       * 3. classNames vs className — THE distinction to understand:
+       *
+       *   - `classNames` (plural, an OBJECT): per-SLOT overrides.
+       *     Keys are "container" | "title" | "value" | "unit" | "label"
+       *     — lets you reach INSIDE the widget and style individual
+       *     pieces independently.
+       *
+       *   - `className` (singular, a STRING): the ordinary React
+       *     convention — one class applied ONLY to the widget's
+       *     outermost container element, same as you'd pass to any
+       *     other component. It's merged (via twMerge) with whatever
+       *     classNames.container already resolved to, not a
+       *     replacement for it.
+       *
+       * This example uses BOTH at once so the difference is visible:
+       * className adds a shadow to the outer box, classNames.value/
+       * classNames.title style two INNER pieces independently.
+       * ============================================================ */}
       <CardWidget
         node={node}
         client={client}

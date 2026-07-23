@@ -257,7 +257,7 @@ export function CardWidget({
         <span className="text-red-600 text-sm">{error}</span>
       ) : (
         <>
-          <span className={resolveSlot("value")}>
+          {/* <span className={resolveSlot("value")}>
             {displayValue}
             {resolvedProps.unit && (
               <span
@@ -266,7 +266,21 @@ export function CardWidget({
                 {resolvedProps.unit}
               </span>
             )}
-          </span>
+          </span> */}
+          <span
+  className={twMerge(
+    "inline-flex items-end justify-center gap-1",
+    resolveSlot("value")
+  )}
+>
+  <span>{displayValue}</span>
+
+  {resolvedProps.unit && (
+    <span className={resolveSlot("unit")}>
+      {resolvedProps.unit}
+    </span>
+  )}
+</span>
           {displayLabel && (
             <span
               className={resolveSlot("label")}
