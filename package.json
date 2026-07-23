@@ -16,10 +16,10 @@
     "./styles.css": "./dist/styles.css"
   },
   "scripts": {
- "clean": "rm -rf dist",
-  "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/style.css --minify",
-  "build:js": "tsup",
-  "build": "npm run clean && npm run build:js && npm run build:css",
+    "clean": "rm -rf dist",
+    "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/style.css --minify",
+    "build:js": "tsup",
+    "build": "npm run clean && npm run build:js && npm run build:css",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -45,6 +45,8 @@
   "devDependencies": {
     "@base-ui/react": "^1.6.0",
     "@tailwindcss/cli": "^4.3.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.3.2",
