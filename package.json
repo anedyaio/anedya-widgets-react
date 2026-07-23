@@ -16,9 +16,10 @@
     "./styles.css": "./dist/styles.css"
   },
   "scripts": {
-    "build:css": "tailwindcss -i src/styles.css -o dist/styles.css --minify",
-    "build:js": "tsup",
-    "build": "npm run build:css && npm run build:js",
+ "clean": "rm -rf dist",
+  "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/style.css --minify",
+  "build:js": "tsup",
+  "build": "npm run clean && npm run build:js && npm run build:css",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -48,6 +49,6 @@
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.3.2",
     "tsup": "^8.5.1",
-    "typescript": "^7.0.2"
+    "typescript": "^5.7.3"
   }
 }

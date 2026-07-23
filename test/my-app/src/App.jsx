@@ -39,7 +39,7 @@ export default function App() {
        * 1. Default appearance — no theme, no classNames, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Default" unit="%" precision={1} />
+      <CardWidget {...commonProps}  title="Default" unit="%" precision={1} />
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same

@@ -15,9 +15,8 @@ unit:
 
 label:
   "text-[length:var(--anedya-card-label-size)]",
-
 container:
-  "flex flex-col border rounded-xl justify-center items-center p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)]"
+  "flex flex-col items-center justify-center text-center border rounded-xl p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)]"
 };
 
 
