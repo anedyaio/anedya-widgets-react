@@ -4,7 +4,8 @@ import { WidgetTheme } from "../types/root";
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   container:
     "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)]",
-  title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
+  title:
+    "text-[length:var(--anedya-gauge-title-size)] font-medium",
   track: "",
   bar: "",
   segment: "",
@@ -15,7 +16,8 @@ export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
     "text-[length:var(--anedya-gauge-tick-size)] font-medium fill-current",
   scaleLabel:
     "text-[length:var(--anedya-gauge-tick-size)] font-medium fill-current",
-  value: "text-[length:var(--anedya-gauge-value-size)] font-bold leading-none",
+  value:
+    "text-[length:var(--anedya-gauge-value-size)] font-bold leading-none",
   unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
   label: "text-[length:var(--anedya-gauge-label-size)]",
   tooltip:
@@ -60,8 +62,5 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
   },
 };
 
-export const gaugeThemes = {
-  light: gaugeLightTheme,
-  dark: gaugeDarkTheme,
-} as const;
+export const gaugeThemes = { light: gaugeLightTheme, dark: gaugeDarkTheme } as const;
 export const DEFAULT_GAUGE_THEME = gaugeLightTheme;
