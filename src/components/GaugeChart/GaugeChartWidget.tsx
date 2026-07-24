@@ -1315,6 +1315,14 @@ export function GaugeWidget({
     length: resolvedProps.needle?.length ?? "medium",
     width: resolvedProps.needle?.width ?? 4,
     color: resolvedProps.needle?.color ?? "",
+    needleColor:
+      resolvedProps.needle?.needleColor ??
+      resolvedProps.needle?.color ??
+      "currentColor",
+    capColor:
+      resolvedProps.needle?.capColor ??
+      resolvedProps.needle?.color ??
+      "currentColor",
     capRadius: resolvedProps.needle?.capRadius ?? 6,
     animation: resolvedProps.needle?.animation ?? true,
   };
@@ -1413,7 +1421,7 @@ export function GaugeWidget({
 
   const pad = 8;
   // const textReserve = resolvedValueLabel.show ? 0.34 : 0.16;
-  const textReserve = 0; 
+  const textReserve = 0;
   const availW = boxWidth - pad * 2;
   const availH = boxHeight * (1 - textReserve) - pad * 2;
 
@@ -1545,11 +1553,14 @@ export function GaugeWidget({
         shape.tag as any,
         "circle.anedya-gauge-needle-cap"
       );
+      needleEl.attr("class", resolveSlot("needle"));
+      
       needleEl
-        .attr("class", resolveSlot("needle"))
-        .attr("fill", resolvedNeedle.color || "currentColor")
-        .attr("stroke", resolvedNeedle.color || "currentColor")
-        .attr("opacity", loading ? 0.4 : 1);
+  .attr("class", resolveSlot("needle"))
+  .attr("fill", resolvedNeedle.needleColor)
+  .attr("stroke", resolvedNeedle.needleColor)
+  .attr("opacity", loading ? 0.4 : 1);
+
       Object.entries(shape.attrs).forEach(([k, v]) =>
         needleEl.attr(
           k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase()),
@@ -1569,9 +1580,9 @@ export function GaugeWidget({
           );
       }
       cap
-        .attr("r", resolvedNeedle.capRadius)
-        .attr("fill", resolvedNeedle.color || "currentColor")
-        .attr("opacity", loading ? 0.4 : 1);
+      .attr("r", resolvedNeedle.capRadius)
+      .attr("fill", resolvedNeedle.capColor)       // ← use capColor
+      .attr("opacity", loading ? 0.4 : 1);
 
       const targetDeg = valueAngle / DEG2RAD;
       if (resolvedNeedle.animation) {
@@ -1769,7 +1780,7 @@ export function GaugeWidget({
         ) : (
           <>
             {/* Value + Unit */}
-            {/* <text
+      {/* <text
               x="0"
               y="0"
               textAnchor="middle"
@@ -1788,8 +1799,8 @@ export function GaugeWidget({
               )}
             </text> */}
 
-            {/* Label (timestamp) */}
-            {/* {displayLabel && (
+      {/* Label (timestamp) */}
+      {/* {displayLabel && (
               <text
                 x="0"
                 y="24"
@@ -1800,8 +1811,8 @@ export function GaugeWidget({
                 {displayLabel}
               </text>
             )} */}
-          {/* </> */}
-        {/* )} */}
+      {/* </> */}
+      {/* )} */}
       {/* </g> */}
     </div>
   );

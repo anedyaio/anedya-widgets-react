@@ -73,6 +73,7 @@ export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   container:
     "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)]",
   title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
+  unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
   track: "",
   bar: "",
   needle: "",
@@ -85,6 +86,7 @@ export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
   styles: {
     container: "",
     title: "text-slate-500",
+    unit: "text-slate-500",  
     track: "text-slate-200", // read via `currentColor` on the track path
     bar: "text-indigo-500",
     needle: "text-slate-700",
@@ -98,6 +100,7 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
   styles: {
     container: "",
     title: "text-slate-400",
+    unit: "text-slate-400",  
     track: "text-slate-700",
     bar: "text-indigo-400",
     needle: "text-slate-200",

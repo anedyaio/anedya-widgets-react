@@ -115,6 +115,7 @@
 export type GaugeSlot =
   | "container"
   | "title"
+  | "unit"
   | "track"
   | "bar"
   | "needle"
@@ -148,7 +149,9 @@ export interface GaugeNeedleConfig {
   /** Preset or px. Relative to computed radius when a preset is used. */
   length?: "short" | "medium" | "full" | number;
   width?: number;
-  color?: string;
+  color?: string;          
+  needleColor?: string; 
+  capColor?: string;  
   capRadius?: number;
   animation?: boolean;
 }
