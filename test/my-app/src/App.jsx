@@ -9,8 +9,7 @@ import { CardWidget } from "public-widget-sdk";
 // Import your stylesheet via the industry-standard subpath
 import "public-widget-sdk/styles.css";
 
-// import { CardWidget } from "../../../src";
-// import "../../../dist/style.css";
+
 
 
 const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;

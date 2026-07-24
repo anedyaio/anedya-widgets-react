@@ -7,6 +7,7 @@ This document covers internal build setup for people working on this SDK itself 
 - [Why this exists](#why-this-exists)
 - [Setting up the stylesheet build](#setting-up-the-stylesheet-build)
 - [Adding a new widget's classes to the build](#adding-a-new-widgets-classes-to-the-build)
+- [Local development](#local-development)
 
 ---
 
@@ -53,4 +54,102 @@ npm install -D @tailwindcss/cli
 
 > **Order matters:** `build:js` must run before `build:css` if `tsup`'s `clean` option is enabled — `tsup` wipes `dist/` before writing its own output, which would delete `style.css` if the CSS step ran first.
 
-Run
+Run `npm run build` before every publish so `dist/style.css` always reflects current source. Consider chaining this into `prepublishOnly` so it can't be forgotten:
+
+```json
+{
+  "scripts": {
+    "prepublishOnly": "npm run build"
+  }
+}
+```
+
+---
+
+## Adding a new widget's classes to the build
+
+Whenever you add a new widget (e.g. `ChartWidget`), make sure its default classes and theme files live somewhere already covered by the `@source` globs in `base.css` — or add a new `@source` line pointing at wherever they live:
+
+```css
+@source "../widgets/**/*.{ts,tsx}";  /* covers src/widgets/**, including new widget folders */
+@source "../themes/**/*.{ts,tsx}";   /* covers src/themes/**, including new theme files */
+```
+
+If a new widget's classes live outside these paths, they silently won't compile — same failure mode described in [Why this exists](#why-this-exists), just for a *new* widget's classes instead of the whole package. After adding any new source file, rebuild and grep for a known class to confirm it made it into `dist/style.css`:
+
+```bash
+npm run build:css
+grep "your-new-class-name" dist/style.css
+```
+
+---
+
+## Local development
+
+The demo app (`my-app`) is used to manually test widgets while working on this SDK. Set it up using `npm link`, which symlinks your local package into the demo — no `file:` reference in `package.json` needed.
+
+### One-time setup
+
+**1. In the package root**, register it as linkable:
+
+```bash
+npm link
+```
+
+**2. In the demo app**, link to it:
+
+```bash
+npm link public-widget-sdk
+```
+
+This creates a symlink from the demo's `node_modules/public-widget-sdk` to your local package root — the demo now resolves that import to your local working copy instead of anything published to npm.
+
+### Two ways to import while developing
+
+**Option A — import directly from source (fastest iteration)**
+
+```jsx
+import { CardWidget } from "../../../src";
+import "../../../dist/style.css";
+```
+
+Use this while actively developing a widget's component code (`.tsx` logic, props, structure). JS changes are picked up by the demo's own dev server via normal React/Vite hot-reload — no rebuild of the SDK package itself required.
+
+**Caveat:** the imported stylesheet (`../../../dist/style.css`) is still a *built* artifact, not the raw `base.css` — so any CSS/Tailwind class change still needs:
+
+```bash
+npm run build:css
+```
+before it shows up in the demo, even in this mode.
+
+**Option B — import as the published package (accurate consumer simulation)**
+
+```jsx
+import { CardWidget } from "public-widget-sdk";
+import "public-widget-sdk/styles.css";
+```
+
+Use this to verify the package behaves correctly as an actual installed dependency — e.g. confirming `exports` map entries resolve correctly, the stylesheet subpath import works, and nothing that only exists in the local `src/` folder (but wasn't actually exported) is accidentally being relied on.
+
+Because the link points at your package root, any rebuild there is picked up automatically:
+
+```bash
+npm run build
+```
+
+No re-linking needed after this, **unless** you change the package's `name` field or its `exports` map — in either case, re-run `npm link` in both the package root and the demo to refresh the symlink.
+
+### Switching between the two
+
+The demo file typically keeps both import blocks present, with one commented out — swap which is active depending on which mode you're testing in.
+
+Two things worth knowing if changes don't seem to show up:
+
+- **Vite's dependency pre-bundling cache** may have optimized an older version of the package. If Option B isn't reflecting a fresh build, clear it and restart:
+```bash
+  rm -rf node_modules/.vite
+  npm run dev
+```
+- Restart the demo's dev server (not just save/hot-reload) after switching which import block is active — changing which module resolves `CardWidget` can require a fresh module graph.
+
+**Rule of thumb:** use Option A day-to-day while iterating on a widget; switch to Option B before committing/publishing, as a final sanity check that the consumer-facing package actually works the way the README describes.
