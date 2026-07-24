@@ -7,8 +7,7 @@ export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {
   title:
   "text-[length:var(--anedya-card-title-size)] font-medium",
 
-value:
-  "text-[length:var(--anedya-card-value-size)] font-bold",
+value: "text-[length:var(--anedya-card-value-size)] font-bold max-w-full min-w-0 leading-tight",
 
 unit:
   "text-[length:var(--anedya-card-unit-size)]",
@@ -21,7 +20,7 @@ container:
 
 
 export const lightTheme: WidgetTheme<CardSlot> = {
-  classNames: {
+  styles: {
     container: "bg-white border-slate-200",
     title: "text-slate-500",
     value: "text-slate-900",
@@ -30,7 +29,7 @@ export const lightTheme: WidgetTheme<CardSlot> = {
 };
 
 export const darkTheme: WidgetTheme<CardSlot> = {
-  classNames: {
+  styles: {
     container: "bg-slate-900 border-slate-800",
     title: "text-slate-400",
     value: "text-white",

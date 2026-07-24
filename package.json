@@ -4,6 +4,7 @@
   "description": "Anedya widget SDK",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
+   "type": "module",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
@@ -11,17 +12,24 @@
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.cjs"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./formatters": {
+      "import": "./dist/formatters.mjs",
+      "require": "./dist/formatters.cjs",
+      "types": "./dist/formatters.d.mts"
+    }
   },
-  "scripts": {
-    "clean": "rm -rf dist",
-    "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/style.css --minify",
-    "build:js": "tsup",
-    "build": "npm run clean && npm run build:js && npm run build:css",
-    "typecheck": "tsc --noEmit"
-  },
+"scripts": {
+  "clean": "rm -rf dist",
+"build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/styles.css --minify",
+  "build:js": "tsdown",
+  "build": "npm run clean && npm run build:js && npm run build:css",
+  "dev": "npm run clean && tsdown --watch",
+  "typecheck": "tsc --noEmit"
+},
+
   "repository": {
     "type": "git",
     "url": "git@github.com:abhishreecodes/new-sdk.git"
@@ -50,7 +58,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.3.2",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.22.13",
     "typescript": "^5.7.3"
   }
 }

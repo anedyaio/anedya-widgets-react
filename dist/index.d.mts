@@ -120,3 +120,4 @@ interface CardWidgetProps extends AnedyaWidgetBaseProps {
 declare function CardWidget({ node, variable, title, unit, precision, formatValue, labelText, classNames, onDataChange, theme, className, width, height, minWidth, maxWidth, }: CardWidgetProps): react.JSX.Element;
 
 export { CardWidget };
+
