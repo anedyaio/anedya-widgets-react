@@ -16,10 +16,10 @@ export type SlotClassNames<TSlots extends string> =
  *      ↓
  *   user theme
  *      ↓
- *   widget classNames prop
+ *   widget styles prop
  *
  * Later layers win via `twMerge`.
  */
 export interface WidgetTheme<TSlots extends string = string> {
-  classNames: SlotClassNames<TSlots>;
+  styles: SlotClassNames<TSlots>;
 }

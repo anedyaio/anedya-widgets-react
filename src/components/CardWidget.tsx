@@ -25,7 +25,7 @@ export type CardWidgetUpdate = Partial<
 export interface CardWidgetProps extends AnedyaWidgetBaseProps {
   unit?: string;
   /** Decimal places for the displayed value. Omit to show the raw value as-is. */
-  precision?: number;
+  decimalPlaces?: number;
   formatValue?: (value: number) => string;
   /** Text shown under the value, e.g. a last-updated label — pass a function to compute it from the latest timestamp. */
   labelText?: (timestamp: number) => string;
@@ -38,7 +38,7 @@ export interface CardWidgetProps extends AnedyaWidgetBaseProps {
    * Tailwind conflicts are resolved via `twMerge`, so later overrides
    * replace earlier utilities within the same Tailwind class group.
    */
-  classNames?: SlotClassNames<CardSlot>;
+  styles?: SlotClassNames<CardSlot>;
   /**
    * Called whenever the latest fetched data changes.
    *
@@ -60,7 +60,7 @@ export interface CardWidgetProps extends AnedyaWidgetBaseProps {
    *     return {
    *       title: "High Humidity",
    *       theme: "dark",
-   *       classNames: {
+   *       styles: {
    *         value: "text-red-500",
    *       },
    *     };
@@ -71,6 +71,7 @@ export interface CardWidgetProps extends AnedyaWidgetBaseProps {
 }
 
 const DEFAULT_WIDTH = 240;
+const DEFAULT_HEIGHT = 160; 
 const DEFAULT_MIN_WIDTH = 180;
 const DEFAULT_MAX_WIDTH = 480;
 
@@ -79,10 +80,10 @@ export function CardWidget({
   variable,
   title = "Latest Value",
   unit,
-  precision,
+  decimalPlaces,
   formatValue,
   labelText,
-  classNames = {},
+  styles = {},
   onDataChange,
   theme,
   className,
@@ -91,7 +92,7 @@ export function CardWidget({
   height,
   minWidth = DEFAULT_MIN_WIDTH,
   maxWidth = DEFAULT_MAX_WIDTH,
-}: CardWidgetProps) {
+}: CardWidgetProps): React.JSX.Element  {
   const [value, setValue] = useState<number | null>(null);
   const [timestamp, setTimestamp] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -162,20 +163,21 @@ export function CardWidget({
   const resolvedProps = {
     title,
     unit,
-    precision,
+    decimalPlaces,
     formatValue,
     labelText,
     width: width ?? DEFAULT_WIDTH,
-    height,
+// height: height ?? DEFAULT_HEIGHT,
+height,
     minWidth,
     maxWidth,
     className,
     theme,
     ...dynamicProps,
 
-    classNames: {
-      ...(classNames ?? {}),
-      ...(dynamicProps.classNames ?? {}),
+    styles: {
+      ...(styles ?? {}),
+      ...(dynamicProps.styles ?? {}),
     },
   };
 
@@ -188,17 +190,17 @@ export function CardWidget({
 
   // Per-slot resolution, lowest to highest precedence:
   //   1. CARD_DEFAULT_CLASSES[slot]      — built-in baseline
-  //   2. resolvedTheme.classNames[slot]  — active theme's classes
-  // 3. resolvedProps.classNames
-  //    (original classNames merged with any returned by onDataChange)
+  //   2. resolvedTheme.styles[slot]  — active theme's classes
+  // 3. resolvedProps.styles
+  //    (original styles merged with any returned by onDataChange)
 
   // twMerge resolves any real Tailwind conflicts between these layers
   // based on actual utility groups, not the order they're written in.
   const resolveSlot = (slot: CardSlot) =>
     twMerge(
       CARD_DEFAULT_CLASSES[slot],
-      resolvedTheme.classNames[slot],
-      resolvedProps.classNames[slot],
+      resolvedTheme.styles[slot],
+      resolvedProps.styles[slot],
     );
 
   const displayValue = useMemo(() => {
@@ -206,11 +208,11 @@ export function CardWidget({
 
     if (resolvedProps.formatValue) return resolvedProps.formatValue(value);
 
-    if (resolvedProps.precision != null)
-      return value.toFixed(resolvedProps.precision);
+    if (resolvedProps.decimalPlaces != null)
+      return value.toFixed(resolvedProps.decimalPlaces);
 
     return String(value);
-  }, [value, resolvedProps.formatValue, resolvedProps.precision]);
+  }, [value, resolvedProps.formatValue, resolvedProps.decimalPlaces]);
   const displayLabel = useMemo(() => {
     if (timestamp == null) return null;
 
@@ -221,6 +223,9 @@ export function CardWidget({
 
     return `Updated ${d.toLocaleTimeString()}`;
   }, [timestamp, resolvedProps.labelText]);
+
+ const hasExplicitHeight = height != null || dynamicProps.height != null;
+  
   return (
     <div
   className="anedya-card-container"
@@ -228,17 +233,20 @@ export function CardWidget({
     width: resolvedProps.width,
     minWidth: resolvedProps.minWidth,
     maxWidth: resolvedProps.maxWidth,
-    height: resolvedProps.height,
+    ...(hasExplicitHeight
+      ? { height: resolvedProps.height } // definite → drives cqh, hard-capped
+      : { minHeight: DEFAULT_HEIGHT }),  // no height passed → auto-grow, cqw-only
     boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
   }}
   >
     <div
-     className={twMerge(
-    "anedya-card",
-    resolveSlot("container"),
-    resolvedProps.className,
-)}
- style={{ height: "100%" }}
+ className={twMerge("anedya-card", resolveSlot("container"), resolvedProps.className)}
+    style={{
+      flex: "1 0 auto",
+      ...(hasExplicitHeight ? { overflow: "hidden" } : {}),
+    }}
  
     >
       <span className={ resolveSlot("title")}>
@@ -246,39 +254,31 @@ export function CardWidget({
       </span>
 
       {loading ? (
-        <div
-          style={{
-            height: 36,
-            width: 36,
-            borderRadius: "50%",
-            border: "2px solid #cbd5e1",
-            borderTopColor: "#475569",
-            animation: "anedya-card-spin 0.8s linear infinite",
-          }}
-        >
-          <style>{`@keyframes anedya-card-spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
+       <div className="flex flex-col gap-[var(--anedya-card-gap)] w-full items-center justify-center">
+    {/* Value Skeleton: Uses the exact font-size variable as its height */}
+    <div 
+      className="w-2/3 bg-slate-200 dark:bg-slate-700 rounded-md animate-pulse"
+      style={{ height: "var(--anedya-card-value-size)" , backgroundColor: theme === "dark" ? "#374151" : "#e5e7eb"}} 
+    />
+    
+    {/* Label Skeleton: Uses the exact label-size variable as its height */}
+    <div 
+      className="w-1/2 bg-slate-200 dark:bg-slate-700 rounded-md animate-pulse"
+      style={{ height: "var(--anedya-card-label-size)", backgroundColor: theme === "dark" ? "#374151" : "#e5e7eb" }} 
+    />
+  </div>
       ) : error ? (
         <span className="text-red-600 text-sm">{error}</span>
       ) : (
         <>
-          {/* <span className={resolveSlot("value")}>
-            {displayValue}
-            {resolvedProps.unit && (
-              <span
-                className={resolveSlot("unit")}
-              >
-                {resolvedProps.unit}
-              </span>
-            )}
-          </span> */}
-          <span
+        
+<span
   className={twMerge(
-    "inline-flex items-end justify-center gap-1",
+    "inline-flex items-baseline justify-center gap-1",
     resolveSlot("value")
   )}
 >
-  <span>{displayValue}</span>
+  <span className="min-w-0 break-words">{displayValue}</span>
 
   {resolvedProps.unit && (
     <span className={resolveSlot("unit")}>

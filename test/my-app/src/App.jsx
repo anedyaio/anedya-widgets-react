@@ -4,12 +4,19 @@
 
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { CardWidget } from "../../../src";
-import "../../../dist/style.css";
+import { CardWidget } from "public-widget-sdk";
 
-const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
-const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
-const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
+// Import your stylesheet via the industry-standard subpath
+import "public-widget-sdk/styles.css";
+
+// import { CardWidget } from "../../../src";
+// import "../../../dist/style.css";
+
+
+const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
+const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
+const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
+
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -22,7 +29,7 @@ const node = anedya.newNode(client, nodeId);
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
 const emeraldTheme= {
-  classNames: {
+  styles: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
     value: "text-emerald-900",
@@ -34,27 +41,27 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-    <div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}>
+<div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
       {/* ============================================================
-       * 1. Default appearance — no theme, no classNames, no
+       * 1. Default appearance — no theme, no styles, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps} height={300} width={700}  title="Default" unit="%" precision={1} />
+      <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1} />
 
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Emerald Theme" unit="%" precision={1} theme={emeraldTheme} />
+      <CardWidget {...commonProps} title="Emerald Theme" unit="%" decimalPlaces={1} theme={emeraldTheme} />
 
       {/* Built-in preset names also work directly: */}
-      <CardWidget {...commonProps} title="Dark Preset" unit="%" precision={1} theme="dark" />
+      <CardWidget {...commonProps} title="Dark Preset" unit="%" decimalPlaces={1} theme="dark" />
 
       {/* ============================================================
-       * 3. classNames vs className — THE distinction to understand:
+       * 3. styles vs className — THE distinction to understand:
        *
-       *   - `classNames` (plural, an OBJECT): per-SLOT overrides.
+       *   - `styles` (plural, an OBJECT): per-SLOT overrides.
        *     Keys are "container" | "title" | "value" | "unit" | "label"
        *     — lets you reach INSIDE the widget and style individual
        *     pieces independently.
@@ -63,20 +70,20 @@ export default function App() {
        *     convention — one class applied ONLY to the widget's
        *     outermost container element, same as you'd pass to any
        *     other component. It's merged (via twMerge) with whatever
-       *     classNames.container already resolved to, not a
+       *     styles.container already resolved to, not a
        *     replacement for it.
        *
        * This example uses BOTH at once so the difference is visible:
-       * className adds a shadow to the outer box, classNames.value/
-       * classNames.title style two INNER pieces independently.
+       * className adds a shadow to the outer box, styles.value/
+       * styles.title style two INNER pieces independently.
        * ============================================================ */}
       <CardWidget
         {...commonProps}
-        title="classNames vs className"
+        title="styles vs className"
         unit="%"
-        precision={1}
+        decimalPlaces={1}
         className="shadow-lg" // <- outer box only, ordinary React convention
-        classNames={{
+        styles={{
           value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
           title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
         }}
@@ -84,22 +91,22 @@ export default function App() {
       />
 
       {/* ============================================================
-       * 4. Plain CSS classes — classNames works with ANY class source,
+       * 4. Plain CSS classes — styles works with ANY class source,
        * not just Tailwind. These reference plain hand-written CSS
        * classes (e.g. defined in a .css file this app already imports).
        * ============================================================ */}
-      <CardWidget
+      {/* <CardWidget
         {...commonProps}
         title="Plain CSS Classes"
         unit="%"
-        precision={1}
-        classNames={{ container: "my-card", value: "my-card-value" }}
-      />
+        decimalPlaces={1}
+        styles={{ container: "my-card", value: "my-card-value" }}
+      /> */}
 
       {/* ============================================================
        * 5. Native Tailwind responsive prefixes — `sm:`/`md:`/`lg:`
        * work exactly as they do anywhere else in your app, because
-       * classNames just forwards whatever string you write straight
+       * styles just forwards whatever string you write straight
        * to `className`. This widget does NOT have its own custom
        * breakpoint system — these prefixes are compiled by YOUR
        * project's Tailwind config and respond to the BROWSER VIEWPORT,
@@ -108,36 +115,37 @@ export default function App() {
        * automatically follow that customization too — nothing to
        * configure on the widget's side.
        * ============================================================ */}
-      <CardWidget
+      {/* <CardWidget
         {...commonProps}
         title="Responsive Text"
         unit="%"
-        precision={1}
-        classNames={{ value: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl" }}
-      />
+        decimalPlaces={1}
+        styles={{ value: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl" }}
+      /> */}
 
       {/* ============================================================
        * 6. formatValue / labelText — simple formatting hooks, distinct
        * from styling. formatValue controls the displayed number's
        * text; labelText controls the caption under it.
        * ============================================================ */}
-      <CardWidget
+      {/* <CardWidget
         {...commonProps}
         title="Custom Formatting"
         formatValue={(v) => `${v.toFixed(2)} % RH`}
         labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
-      />
+       
+      /> */}
 
       {/* ============================================================
        * 7. onStyleChange — conditional class overrides driven by the
        * RAW fetched data ({ value, timestamp }), always applied on top
-       * of everything else (theme, classNames, className).
+       * of everything else (theme, styles, className).
        * ============================================================ */}
-      <CardWidget
+      {/* <CardWidget
         {...commonProps}
         title="Threshold Coloring"
         unit="%"
-        precision={1}
+        decimalPlaces={1}
 
        onDataChange={(data) => {
     if (!data) return;
@@ -146,7 +154,7 @@ export default function App() {
       return {
         title: "High Humidity",
         theme: "dark",
-        classNames: {
+        styles: {
           value: "text-red-500"
         }
       };
@@ -158,14 +166,14 @@ export default function App() {
     };
   }}
   
-      />
+      /> */}
 
       {/* ============================================================
        * 8. Sizing — width/height/minWidth/maxWidth are plain props,
        * applied as inline styles on the container, independent of the
-       * whole classNames/theme system.
+       * whole styles/theme system.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} />
+      {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
     </div>
   );
 }

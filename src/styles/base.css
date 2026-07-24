@@ -1,52 +1,26 @@
 @import "tailwindcss";
 
-/* Explicit @source directives, so Tailwind scans exactly the folders
-   that actually contain our class strings (CARD_DEFAULT_CLASSES,
-   lightTheme, darkTheme, and any future widget's defaults), rather
-   than relying purely on automatic content detection. Paths are
-   relative to THIS file's location (src/styles/base.css). */
 @source "../widgets/**/*.{ts,tsx}";
 @source "../themes/**/*.{ts,tsx}";
 @source "../common.ts";
 
-/* ---------- Widget defaults ---------- */
 .anedya-card-container {
-  container-type: inline-size;
+  container-type: size;
   container-name: anedya-card;
+  transition: width 0.25s ease, height 0.25s ease;
 }
-
 
 .anedya-card {
-  --anedya-card-padding: 1rem;
-  --anedya-card-title-size: .875rem;
-  --anedya-card-value-size: 2.25rem;
-  --anedya-card-unit-size: 1rem;
-  --anedya-card-label-size: .75rem;
-  --anedya-card-gap: .5rem;
+  --anedya-card-padding: clamp(1rem, 0.5rem + 2.5cqw + 2.5cqh, 4.5rem);
+  --anedya-card-title-size: clamp(0.875rem, 0.6rem + 1.5cqw + 1.5cqh, 3rem);
+  --anedya-card-value-size: clamp(2.25rem, 1rem + 8cqw + 8cqh, 9.5rem);
+  --anedya-card-unit-size: clamp(1rem, 0.7rem + 1.5cqw + 1.5cqh, 3.25rem);
+  --anedya-card-label-size: clamp(0.75rem, 0.5rem + 1.2cqw + 1.2cqh, 2.25rem);
+  --anedya-card-gap: clamp(0.5rem, 0.2rem + 2cqw + 3cqh, 3.5rem);
+
+  transition: padding 0.25s ease, gap 0.25s ease;
 }
 
-@container anedya-card (min-width: 320px) {
-  .anedya-card {
-    --anedya-card-padding: 1.25rem;
-
-    --anedya-card-title-size: 1rem;
-    --anedya-card-value-size: 2.75rem;
-    --anedya-card-unit-size: 1.125rem;
-    --anedya-card-label-size: 0.875rem;
-
-    --anedya-card-gap: 0.75rem;
-  }
-}
-
-@container anedya-card (min-width: 420px) {
-  .anedya-card {
-    --anedya-card-padding: 1.5rem;
-
-    --anedya-card-title-size: 1.125rem;
---anedya-card-value-size: 5rem;
-    --anedya-card-unit-size: 1.25rem;
-    --anedya-card-label-size: 1rem;
-
-    --anedya-card-gap: 1rem;
-  }
+.anedya-card > * {
+  transition: font-size 0.25s ease;
 }

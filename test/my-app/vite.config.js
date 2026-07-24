@@ -11,6 +11,12 @@ export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom", "@base-ui/react"],
   },
+  server: {
+    fs: {
+      // Allow Vite to fetch assets from the parent widget SDK directory
+      allow: ['..'] 
+    }
+  }
 
 })
 
