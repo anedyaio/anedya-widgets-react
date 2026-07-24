@@ -12,7 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "noEmit": true,
-    "types":["react", "react-dom"],
     "isolatedDeclarations": true
   },
   "include": ["src"]

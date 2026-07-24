@@ -1,6 +1,7 @@
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
+import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
 import "../../../dist/style.css";
 
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
@@ -180,6 +181,69 @@ export default function App() {
         minWidth={280}
         maxWidth={400}
         height={200}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        min={0}
+        max={100}
+        // size= not working proper
+        valueLabel={{ precision: 1 }}
+        arc={{
+          startAngle: -90,
+          endAngle: 90,
+          // radius: not working proper
+          thickness: 30,
+          // cornerRadius:100
+        }}
+        track={{
+          show: true,
+          color: "yellow",
+        }}
+        fillMode="progress"
+        color="#1fa2ff"
+        needle={{
+          show: true,
+          type: "triangle",
+          length: "medium",
+          width: 5,
+          color: "white",
+          capRadius: 7,
+        }}
+        needleLabel={{
+          show: true,
+          formatter: () => {
+            "Hello";
+          },
+        }}
+        labels={{
+          show: true,
+          position: "outside",
+        }}
+        scale={{
+          minLabel: "Minimum",
+          maxLabel: "Maximum",
+        }}
+        ticks={{
+          show: true,
+          count: 10,
+          position: "outside",
+          length: 10,
+          labels: true,
+        }}
+        animation={{
+          duration: 5000,
+          easing: "easeElasticOut",
+        }}
+        tooltip={{
+          show: false,
+        }}
+        classNames={{
+          title: "text-white",
+          tickLabel: "text-white text-lg",
+          label: "text-white",
+          value: "text-white",
+        }}
       />
     </div>
   );
