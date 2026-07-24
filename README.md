@@ -1,40 +1,59 @@
-# CardWidget
+[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
-A single-value display widget for Anedya data — shows the latest reading, a title, and a last-updated label.
+
+<!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
+<p align="center">
+    <img src="https://cdn.anedya.io/anedya_black_banner.png" alt="Logo">
+</p>
+<!--</div>-->
+
+# Anedya Widgets SDK
+
+A collection of pre-built, themeable React widgets for displaying Anedya IoT data — drop-in components for dashboards and front-end apps.
 
 ## Table of Contents
 
-- [Setup](#setup)
-- [Required props](#required-props)
-- [The styling model](#the-styling-model)
-- [`styles` vs `className`](#styles-vs-classname--the-distinction-that-matters-most)
-- [Theming](#theming)
-- [Tailwind responsive utilities](#tailwind-responsive-utilities)
-- [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
-- [How props are resolved](#how-props-are-resolved)
-- [Formatting vs rendering](#formatting-vs-rendering)
-- [Sizing](#sizing)
-- [Responsive sizing](#responsive-sizing)
-- [Loading & error states](#loading--error-states)
-- [Other props](#other-props)
+- [Installation & Setup](#installation--setup)
+- [Widgets](#widgets)
+  - [CardWidget](#cardwidget)
+    - [Required props](#required-props)
+    - [The styling model](#the-styling-model)
+    - [`styles` vs `className`](#styles-vs-classname--the-distinction-that-matters-most)
+    - [Theming](#theming)
+    - [Tailwind responsive utilities](#tailwind-responsive-utilities)
+    - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
+    - [How props are resolved](#how-props-are-resolved)
+    - [Formatting vs rendering](#formatting-vs-rendering)
+    - [Sizing](#sizing)
+    - [Responsive sizing](#responsive-sizing)
+    - [Loading & error states](#loading--error-states)
+    - [Other props](#other-props)
 - [Build & distribution](#build--distribution--why-classes-render-unstyled-without-this)
 
 ---
-## Setup
 
-`CardWidget` doesn't create its own SDK client or node — it only renders data you fetch through the [Anedya Frontend SDK](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk), which is a separate package you'll need alongside this one.
+## Installation & Setup
+
+Widgets in this SDK don't create their own Anedya client or node — they only render data you fetch through the [Anedya Frontend SDK](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk), which is a separate package you'll need alongside this one.
 
 **1. Install both packages:**
 
 ```bash
-npm install @anedyasystems/anedya-frontend-sdk your-sdk
+npm install @anedyasystems/anedya-frontend-sdk public-widget-sdk
 ```
 
-**2. Create a client and node using the Frontend SDK, then pass the node into `CardWidget`:**
+**2. Import the stylesheet once**, anywhere in your app's entry point:
+
+```jsx
+import "public-widget-sdk/styles.css";
+```
+
+**3. Create a client and node using the Frontend SDK, then pass the node into any widget:**
 
 ```jsx
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { CardWidget } from "your-sdk";
+import { CardWidget } from "public-widget-sdk";
+import "public-widget-sdk/styles.css";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -44,11 +63,21 @@ const node = anedya.newNode(client, nodeId);
 <CardWidget node={node} variable="humidity" />
 ```
 
-> `tokenId`, `token`, and `nodeId` come from your Anedya account/device setup — see the [Frontend SDK docs](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk) for details on obtaining these and on other `node`/`client` methods (fetching historical data, live streaming, key-value store, etc.) beyond what this widget itself uses.
+> `tokenId`, `token`, and `nodeId` come from your Anedya account/device setup — see the [Frontend SDK docs](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk) for details on obtaining these and on other `node`/`client` methods (fetching historical data, live streaming, key-value store, etc.) beyond what these widgets use directly.
 
 ---
 
-## Required props
+## Widgets
+
+### CardWidget
+
+A single-value display widget — shows the latest reading, a title, and a last-updated label.
+
+```jsx
+<CardWidget node={node} variable="humidity" title="Humidity" unit="%" decimalPlaces={1} />
+```
+
+#### Required props
 
 | Prop | Type | Description |
 |---|---|---|
@@ -57,7 +86,7 @@ const node = anedya.newNode(client, nodeId);
 
 ---
 
-## The styling model
+#### The styling model
 
 `CardWidget` is **entirely class-based** — every visual choice is a CSS class string, not a style property. This is deliberate: card widgets are commonly styled with Tailwind, and classes compose and override far more predictably than inline styles do once you're combining a theme, a per-instance override, and a conditional rule all on the same element.
 
@@ -69,7 +98,7 @@ type CardSlot = "container" | "title" | "value" | "unit" | "label";
 
 ---
 
-## `styles` vs `className` — the distinction that matters most
+#### `styles` vs `className` — the distinction that matters most
 
 These look similar but do genuinely different things:
 
@@ -90,16 +119,16 @@ These look similar but do genuinely different things:
 
 Both can be used together freely — `className` is merged (via `twMerge`) with whatever `styles.container` already resolved to; it doesn't replace it.
 
-> **Note:** `styles` classes are consumer-authored strings forwarded straight into `className` at render — the widget doesn't generate any CSS for them at build time. Any class you pass here must already exist in your own app's compiled CSS (e.g. your own Tailwind build, or a plain hand-written class in a stylesheet you import) — arbitrary utility names that only the widget's *own* Tailwind build knows about (like the container-query variables described below) won't do anything if typed fresh from a consuming app.
+> **Note:** `styles` classes are consumer-authored strings forwarded straight into `className` at render — the widget doesn't generate any CSS for them at build time. Any class you pass here must already exist in your own app's compiled CSS (e.g. your own Tailwind build, or a plain hand-written class in a stylesheet you import).
 
 ---
 
-## Theming
+#### Theming
 
 `theme` accepts a built-in preset name, or a full custom `WidgetTheme<CardSlot>` object — just a plain object shaped like `styles`, reusable across every widget instance that uses it:
 
 ```jsx
-const emeraldTheme: WidgetTheme<CardSlot> = {
+const emeraldTheme = {
   styles: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
@@ -115,7 +144,7 @@ const emeraldTheme: WidgetTheme<CardSlot> = {
 
 ---
 
-## Tailwind responsive utilities
+#### Tailwind responsive utilities
 
 You can freely use Tailwind's responsive prefixes inside `styles`:
 
@@ -133,7 +162,7 @@ If you supply your own `text-*` classes (responsive or otherwise), they replace 
 
 ---
 
-## `onDataChange` — data-driven rendering
+#### `onDataChange` — data-driven rendering
 
 `onDataChange` is called whenever the latest fetched data changes.
 
@@ -171,7 +200,7 @@ Returning `undefined` (or nothing) clears any previous overrides and restores th
 
 ---
 
-## How props are resolved
+#### How props are resolved
 
 Rendering happens in layers.
 
@@ -194,15 +223,13 @@ Later layers win whenever two Tailwind utilities conflict. Conflicts are resolve
 
 ---
 
-## Formatting vs rendering
+#### Formatting vs rendering
 
 `formatValue` and `labelText` control **what text is displayed**.
 
 `styles` controls **how the widget looks**.
 
 `onDataChange` can override either one (along with most other widget props), allowing the widget to react to incoming data.
-
-For example:
 
 ```tsx
 <CardWidget
@@ -227,7 +254,7 @@ For example:
 
 ---
 
-## Sizing
+#### Sizing
 
 `width` / `height` / `minWidth` / `maxWidth` are plain props, applied as inline styles on the container — independent of the whole `styles`/theme system:
 
@@ -235,7 +262,7 @@ For example:
 <CardWidget width={320} height={200} minWidth={280} maxWidth={400} />
 ```
 
-### `height` has two distinct modes
+##### `height` has two distinct modes
 
 Whether you pass `height` changes how the card behaves — this is intentional, not a quirk:
 
@@ -256,7 +283,7 @@ If you're using a `formatValue` that can produce long strings, either don't pass
 
 ---
 
-## Responsive sizing
+#### Responsive sizing
 
 The widget automatically scales its internal spacing and typography using **CSS Container Queries** — based on the card's own rendered size, not the browser viewport.
 
@@ -275,11 +302,9 @@ By default the following properties scale automatically:
 
 A card inside a narrow dashboard column will use smaller typography than the same card rendered full-width, even on the same screen — this behavior is built in and needs no configuration.
 
-### Overriding responsive sizing
+##### Overriding responsive sizing
 
 If you provide your own font-size utility for a slot, you're opting out of the default responsive sizing for that slot.
-
-For example:
 
 ```tsx
 <CardWidget
@@ -289,27 +314,21 @@ For example:
 />
 ```
 
-The value will always render at `text-6xl`.
-
-Likewise, if you provide responsive Tailwind classes:
-
-```tsx
-styles={{
-  value: "text-2xl md:text-5xl"
-}}
-```
-
-your own breakpoint rules take precedence over the widget's default responsive sizing. This follows normal Tailwind behavior — your classes always win over the widget defaults.
+The value will always render at `text-6xl`. Likewise, responsive Tailwind classes (`text-2xl md:text-5xl`) take precedence over the widget's default responsive sizing — your classes always win over the widget defaults.
 
 ---
 
-## Loading & error states
+#### Loading & error states
 
-While the initial fetch is in flight, the card renders a small spinner in place of the value. If the fetch fails or no data is available, the card renders the error message text in place of the value (title and label still render normally). Neither state currently accepts style overrides via `styles` — flag it if you need to customize their appearance.
+While the initial fetch is in flight, the card renders **skeleton loaders** in place of the value and label — pulsing placeholder blocks sized to match each slot's current font-size variable (`var(--anedya-card-value-size)` / `var(--anedya-card-label-size)`), so the skeleton scales along with the card exactly like the real content would.
+
+If the fetch fails or no data is available, the card renders the error message text in place of the value (title still renders normally).
+
+Neither state currently accepts style overrides via `styles` — flag it if you need to customize their appearance.
 
 ---
 
-## Other props
+#### Other props
 
 | Prop | Type | Description |
 |---|---|---|
@@ -356,10 +375,10 @@ npm install -D @tailwindcss/cli
 
 Run it as part of your normal publish/build step so `dist/style.css` always reflects the current source.
 
-**4. Consumers import it once**, anywhere in their app:
+**4. Consumers import it once**, via the package's `styles.css` subpath export:
 
 ```jsx
-import "your-sdk/dist/style.css";
+import "public-widget-sdk/styles.css";
 ```
 
 That's the entire integration on their end — no `content` glob changes, no Tailwind config coordination, no knowledge of how this SDK is built internally required.
