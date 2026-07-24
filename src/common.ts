@@ -66,3 +66,5 @@ export interface FormatOptions {
   precision?: number;     // decimal places for the scaled number
 }
 export type FormatResult = { value: string; unit?: string };
+
+export type LabelFormatPreset = "time" | "date" | "datetime" | "relative" | "iso";
