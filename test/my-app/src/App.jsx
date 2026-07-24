@@ -2,6 +2,7 @@ import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
+import "../../../dist/style.css";
 
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
 const token =
@@ -132,8 +133,68 @@ export default function App() {
         }}
       />
 
-      {/* <GaugeWidget {...commonProps} title="Temp" unit="°C" precision={1} /> */}
-
+      {/* <div style={{backgroundColor:"white"}}> */}
+        <GaugeWidget 
+        {...commonProps} 
+        min={0}
+        max={100}
+        // size= not working proper 
+        valueLabel={{ precision: 1 }} 
+        arc={{
+          startAngle:-90,
+          endAngle:90,
+          // radius: not working proper
+          thickness:30,
+          // cornerRadius:100
+        }}
+        track={{
+          show:true,
+          color:"yellow"
+        }}
+        fillMode="progress"
+        color="#1fa2ff"
+        needle={{
+          show:true,
+          type:"triangle",
+          length:"medium",
+          width:5,
+          color:"white",
+          capRadius:7
+       }}
+       needleLabel={{
+        show:true,
+        formatter:(() => {"Hello"})
+       }}
+       labels={{
+        show:true,
+        position:"outside"
+       }}
+       scale={{
+        minLabel:"Minimum",
+        maxLabel:"Maximum"
+       }}
+       ticks={{
+        show:true,
+        count:10,
+        position:"outside",
+        length:10,
+        labels:true,
+       }}
+       animation={{
+        duration:5000,
+        easing:"easeElasticOut"
+       }}
+       tooltip={{
+        show:false
+       }}
+       classNames={{
+        title:"text-white",
+        tickLabel:"text-white text-lg",
+        label:"text-white",
+        value:"text-white"
+       }}
+        />
+      {/* </div> */}
       {/* Needle gauge with threshold colors */}
       {/* <GaugeWidget
         {...commonProps}
@@ -172,6 +233,113 @@ export default function App() {
       {/* <div style={{ width: "50%", height: "250px" }}>
         <GaugeWidget {...commonProps} variant="needle" />
       </div> */}
+
+{/* ============================================================
+       * 1. Progress variant (default) — track + fill + needle,
+       * value below needle, variable name below that.
+       * ============================================================ */}
+      {/* <div style={{ width: 320, height: 240 }}>
+        <GaugeWidget
+          {...commonProps}
+          title="Progress"
+          value={47}
+          valueLabel={{ suffix: "%", precision: 0 }}
+        />
+      </div> */}
+
+      {/* ============================================================
+       * 2. Needle variant — explicit ticks + needle, no fill sweep
+       * (needle-only reading, like a speedometer).
+       * ============================================================ */}
+      {/* <div style={{ width: 320, height: 240 }}> */}
+        <GaugeWidget
+          {...commonProps}
+          variant="needle"
+          needle={{ 
+            show: true,
+            type:"triangle",
+            color:"#1fa2ff"
+          }}
+          title="Needle"
+          // value={68}
+          min={0}
+          max={100}
+          ticks={{ show: true, count: 6 }}
+          valueLabel={{ suffix: "°C", precision: 1 }}
+          classNames={{value:"text-white"}}
+        />
+      {/* </div> */}
+
+      {/* ============================================================
+       * 3. Segmented variant — colored ranges (risk zones), with
+       * needle enabled to point at the current value (like your
+       * ChartExpo reference image).
+       * ============================================================ */}
+      {/* <div style={{ width: 820, height: 840 }}> */}
+        <GaugeWidget
+          {...commonProps}
+          variant="segmented"
+          title="Segmented"
+          // value={72}
+          min={0}
+          max={100}
+          needle={{ 
+            show: true,
+            type:"line"
+          }}
+          arc={{
+            gap:0,
+            cornerRadius:0,
+          }}
+          segments={[
+            { from: 0, to: 20, color: "#ef4444" },
+            { from: 20, to: 40, color: "#f59e0b" },
+            { from: 40, to: 60, color: "#22c55e" },
+            { from: 60, to: 80, color: "#ef4444" },
+            { from: 80, to: 100, color: "#f59e0b" }
+          ]}
+          valueLabel={{ precision: 0 }}
+          classNames={{value:"text-white"}}
+          responsive={true}
+        />
+      {/* </div> */}
+
+      {/* ============================================================
+       * 4. Multi-bar variant — concentric bars, each with its own
+       * value/color/label. Needle is not shown for this variant.
+       * ============================================================ */}
+      {/* <div style={{ width: 320, height: 240 }}> */}
+        {/* <GaugeWidget
+          {...commonProps}
+          variant="multiBar"
+          title="Multi-Bar"
+          min={0}
+          max={100}
+          bars={[
+            { value: 82, color: "#6366f1", label: "CPU" },
+            { value: 64, color: "#22c55e", label: "Memory" },
+            { value: 41, color: "#f59e0b", label: "Disk" },
+          ]}
+          valueLabel={{ show: false }}
+          classNames={{value:"text-white"}}
+        /> */}
+      {/* </div> */}
+
+      {/* ============================================================
+       * 5. Bonus — gradient fill on the progress variant, per your
+       * "user can pass their own gradient" requirement.
+       * ============================================================ */}
+      {/* <div style={{ width: 320, height: 240 }}> */}
+        <GaugeWidget
+          {...commonProps}
+          title="Gradient Fill"
+          // value={55}
+          color={["#f43f5e", "#f59e0b", "#1fa2ff"]}
+          valueLabel={{ suffix: "%", precision: 0 }}
+          classNames={{value:"text-white"}}
+        />
+      {/* </div> */}
+
     </div>
   );
 }

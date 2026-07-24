@@ -1,36 +1,40 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-interface ElementSize {
+export interface ObservedSize {
   width: number;
   height: number;
 }
 
-export function useResizeObserver(): {
-  ref: React.RefObject<HTMLDivElement | null>;
-  width: number;
-  height: number;
-} {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState<ElementSize>({ width: 0, height: 0 });
+/**
+ * Observes the border-box size of the returned ref's element and
+ * returns it. Used by every widget that needs to redraw its D3
+ * geometry (arc radius, needle length, bar scales, etc.) when the
+ * container is resized — mobile, tablet, laptop, desktop, or a
+ * consumer-resized card, all handled the same way.
+ */
+export function useResizeObserver<T extends Element>(enabled = true) {
+  const ref = useRef<T | null>(null);
+  const [size, setSize] = useState<ObservedSize>({ width: 0, height: 0 });
 
   useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
+    if (!enabled || !ref.current) return;
+    const el = ref.current;
 
-    // Create the observer (non‑generic)
-    const observer = new ResizeObserver((entries) => {
-      if (!entries.length) return;
-      const { width, height } = entries[0].contentRect;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const box = entry.borderBoxSize?.[0];
+      const width = box ? box.inlineSize : entry.contentRect.width;
+      const height = box ? box.blockSize : entry.contentRect.height;
       setSize({ width, height });
     });
 
-    observer.observe(node);
+    ro.observe(el);
+    // Seed immediately so first paint isn't 0x0 while waiting on the first callback.
+    const rect = el.getBoundingClientRect();
+    setSize({ width: rect.width, height: rect.height });
 
-    // Cleanup
-    return () => {
-      observer.disconnect();
-    };
-  }, []); // empty dependency → runs once after mount
+    return () => ro.disconnect();
+  }, [enabled]);
 
-  return { ref: containerRef, ...size };
+  return { ref, size } as const;
 }

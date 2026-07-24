@@ -1,662 +1,870 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { twMerge } from "tailwind-merge";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
-import {SlotClassNames, WidgetTheme } from "../../types/root";
+import { twMerge } from "tailwind-merge";
 import { AnedyaWidgetBaseProps } from "../../common";
+import { SlotClassNames, WidgetTheme } from "../../types/root";
 import {
-  GAUGE_DEFAULT_CLASSES,
-  gaugeThemes,
+  GaugeAnimationConfig,
+  GaugeArcConfig,
+  GaugeBarSpec,
+  GaugeColor,
+  GaugeLabelsConfig,
+  GaugeNeedleConfig,
+  GaugeNeedleLabelConfig,
+  GaugeScaleConfig,
+  GaugeSegment,
   GaugeSlot,
+  GaugeThreshold,
+  GaugeTicksConfig,
+  GaugeTooltipConfig,
+  GaugeTrackConfig,
+  GaugeValueLabelConfig,
+  GaugeVariant,
+} from "../../types/gauge";
+import {
+  DEFAULT_GAUGE_THEME,
+  GAUGE_DEFAULT_CLASSES,
+  gaugeDarkTheme,
+  gaugeLightTheme,
 } from "../../themes/gaugeTheme";
 import { useResizeObserver } from "../../hooks/useResizeObserver";
 
 export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
-  variant?: "progress" | "needle" | "segmented" | "multiBar";
+  variant?: GaugeVariant;
+  /** Used before live data arrives, or standalone in dummy-data mode. */
   value?: number;
-
   min?: number;
   max?: number;
   size?: number;
+  responsive?: boolean;
 
-  arc?: {
-    startAngle?: number;   // degrees, default 180
-    endAngle?: number;     // degrees, default 0 (semi-circle left to right)
-    thickness?: number;
-    cornerRadius?: number;
-    gap?: number;
-  };
-
-  track?: {
-    show?: boolean;
-    color?: string;
-  };
-
+  arc?: GaugeArcConfig;
+  track?: GaugeTrackConfig;
   fillMode?: "progress" | "solid";
+  /** Single-bar fill color (progress/needle/segmented variants). Pass an array of 2+ colors for a gradient. */
+  color?: GaugeColor;
+  bars?: GaugeBarSpec[];
 
-  bars?: Array<{
-    value: number;
-    color?: string;
-    label?: string;
-  }>;
-
-  needle?: {
-    show?: boolean;
-    type?: "line" | "rounded" | "drop" | "triangle";
-    length?: "short" | "medium" | "full" | number;
-    width?: number;
-    color?: string;
-    capRadius?: number;
-    animation?: boolean;
-  };
-
-  valueLabel?: {
-    show?: boolean;
-    precision?: number;
-    prefix?: string;
-    suffix?: string;
-    formatter?: (value: number) => string;
-  };
-
-  needleLabel?: {
-    show?: boolean;
-    formatter?: (value: number) => string;
-  };
-
-  scale?: {
-    minLabel?: string;
-    maxLabel?: string;
-  };
-
-  ticks?: {
-    show?: boolean;
-    count?: number;
-    position?: "inside" | "outside" | "cross";
-    length?: number;
-    labels?: boolean;
-  };
-
-  segments?: Array<{
-    from: number;
-    to: number;
-    color: string;
-  }>;
-
-  thresholds?: Array<{
-    value: number;
-    color: string;
-  }>;
-
-  gradient?: {
-    colors: string[];
-  };
-
-  animation?: {
-    duration?: number;
-    easing?: string;
-  };
-
-  tooltip?: {
-    show?: boolean;
-  };
-
-  onClick?: () => void;
-  onHover?: (isHover: boolean) => void;
-  onValueChange?: (value: number) => void;
+  needle?: GaugeNeedleConfig;
+  labels?: GaugeLabelsConfig;
+  valueLabel?: GaugeValueLabelConfig;
+  needleLabel?: GaugeNeedleLabelConfig;
+  scale?: GaugeScaleConfig;
+  ticks?: GaugeTicksConfig;
+  segments?: GaugeSegment[];
+  thresholds?: GaugeThreshold[];
+  animation?: GaugeAnimationConfig;
+  tooltip?: GaugeTooltipConfig;
 
   classNames?: SlotClassNames<GaugeSlot>;
+  style?: React.CSSProperties;
+
+  onClick?: (value: number) => void;
+  onHover?: (value: number | null) => void;
+  onValueChange?: (value: number) => void;
 }
 
-// Helper: convert degrees to radians
-const deg2rad = (deg: number) => (deg * Math.PI) / 180;
+const DEG2RAD = Math.PI / 180;
 
-// Default angles for semi-circle (left to right)
-const DEFAULT_START_ANGLE = 180;
-const DEFAULT_END_ANGLE = 0;
+const DEFAULT_ARC: Required<Omit<GaugeArcConfig, "radius" | "thickness">> = {
+  startAngle: -90,
+  endAngle: 90,
+  cornerRadius: 0,
+  gap: 6,
+};
+
+const DEFAULT_ANIMATION: Required<GaugeAnimationConfig> = {
+  duration: 750,
+  easing: "easeCubicOut",
+};
+
+function resolveEase(name: string) {
+  return (d3 as any)[name] ?? d3.easeCubicOut;
+}
+
+function needlePixelLength(
+  length: GaugeNeedleConfig["length"],
+  radius: number
+) {
+  if (typeof length === "number") return length;
+  switch (length) {
+    case "short":
+      return radius * 0.55;
+    case "full":
+      return radius * 0.95;
+    case "medium":
+    default:
+      return radius * 0.75;
+  }
+}
+
+/** Builds a needle shape as an SVG path/element string, pointing "up" (-y) from the origin. */
+function needleShape(
+  type: NonNullable<GaugeNeedleConfig["type"]>,
+  length: number,
+  width: number
+) {
+  const w = width;
+  switch (type) {
+    case "line":
+      return {
+        tag: "line",
+        attrs: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: -length,
+          strokeWidth: w,
+          strokeLinecap: "butt",
+        },
+      };
+    case "rounded":
+      return {
+        tag: "line",
+        attrs: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: -length,
+          strokeWidth: w,
+          strokeLinecap: "round",
+        },
+      };
+    case "triangle": {
+      const half = w / 2;
+      return {
+        tag: "polygon",
+        attrs: {
+          points: `0,0 ${-half},${-length * 0.15} 0,${-length} ${half},${
+            -length * 0.15
+          }`,
+        },
+      };
+    }
+    case "drop":
+    default: {
+      const half = w / 2;
+      // Teardrop: rounded base, sharp tip.
+      const d = `M ${-half} 0 
+                 C ${-half} ${-length * 0.35}, ${-w} ${
+        -length * 0.7
+      }, 0 ${-length}
+                 C ${w} ${-length * 0.7}, ${half} ${-length * 0.35}, ${half} 0
+                 A ${half} ${half} 0 1 1 ${-half} 0 Z`;
+      return { tag: "path", attrs: { d } };
+    }
+  }
+}
+
+function isGradientColor(c?: GaugeColor): c is string[] {
+  return Array.isArray(c) && c.length >= 2;
+}
+
+/** Ensures a <linearGradient> with the given id/colors exists in <defs> and returns its url() reference. Reuses the def if colors are unchanged. */
+function resolveFill(
+  defs: d3.Selection<SVGDefsElement, unknown, null, undefined>,
+  id: string,
+  color: GaugeColor | undefined,
+  fallback: string
+): string {
+  if (!color) return fallback;
+  if (!isGradientColor(color)) return color;
+
+  let grad = defs.select<SVGLinearGradientElement>(`#${id}`);
+  if (grad.empty()) {
+    grad = defs.append("linearGradient").attr("id", id);
+  }
+  grad.attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "0%");
+  grad.selectAll("stop").remove();
+  color.forEach((c, i) =>
+    grad
+      .append("stop")
+      .attr("offset", `${(i / (color.length - 1)) * 100}%`)
+      .attr("stop-color", c)
+  );
+  return `url(#${id})`;
+}
+
+/** Normalized (r=1) bounding box of an arc sweep, for any start/end angle — handles semicircle, 270°, full circle, custom. */
+function getArcBounds(startDeg: number, endDeg: number) {
+  const lo = Math.min(startDeg, endDeg);
+  const hi = Math.max(startDeg, endDeg);
+  const angles = [startDeg, endDeg];
+  for (let k = Math.ceil(lo / 90) * 90; k <= hi; k += 90) angles.push(k);
+
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  angles.forEach((deg) => {
+    const a = deg * DEG2RAD;
+    const x = Math.sin(a);
+    const y = -Math.cos(a);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  });
+  return { minX, maxX, minY, maxY, w: maxX - minX, h: maxY - minY };
+}
 
 export function GaugeWidget({
   node,
   variable,
-  value: valueOverride,
   title,
+  theme,
+  className,
+  style,
+  width,
+  height,
+  minWidth = 160,
+  maxWidth = 480,
+  minHeight = 160,
+  maxHeight = 480,
+  aspectRatio,
+
   variant = "progress",
+  value: valueProp,
   min = 0,
   max = 100,
   size,
-  arc: arcProps = {},
-  track: trackProps = {},
+  responsive = true,
+
+  arc,
+  track,
   fillMode = "progress",
+  color,
   bars,
-  needle: needleProps = {},
-  valueLabel: valueLabelProps = {},
-  needleLabel: needleLabelProps = {},
-  scale: scaleProps = {},
-  ticks: ticksProps = {},
+
+  needle,
+  labels,
+  valueLabel,
+  needleLabel,
+  scale,
+  ticks,
   segments,
   thresholds,
-  gradient,
   animation,
   tooltip,
+
+  classNames = {},
   onClick,
   onHover,
   onValueChange,
-  classNames = {},
-  theme,
-  className,
-  width: initialWidth,
-  height: initialHeight,
-  minWidth,
-  maxWidth,
 }: GaugeWidgetProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const prevValueRef = useRef<number>(min);
 
-  // ----- Data fetching (same as CardWidget) -----
   const [fetchedValue, setFetchedValue] = useState<number | null>(null);
-  const [fetchedTimestamp, setFetchedTimestamp] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(false);
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
 
+  // ---- Live data fetch (mirrors CardWidget) ----
   useEffect(() => {
     if (!node) return;
-    mountedRef.current = true;
-    const fetchLatest = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await node.getLatestData(variable);
-        if (!mountedRef.current) return;
-        if (res.isSuccess && res.isDataAvailable) {
+    let mounted = true;
+
+    node
+      .getLatestData(variable)
+      .then((res: any) => {
+        if (!mounted) return;
+        if (res?.isSuccess && res?.isDataAvailable) {
           setFetchedValue(res.data.value);
-          setFetchedTimestamp(res.data.timestamp);
-        } else {
-          setFetchedValue(null);
-          setError(res.error?.errorMessage ?? "No data available");
         }
-      } catch (err: any) {
-        if (!mountedRef.current) return;
-        setFetchedValue(null);
-        setError(err?.message ?? "Failed to fetch data");
-      } finally {
-        if (mountedRef.current) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchLatest();
+      })
+      .catch(() => {
+        /* fall back to `value` prop / dummy data silently */
+      });
+
     return () => {
-      mountedRef.current = false;
+      mounted = false;
     };
   }, [node, variable]);
 
-  // Resolve displayed value
-  const value = valueOverride ?? fetchedValue;
+  const rawValue = fetchedValue ?? valueProp ?? min;
+  const clampedValue = Math.min(max, Math.max(min, rawValue));
 
-  // ----- Dynamic overrides (like onDataChange in Card) -----
-  const [dynamicProps, setDynamicProps] = useState<Partial<GaugeWidgetProps>>({});
   useEffect(() => {
-    if (onValueChange) {
-      onValueChange(value ?? 0);
-    }
-  }, [value, onValueChange]);
+    onValueChange?.(clampedValue);
+  }, [clampedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // We can support an onDataChange like callback if desired; for now keep simple
+  // ---- Responsive sizing ----
+  const { ref: wrapperRef, size: dims } = useResizeObserver<HTMLDivElement>(
+    responsive && size == null
+  );
 
-  // Merge all props (original + dynamic)
-  const resolvedProps = {
-    ...({
-      variant,
-      min,
-      max,
-      arc: arcProps,
-      track: trackProps,
-      fillMode,
-      bars,
-      needle: needleProps,
-      valueLabel: valueLabelProps,
-      needleLabel: needleLabelProps,
-      scale: scaleProps,
-      ticks: ticksProps,
-      segments,
-      thresholds,
-      gradient,
-      animation,
-      tooltip,
-    } as GaugeWidgetProps),
-    ...dynamicProps,
-    classNames: {
-      ...classNames,
-      ...(dynamicProps.classNames ?? {}),
-    },
+  // ---- Resolved config (defaults per variant) ----
+  const resolvedArc = { ...DEFAULT_ARC, ...arc };
+  const resolvedTrack: Required<GaugeTrackConfig> = {
+    show: track?.show ?? true,
+    color: track?.color ?? "",
+  };
+  const needleShownByDefault = variant === "progress" || variant === "needle";
+  const resolvedNeedle: Required<Omit<GaugeNeedleConfig, "length">> & {
+    length: NonNullable<GaugeNeedleConfig["length"]>;
+  } = {
+    show: needle?.show ?? needleShownByDefault,
+    type: needle?.type ?? "rounded",
+    length: needle?.length ?? "medium",
+    width: needle?.width ?? 4,
+    color: needle?.color ?? "",
+    capRadius: needle?.capRadius ?? 6,
+    animation: needle?.animation ?? true,
+  };
+  const resolvedLabels: Required<GaugeLabelsConfig> = {
+    show: labels?.show ?? true,
+    position: labels?.position ?? "outside",
+  };
+  const resolvedValueLabel: Required<
+    Omit<GaugeValueLabelConfig, "formatter">
+  > & { formatter?: (v: number) => string } = {
+    show: valueLabel?.show ?? true,
+    precision: valueLabel?.precision ?? 0,
+    prefix: valueLabel?.prefix ?? "",
+    suffix: valueLabel?.suffix ?? "",
+    formatter: valueLabel?.formatter,
   };
 
-  // Resolve theme
+  const resolvedNeedleLabel: Required<
+    Omit<GaugeNeedleLabelConfig, "formatter">
+  > & { formatter?: (v: number) => string } = {
+    show: needleLabel?.show ?? false,
+    formatter: needleLabel?.formatter,
+  };
+  const resolvedTicks: Required<GaugeTicksConfig> = {
+    show: ticks?.show ?? (variant === "needle" || variant === "segmented"),
+    count: ticks?.count ?? 5,
+    position: ticks?.position ?? "outside",
+    length: ticks?.length ?? 6,
+    labels: ticks?.labels ?? true,
+  };
+  const resolvedAnimation = { ...DEFAULT_ANIMATION, ...animation };
+  const resolvedTooltip: Required<GaugeTooltipConfig> = {
+    show: tooltip?.show ?? true,
+  };
+
+  // ---- Theme + slot classes (identical precedence chain to CardWidget) ----
   const resolvedTheme: WidgetTheme<GaugeSlot> =
     theme === "dark"
-      ? gaugeThemes.dark
+      ? gaugeDarkTheme
       : theme === "light"
-        ? gaugeThemes.light
-        : (theme as WidgetTheme<GaugeSlot>) ?? gaugeThemes.light;
+      ? gaugeLightTheme
+      : (theme as WidgetTheme<GaugeSlot>) ?? DEFAULT_GAUGE_THEME;
 
-  // Slot resolution (lowest to highest precedence)
-  const resolveSlot = (slot: GaugeSlot) =>
-    twMerge(
-      GAUGE_DEFAULT_CLASSES[slot],
-      resolvedTheme.classNames[slot],
-      resolvedProps.classNames?.[slot],
-    );
+  const resolveSlot = useCallback(
+    (slot: GaugeSlot) =>
+      twMerge(
+        GAUGE_DEFAULT_CLASSES[slot],
+        resolvedTheme.classNames[slot],
+        classNames[slot]
+      ),
+    [resolvedTheme, classNames]
+  );
 
-  // ----- Resize observer for dynamic SVG size -----
-  const { ref: gaugeContainerRef, width: containerWidth, height: containerHeight } =
-  useResizeObserver();
+  const boxWidth = size ?? width ?? (dims.width || 240);
+  const boxHeight = size ?? height ?? (dims.height || boxWidth * 0.62);
 
-  // Combine refs: containerRef for our own use, resizeRef for observer
-  const setContainerRef = (node: HTMLDivElement | null) => {
-    containerRef.current = node;
-    (resizeRef as any)(node);
-  };
+  const bounds = useMemo(
+    () => getArcBounds(resolvedArc.startAngle, resolvedArc.endAngle),
+    [resolvedArc.startAngle, resolvedArc.endAngle]
+  );
 
-  // Final dimensions (shorthand size overrides width/height)
-  const effectiveWidth = size ?? initialWidth ?? containerWidth;
-  const effectiveHeight = size ?? initialHeight ?? containerHeight;
+  const pad = 8;
+  // Reserve room below the arc for value/needle-label/variable text so
+  // the dome never gets crowded — bigger reserve when the value label is on.
+  const textReserve = resolvedValueLabel.show ? 0.34 : 0.16;
+  const availW = boxWidth - pad * 2;
+  const availH = boxHeight * (1 - textReserve) - pad * 2;
 
-  // ----- Arc configuration -----
-  const startAngleDeg = arcProps.startAngle ?? DEFAULT_START_ANGLE;
-  const endAngleDeg = arcProps.endAngle ?? DEFAULT_END_ANGLE;
-  const thickness = arcProps.thickness ?? 12;
-  const cornerRadius = arcProps.cornerRadius ?? 0;
-  const gap = arcProps.gap ?? 2;
+  const outerRadius =
+    resolvedArc.radius ??
+    Math.max(24, Math.min(availW / (bounds.w || 1), availH / (bounds.h || 1)));
 
-  // Convert to radians for D3
-  const startAngleRad = deg2rad(startAngleDeg);
-  const endAngleRad = deg2rad(endAngleDeg);
+  const thickness = resolvedArc.thickness ?? Math.max(6, outerRadius * 0.18);
 
-  // Compute angle for a given value
-  const valueToAngle = (val: number) => {
-    const clamped = Math.min(max, Math.max(min, val));
-    const ratio = (clamped - min) / (max - min);
-    return startAngleRad + ratio * (endAngleRad - startAngleRad);
-  };
+  // Center the arc's bounding box within the available width, anchor its top at `pad`.
+  const cx =
+    pad - bounds.minX * outerRadius + (availW - bounds.w * outerRadius) / 2;
+  const cy = pad - bounds.minY * outerRadius;
 
-  // D3 arc generator
-  const createArc = (innerRadius: number, outerRadius: number) =>
-    d3.arc()
-      .innerRadius(innerRadius)
-      .outerRadius(outerRadius)
-      .startAngle(startAngleRad)
-      .endAngle(endAngleRad)
-      .cornerRadius(cornerRadius);
+  const angleScale = useMemo(
+    () =>
+      d3
+        .scaleLinear()
+        .domain([min, max])
+        .range([
+          resolvedArc.startAngle * DEG2RAD,
+          resolvedArc.endAngle * DEG2RAD,
+        ])
+        .clamp(true),
+    [min, max, resolvedArc.startAngle, resolvedArc.endAngle]
+  );
 
-  // ----- SVG drawing -----
+  // ---- D3 draw ----
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current) return;
+    if (!svgRef.current || boxWidth === 0 || boxHeight === 0) return;
 
     const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove(); // clear previous render
+    const defs = svg.select<SVGDefsElement>("defs");
+    const root = svg.select<SVGGElement>("g.anedya-gauge-root");
+    root.attr("transform", `translate(${cx},${cy})`);
 
-    const w = effectiveWidth;
-    const h = effectiveHeight;
-    const cx = w / 2;
-    const cy = h / 2;
+    const ease = resolveEase(resolvedAnimation.easing);
+    const arcGen = d3
+      .arc<{ startAngle: number; endAngle: number; r: number }>()
+      .innerRadius((d) => d.r - thickness)
+      .outerRadius((d) => d.r)
+      .cornerRadius(resolvedArc.cornerRadius)
+      .startAngle((d) => d.startAngle)
+      .endAngle((d) => d.endAngle);
 
-    // Determine arc radii based on available space and thickness
-    const maxRadius = Math.min(cx, cy) - 10; // padding
-    const outerRadius = maxRadius;
-    const innerRadius = outerRadius - thickness;
+    const startA = resolvedArc.startAngle * DEG2RAD;
+    const endA = resolvedArc.endAngle * DEG2RAD;
 
-    // Helper to draw an arc (for track, bar, segments)
-    const drawArc = (
-      selection: d3.Selection<any, any, any, any>,
-      startAngle: number,
-      endAngle: number,
-      innerR: number,
-      outerR: number,
-      className?: string,
-    ) => {
-      const arcGen = d3.arc()
-        .innerRadius(innerR)
-        .outerRadius(outerR)
-        .startAngle(startAngle)
-        .endAngle(endAngle)
-        .cornerRadius(cornerRadius);
-      selection.attr("d", arcGen as any);
-      if (className) selection.attr("class", className);
-    };
-
-    // ----- Track -----
-    if (trackProps.show !== false) {
-      const trackArc = createArc(innerRadius, outerRadius);
-      svg.append("path")
-        .datum({ endAngle: endAngleRad })
-        .attr("d", trackArc as any)
-        .attr("class", resolveSlot("track"))
-        .attr("fill", "none")
-        .attr("stroke-width", thickness);
+    // --- Track ---
+    const trackSel = root.select<SVGPathElement>(
+      "path.anedya-gauge-track-path"
+    );
+    if (resolvedTrack.show && variant !== "multiBar") {
+      trackSel
+        .attr(
+          "d",
+          arcGen({ startAngle: startA, endAngle: endA, r: outerRadius })!
+        )
+        .attr("fill", resolvedTrack.color || "currentColor")
+        .attr("opacity", 1);
+    } else {
+      trackSel.attr("opacity", 0);
     }
 
-    // ----- Determine bar fill color (from thresholds or single color) -----
-    let barColorClass = ""; // we use Tailwind classes for dynamic color via CSS variables? We'll rely on the slot class.
-    // For simplicity, we let the slot "bar" carry the default stroke color via CSS variable.
-    // Segments and thresholds add their own inline styles if needed.
-    // We'll apply colors directly via inline style when needed.
+    // --- Bar (progress / solid / segmented base) ---
+    const barGroup = root.select<SVGGElement>("g.anedya-gauge-bar-group");
+    barGroup.selectAll("*").remove();
 
-    // ----- Variant: progress bar (single arc) -----
-    if (variant === "progress" || variant === "needle" || variant === "segmented") {
-      const currentAngle = valueToAngle(value ?? min);
-      const progressArc = d3.arc()
-        .innerRadius(innerRadius)
-        .outerRadius(outerRadius)
-        .startAngle(startAngleRad)
-        .endAngle(currentAngle)
-        .cornerRadius(cornerRadius);
+    if (variant === "multiBar" && bars?.length) {
+      const maxBars = bars.slice(0, 10);
+      maxBars.forEach((bar, i) => {
+        const r = outerRadius - i * (thickness + resolvedArc.gap);
+        if (resolvedTrack.show) {
+          barGroup
+            .append("path")
+            .attr("d", arcGen({ startAngle: startA, endAngle: endA, r })!)
+            .attr(
+              "class",
+              twMerge("anedya-gauge-multibar-track", resolveSlot("track"))
+            )
+            .attr("fill", resolvedTrack.color || "currentColor")
+            .attr("stroke", "none");
+        }
+        const valAngle = d3
+          .scaleLinear()
+          .domain([min, max])
+          .range([startA, endA])
+          .clamp(true)(bar.value);
 
-      // Handle segments
-      if (segments && segments.length > 0) {
-        // Draw segments as separate colored arcs spanning the full range
-        segments.forEach((seg) => {
-          const segStart = valueToAngle(seg.from);
-          const segEnd = valueToAngle(seg.to);
-          svg.append("path")
-            .datum({ endAngle: segEnd })
-            .attr("d", (d) => {
-              const arc = d3.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(outerRadius)
-                .startAngle(segStart)
-                .endAngle(d.endAngle)
-                .cornerRadius(0);
-              return arc(d);
-            })
-            .attr("fill", "none")
-            .attr("stroke", seg.color)
-            .attr("stroke-width", thickness)
-            .attr("class", resolveSlot("segment"));
+        const barFill = resolveFill(
+          defs,
+          `anedya-gauge-bar-fill-${i}`,
+          bar.color,
+          "currentColor"
+        );
+
+        const path = barGroup
+          .append("path")
+          .attr("class", resolveSlot("bar"))
+          .attr("fill", barFill)
+          .attr("stroke", "none");
+        path
+          .datum({ startAngle: startA, endAngle: startA, r })
+          .attr("d", arcGen as any)
+          .transition()
+          .duration(resolvedAnimation.duration)
+          .ease(ease)
+          .attrTween("d", function (d: any) {
+            const i2 = d3.interpolate(d.endAngle, valAngle);
+            return (t) => {
+              d.endAngle = i2(t);
+              return arcGen(d)!;
+            };
+          });
+      });
+    } else if (segments?.length) {
+      const scaleAngle = d3
+        .scaleLinear()
+        .domain([min, max])
+        .range([startA, endA])
+        .clamp(true);
+      // Half the configured gap, converted from px to radians at this radius,
+      // so adjoining segments get visible separation like distinct blocks.
+      const gapRad = resolvedArc.gap / 2 / outerRadius || 0;
+
+      const segArcGen = d3
+        .arc<{ startAngle: number; endAngle: number; r: number }>()
+        .innerRadius((d) => d.r - thickness)
+        .outerRadius((d) => d.r)
+        .cornerRadius(resolvedArc.cornerRadius || thickness / 4)
+        .startAngle((d) => d.startAngle)
+        .endAngle((d) => d.endAngle);
+
+      segments.forEach((seg, idx) => {
+        const segStart = scaleAngle(seg.from) + gapRad;
+        const segEnd = scaleAngle(seg.to) - gapRad;
+        if (segEnd <= segStart) return;
+
+        const fill = resolveFill(
+          defs,
+          `anedya-gauge-segment-fill-${idx}`,
+          seg.color,
+          "currentColor"
+        );
+        barGroup
+          .append("path")
+          .attr("class", resolveSlot("segment"))
+          .attr("fill", fill)
+          .attr("stroke", "none")
+          .attr(
+            "d",
+            segArcGen({
+              startAngle: segStart,
+              endAngle: segEnd,
+              r: outerRadius,
+            })!
+          );
+      });
+    } else {
+      const valueAngle = angleScale(clampedValue);
+      const barColorRaw: GaugeColor | undefined =
+        color ??
+        (thresholds?.length
+          ? [...thresholds]
+              .sort((a, b) => a.value - b.value)
+              .reduce<GaugeColor | undefined>(
+                (acc, th) => (clampedValue >= th.value ? th.color : acc),
+                thresholds[0].color
+              )
+          : undefined);
+
+      const barFill = resolveFill(
+        defs,
+        "anedya-gauge-bar-fill",
+        barColorRaw,
+        "currentColor"
+      );
+
+      const path = barGroup
+        .append("path")
+        .attr("class", resolveSlot("bar"))
+        .attr("fill", barFill)
+        .attr("stroke", "none");
+
+      const from = fillMode === "solid" ? startA : startA;
+      const to = fillMode === "solid" ? endA : valueAngle;
+
+      path
+        .datum({
+          startAngle: startA,
+          endAngle:
+            prevValueRef.current != null
+              ? angleScale(prevValueRef.current)
+              : startA,
+          r: outerRadius,
+        })
+        .transition()
+        .duration(resolvedAnimation.duration)
+        .ease(ease)
+        .attrTween("d", function (d: any) {
+          const i2 = d3.interpolate(d.endAngle, to);
+          return (t) => {
+            d.endAngle = i2(t);
+            return arcGen({
+              startAngle: from,
+              endAngle: d.endAngle,
+              r: outerRadius,
+            })!;
+          };
         });
-
-        // If fillMode is progress, we overlay the bar only up to current value using a clip-path? 
-        // We'll just draw the bar on top.
-        if (fillMode === "progress") {
-          svg.append("path")
-            .attr("d", progressArc as any)
-            .attr("fill", "none")
-            .attr("stroke", "currentColor") // will be overridden by class
-            .attr("stroke-width", thickness)
-            .attr("class", resolveSlot("bar"));
-        }
-      } else {
-        // Standard bar (no segments)
-        // If thresholds exist, choose color based on current value
-        let strokeColor = "";
-        if (thresholds && thresholds.length > 0) {
-          const threshold = [...thresholds]
-            .sort((a, b) => a.value - b.value)
-            .find(t => (value ?? min) <= t.value) ?? thresholds[thresholds.length - 1];
-          strokeColor = threshold.color;
-        }
-
-        if (fillMode === "solid") {
-          // Draw a full arc as the bar, with solid color
-          const fullArc = createArc(innerRadius, outerRadius);
-          svg.append("path")
-            .datum({ endAngle: endAngleRad })
-            .attr("d", fullArc as any)
-            .attr("fill", "none")
-            .attr("stroke", strokeColor || "currentColor")
-            .attr("stroke-width", thickness)
-            .attr("class", resolveSlot("bar"));
-        } else {
-          // Progress fill
-          svg.append("path")
-            .attr("d", progressArc as any)
-            .attr("fill", "none")
-            .attr("stroke", strokeColor || "currentColor")
-            .attr("stroke-width", thickness)
-            .attr("class", resolveSlot("bar"));
-        }
-      }
     }
 
-    // ----- Variant: multiBar -----
-    if (variant === "multiBar" && bars && bars.length > 0) {
-      const totalThickness = thickness * bars.length + gap * (bars.length - 1);
-      const startRadius = outerRadius - totalThickness + thickness;
-      bars.forEach((bar, i) => {
-        const barThickness = thickness; // shared
-        const innerR = startRadius + i * (thickness + gap);
-        const outerR = innerR + barThickness;
-        const barAngle = valueToAngle(bar.value);
-        const barArc = d3.arc()
-          .innerRadius(innerR)
-          .outerRadius(outerR)
-          .startAngle(startAngleRad)
-          .endAngle(barAngle)
-          .cornerRadius(cornerRadius);
-
-        svg.append("path")
-          .attr("d", barArc as any)
-          .attr("fill", "none")
-          .attr("stroke", bar.color || "currentColor")
-          .attr("stroke-width", barThickness)
-          .attr("class", resolveSlot("bar"));
-      });
-    }
-
-    // ----- Needle -----
-    const needleShow = needleProps.show !== false && (variant === "needle" || variant === "segmented" || variant === "progress" ? needleProps.show : false);
-    if (needleShow && value != null) {
-      const needleAngle = valueToAngle(value);
-      const needleLength = (() => {
-        const len = needleProps.length ?? "medium";
-        switch (len) {
-          case "short": return outerRadius * 0.6;
-          case "medium": return outerRadius * 0.8;
-          case "full": return outerRadius * 1.05;
-          default: return len;
-        }
-      })();
-      const needleWidth = needleProps.width ?? 2;
-      const capRadius = needleProps.capRadius ?? 4;
-      const needleColor = needleProps.color ?? "currentColor";
-
-      // Needle tip coordinates
-      const tipX = cx + needleLength * Math.cos(needleAngle - Math.PI / 2);
-      const tipY = cy + needleLength * Math.sin(needleAngle - Math.PI / 2);
-
-      const needleGroup = svg.append("g").attr("class", resolveSlot("needle"));
-
-      // Draw needle line (simple line)
-      needleGroup.append("line")
-        .attr("x1", cx)
-        .attr("y1", cy)
-        .attr("x2", tipX)
-        .attr("y2", tipY)
-        .attr("stroke", needleColor)
-        .attr("stroke-width", needleWidth)
-        .attr("stroke-linecap", "round");
-
-      // Center cap
-      needleGroup.append("circle")
-        .attr("cx", cx)
-        .attr("cy", cy)
-        .attr("r", capRadius)
-        .attr("fill", needleColor);
-
-      // Optional: animation (we'll keep simple for now)
-    }
-
-    // ----- Ticks -----
-    if (ticksProps.show) {
-      const tickCount = ticksProps.count ?? 5;
-      const tickLength = ticksProps.length ?? 5;
-      const tickPosition = ticksProps.position ?? "outside";
-      const tickAngles = d3.range(tickCount).map(i => {
-        const ratio = i / (tickCount - 1);
-        return startAngleRad + ratio * (endAngleRad - startAngleRad);
-      });
-
-      tickAngles.forEach(angle => {
-        const cos = Math.cos(angle - Math.PI / 2);
-        const sin = Math.sin(angle - Math.PI / 2);
-        let innerP, outerP;
-        const baseR = (tickPosition === "inside") ? innerRadius : outerRadius;
-        if (tickPosition === "inside") {
-          innerP = { x: cx + (baseR - tickLength) * cos, y: cy + (baseR - tickLength) * sin };
-          outerP = { x: cx + baseR * cos, y: cy + baseR * sin };
-        } else if (tickPosition === "outside") {
-          innerP = { x: cx + baseR * cos, y: cy + baseR * sin };
-          outerP = { x: cx + (baseR + tickLength) * cos, y: cy + (baseR + tickLength) * sin };
-        } else { // cross
-          innerP = { x: cx + (baseR - tickLength / 2) * cos, y: cy + (baseR - tickLength / 2) * sin };
-          outerP = { x: cx + (baseR + tickLength / 2) * cos, y: cy + (baseR + tickLength / 2) * sin };
-        }
-        svg.append("line")
-          .attr("x1", innerP.x)
-          .attr("y1", innerP.y)
-          .attr("x2", outerP.x)
-          .attr("y2", outerP.y)
+    // --- Ticks ---
+    const tickGroup = root.select<SVGGElement>("g.anedya-gauge-ticks");
+    tickGroup.selectAll("*").remove();
+    if (resolvedTicks.show) {
+      const count = Math.max(2, resolvedTicks.count);
+      const tickR =
+        resolvedTicks.position === "inside"
+          ? outerRadius - thickness
+          : resolvedTicks.position === "cross"
+          ? outerRadius - thickness / 2
+          : outerRadius + 4;
+      d3.range(count).forEach((i) => {
+        const t = i / (count - 1);
+        const tv = min + t * (max - min);
+        const a = angleScale(tv);
+        const x1 = Math.sin(a) * tickR;
+        const y1 = -Math.cos(a) * tickR;
+        const x2 =
+          Math.sin(a) *
+          (tickR +
+            (resolvedTicks.position === "inside"
+              ? -resolvedTicks.length
+              : resolvedTicks.length));
+        const y2 =
+          -Math.cos(a) *
+          (tickR +
+            (resolvedTicks.position === "inside"
+              ? -resolvedTicks.length
+              : resolvedTicks.length));
+        tickGroup
+          .append("line")
           .attr("class", resolveSlot("tick"))
-          .attr("stroke-width", 1);
-      });
+          .attr("stroke", "currentColor")
+          .attr("x1", x1)
+          .attr("y1", y1)
+          .attr("x2", x2)
+          .attr("y2", y2);
 
-      if (ticksProps.labels) {
-        const labelOffset = (ticksProps.position === "outside" ? 15 : -15);
-        tickAngles.forEach((angle, i) => {
-          const val = min + (i / (tickCount - 1)) * (max - min);
-          const cos = Math.cos(angle - Math.PI / 2);
-          const sin = Math.sin(angle - Math.PI / 2);
-          const labelR = outerRadius + labelOffset;
-          const x = cx + labelR * cos;
-          const y = cy + labelR * sin;
-          svg.append("text")
-            .attr("x", x)
-            .attr("y", y)
+        if (resolvedTicks.labels) {
+          const lx = Math.sin(a) * (tickR + resolvedTicks.length + 10);
+          const ly = -Math.cos(a) * (tickR + resolvedTicks.length + 10);
+          tickGroup
+            .append("text")
+            .attr("class", resolveSlot("tickLabel"))
+            .attr("x", lx)
+            .attr("y", ly)
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
-            .attr("class", resolveSlot("tickLabel"))
-            .text(Math.round(val).toString());
-        });
-      }
+            .text(String(Math.round(tv)));
+        }
+      });
     }
 
-    // ----- Scale labels (min/max) -----
-    if (scaleProps.minLabel || scaleProps.maxLabel) {
-      // Place labels at the start/end of the arc, outside
-      const minAngle = startAngleRad;
-      const maxAngle = endAngleRad;
-      const labelDist = outerRadius + 20;
-      const minX = cx + labelDist * Math.cos(minAngle - Math.PI / 2);
-      const minY = cy + labelDist * Math.sin(minAngle - Math.PI / 2);
-      const maxX = cx + labelDist * Math.cos(maxAngle - Math.PI / 2);
-      const maxY = cy + labelDist * Math.sin(maxAngle - Math.PI / 2);
+    // --- Needle ---
+    const needleGroup = root.select<SVGGElement>("g.anedya-gauge-needle");
+    if (resolvedNeedle.show && variant !== "multiBar") {
+      const len = needlePixelLength(resolvedNeedle.length, outerRadius);
+      const shape = needleShape(resolvedNeedle.type, len, resolvedNeedle.width);
 
-      if (scaleProps.minLabel) {
-        svg.append("text")
-          .attr("x", minX)
-          .attr("y", minY)
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "middle")
-          .attr("class", resolveSlot("tickLabel"))
-          .text(scaleProps.minLabel);
+      needleGroup.selectAll("*:not(circle.anedya-gauge-needle-cap)").remove();
+      const needleEl = needleGroup.insert(
+        shape.tag as any,
+        "circle.anedya-gauge-needle-cap"
+      );
+      needleEl
+        .attr("class", resolveSlot("needle"))
+        .attr("fill", resolvedNeedle.color || "currentColor")
+        .attr("stroke", resolvedNeedle.color || "currentColor");
+      Object.entries(shape.attrs).forEach(([k, v]) =>
+        needleEl.attr(
+          k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase()),
+          v as any
+        )
+      );
+
+      let cap = needleGroup.select<SVGCircleElement>(
+        "circle.anedya-gauge-needle-cap"
+      );
+      if (cap.empty()) {
+        cap = needleGroup
+          .append("circle")
+          .attr(
+            "class",
+            twMerge("anedya-gauge-needle-cap", resolveSlot("needleCap"))
+          );
       }
-      if (scaleProps.maxLabel) {
-        svg.append("text")
-          .attr("x", maxX)
-          .attr("y", maxY)
-          .attr("text-anchor", "middle")
-          .attr("dominant-baseline", "middle")
-          .attr("class", resolveSlot("tickLabel"))
-          .text(scaleProps.maxLabel);
+      cap
+        .attr("r", resolvedNeedle.capRadius)
+        .attr("fill", resolvedNeedle.color || "currentColor");
+
+      const targetDeg = angleScale(clampedValue) / DEG2RAD;
+      if (resolvedNeedle.animation) {
+        needleGroup
+          .transition()
+          .duration(resolvedAnimation.duration)
+          .ease(ease)
+          .attrTween("transform", function () {
+            const current = needleGroup.attr("data-angle")
+              ? +needleGroup.attr("data-angle")!
+              : startA / DEG2RAD;
+            const interp = d3.interpolate(current, targetDeg);
+            return (t) => {
+              const a = interp(t);
+              needleGroup.attr("data-angle", String(a));
+              return `rotate(${a})`;
+            };
+          });
+      } else {
+        needleGroup
+          .attr("transform", `rotate(${targetDeg})`)
+          .attr("data-angle", String(targetDeg));
       }
+      needleGroup.attr("opacity", 1);
+    } else {
+      needleGroup.attr("opacity", 0);
     }
 
+    prevValueRef.current = clampedValue;
   }, [
-    value, variant, min, max, effectiveWidth, effectiveHeight,
-    arcProps, trackProps, fillMode, bars, needleProps, segments,
-    thresholds, gradient, ticksProps, scaleProps, resolveSlot
+    boxWidth,
+    boxHeight,
+    cx,
+    cy,
+    outerRadius,
+    thickness,
+    variant,
+    clampedValue,
+    min,
+    max,
+    fillMode,
+    color,
+    JSON.stringify(bars),
+    JSON.stringify(segments),
+    JSON.stringify(thresholds),
+    resolvedTrack.show,
+    resolvedTrack.color,
+    resolvedNeedle.show,
+    resolvedNeedle.type,
+    resolvedNeedle.length,
+    resolvedNeedle.width,
+    resolvedNeedle.color,
+    resolvedNeedle.capRadius,
+    resolvedNeedle.animation,
+    resolvedTicks.show,
+    resolvedTicks.count,
+    resolvedTicks.position,
+    resolvedTicks.length,
+    resolvedTicks.labels,
+    resolvedAnimation.duration,
+    resolvedAnimation.easing,
+    resolveSlot,
   ]);
 
-  // ----- Center value text (HTML) -----
-  const displayValue = useMemo(() => {
-    if (value == null) return "—";
-    if (valueLabelProps.formatter) return valueLabelProps.formatter(value);
-    const prec = valueLabelProps.precision ?? 0;
-    const num = value.toFixed(prec);
-    return `${valueLabelProps.prefix ?? ""}${num}${valueLabelProps.suffix ?? ""}`;
-  }, [value, valueLabelProps]);
+  // ---- Hover / tooltip / click (D3-driven, div overlay like BarChartWidget's tooltip) ----
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<SVGSVGElement>) => {
+      if (!resolvedTooltip.show && !onHover) return;
+      const rect = svgRef.current!.getBoundingClientRect();
+      const x = e.clientX - rect.left - cx;
+      const y = e.clientY - rect.top - cy;
+      const dist = Math.hypot(x, y);
+      if (dist < outerRadius - thickness - 6 || dist > outerRadius + 6) {
+        setHoverValue(null);
+        onHover?.(null);
+        return;
+      }
+      let a = Math.atan2(x, -y);
+      const hv = angleScale.invert(a);
+      const clamped = Math.min(max, Math.max(min, hv));
+      setHoverValue(clamped);
+      onHover?.(clamped);
+      if (tooltipRef.current) {
+        tooltipRef.current.style.left = `${e.clientX - rect.left + 10}px`;
+        tooltipRef.current.style.top = `${e.clientY - rect.top - 24}px`;
+      }
+    },
+    [
+      cx,
+      cy,
+      outerRadius,
+      thickness,
+      angleScale,
+      min,
+      max,
+      onHover,
+      resolvedTooltip.show,
+    ]
+  );
 
-  // ----- Needle label (HTML) -----
-  const needleLabelText = useMemo(() => {
-    if (!needleLabelProps.show || value == null) return null;
-    if (needleLabelProps.formatter) return needleLabelProps.formatter(value);
-    return `${value}`;
-  }, [value, needleLabelProps]);
+  const handlePointerLeave = useCallback(() => {
+    setHoverValue(null);
+    onHover?.(null);
+  }, [onHover]);
 
-  // ----- Render -----
+  const handleClick = useCallback(
+    () => onClick?.(clampedValue),
+    [onClick, clampedValue]
+  );
+
+  const formattedValue = resolvedValueLabel.formatter
+    ? resolvedValueLabel.formatter(clampedValue)
+    : `${resolvedValueLabel.prefix}${clampedValue.toFixed(
+        resolvedValueLabel.precision
+      )}${resolvedValueLabel.suffix}`;
+
+  const needleLabelText = resolvedNeedleLabel.formatter?.(clampedValue);
+
   return (
     <div
-      ref={gaugeContainerRef}
+      ref={wrapperRef}
       className={twMerge(
-        "anedya-gauge",
+        "anedya-gauge relative",
         resolveSlot("container"),
-        className,
+        className
       )}
       style={{
-        width: effectiveWidth,
-        height: effectiveHeight,
+        width: width ?? "100%",
+        height: height ?? undefined,
         minWidth,
         maxWidth,
+        minHeight,
+        maxHeight,
+        aspectRatio: height ? undefined : aspectRatio ?? 1.7,
         boxSizing: "border-box",
+        ...style,
       }}
-      onClick={onClick}
-      onMouseEnter={() => onHover?.(true)}
-      onMouseLeave={() => onHover?.(false)}
+      onClick={handleClick}
     >
       {title && <span className={resolveSlot("title")}>{title}</span>}
 
-      {loading ? (
-        <div
-          style={{
-            height: 24,
-            width: 24,
-            borderRadius: "50%",
-            border: "2px solid #cbd5e1",
-            borderTopColor: "#475569",
-            animation: "anedya-card-spin 0.8s linear infinite",
-          }}
-        >
-          <style>{`@keyframes anedya-card-spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      ) : error ? (
-        <span className="text-red-600 text-sm">{error}</span>
-      ) : (
-        <>
-          <svg
-            ref={svgRef}
-            width="100%"
-            height="100%"
-            viewBox={`0 0 ${effectiveWidth} ${effectiveHeight}`}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${boxWidth || 200} ${boxHeight || 200}`}
+        className="block w-full h-auto"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+      >
+        <defs />
+        <g className="anedya-gauge-root">
+          <path
+            className={twMerge("anedya-gauge-track-path", resolveSlot("track"))}
+            fill="currentColor"
+            stroke="none"
           />
-
-          {/* Center value (HTML overlay) */}
-          {valueLabelProps.show !== false && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className={resolveSlot("centerValue")}>
-                {displayValue}
-              </span>
-              {needleLabelText && (
-                <span className={resolveSlot("needleLabel")}>
-                  {needleLabelText}
-                </span>
+          <g className="anedya-gauge-bar-group" />
+          <g className="anedya-gauge-ticks" />
+          <g className="anedya-gauge-needle">
+            <circle
+              className={twMerge(
+                "anedya-gauge-needle-cap",
+                resolveSlot("needleCap")
               )}
-            </div>
-          )}
-        </>
+            />
+          </g>
+        </g>
+      </svg>
+
+      {resolvedLabels.show && (scale?.minLabel || scale?.maxLabel) && (
+        <div className="flex w-full justify-between px-2 text-xs -mt-2">
+          <span className={resolveSlot("scaleLabel")}>{scale?.minLabel}</span>
+          <span className={resolveSlot("scaleLabel")}>{scale?.maxLabel}</span>
+        </div>
       )}
 
-      {/* Tooltip placeholder */}
-      {tooltip?.show && (
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-          {/* D3 tooltip handling can be added later */}
+      {resolvedValueLabel.show && (
+        <span className={resolveSlot("value")}>{formattedValue}</span>
+      )}
+
+      {resolvedNeedleLabel.show && needleLabelText && (
+        <span className={resolveSlot("label")}>{needleLabelText}</span>
+      )}
+
+      {variable && <span className={resolveSlot("label")}>{variable}</span>}
+
+      {resolvedTooltip.show && hoverValue != null && (
+        <div
+          ref={tooltipRef}
+          className={twMerge("absolute", resolveSlot("tooltip"))}
+        >
+          {hoverValue.toFixed(resolvedValueLabel.precision)}
         </div>
       )}
     </div>

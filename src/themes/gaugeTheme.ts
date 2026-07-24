@@ -1,63 +1,67 @@
-import { SlotClassNames, WidgetTheme } from "../types/root";
-
-// The exact same slot names we'll use in the widget
-export type GaugeSlot =
-  | "container"
-  | "title"
-  | "track"
-  | "bar"
-  | "needle"
-  | "centerValue"
-  | "needleLabel"
-  | "tick"
-  | "tickLabel"
-  | "segment";
+import { GaugeSlot } from "../types/gauge";
+import { WidgetTheme } from "../types/root";
 
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   container:
-    "flex flex-col items-center justify-center text-center border rounded-xl p-[var(--anedya-gauge-padding)] gap-[var(--anedya-gauge-gap)]",
-  title:
-    "text-[length:var(--anedya-gauge-title-size)] font-medium",
-  track:
-    "[stroke:var(--anedya-gauge-track-stroke)] [fill:var(--anedya-gauge-track-fill)]",
-  bar:
-    "[stroke:var(--anedya-gauge-bar-stroke)] [fill:var(--anedya-gauge-bar-fill)]",
-  needle:
-    "[fill:var(--anedya-gauge-needle-color)] [stroke:var(--anedya-gauge-needle-color)]",
-  centerValue:
-    "text-[length:var(--anedya-gauge-center-value-size)] font-[var(--anedya-gauge-center-value-weight)] text-[var(--anedya-gauge-center-value-color)]",
-  needleLabel:
-    "text-[length:var(--anedya-gauge-needle-label-size)] text-[var(--anedya-gauge-needle-label-color)]",
-  tick:
-    "[stroke:var(--anedya-gauge-tick-stroke)]",
+    "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)]",
+  title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
+  track: "",
+  bar: "",
+  segment: "",
+  needle: "",
+  needleCap: "",
+  tick: "",
   tickLabel:
-    "text-[length:var(--anedya-gauge-tick-label-size)] text-[var(--anedya-gauge-tick-label-color)] fill-[var(--anedya-gauge-tick-label-color)]",
-  segment:
-    "[stroke:var(--anedya-gauge-segment-stroke)]",
+    "text-[length:var(--anedya-gauge-tick-size)] font-medium fill-current",
+  scaleLabel:
+    "text-[length:var(--anedya-gauge-tick-size)] font-medium fill-current",
+  value: "text-[length:var(--anedya-gauge-value-size)] font-bold leading-none",
+  unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
+  label: "text-[length:var(--anedya-gauge-label-size)]",
+  tooltip:
+    "pointer-events-none absolute z-10 rounded-md px-2 py-1 text-xs font-medium shadow-md",
 };
 
-export const lightTheme: WidgetTheme<GaugeSlot> = {
+export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
   classNames: {
-    container: "bg-white border-slate-200",
+    container: "",
     title: "text-slate-500",
-    centerValue: "text-slate-900",
-    needleLabel: "text-slate-400",
-    tickLabel: "fill-slate-400 text-slate-400",
+    track: "text-slate-200", // read via `currentColor` on the track path
+    bar: "text-indigo-500",
+    segment: "",
+    needle: "text-slate-700",
+    needleCap: "text-slate-700",
+    tick: "text-slate-300",
+    tickLabel: "text-slate-400",
+    scaleLabel: "text-slate-400",
+    value: "text-slate-900",
+    unit: "text-slate-500",
+    label: "text-slate-400",
+    tooltip: "bg-slate-900 text-white",
   },
 };
 
-export const darkTheme: WidgetTheme<GaugeSlot> = {
+export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
   classNames: {
-    container: "bg-slate-900 border-slate-800",
+    container: "",
     title: "text-slate-400",
-    centerValue: "text-white",
-    needleLabel: "text-slate-500",
-    tickLabel: "fill-slate-500 text-slate-500",
+    track: "text-slate-700",
+    bar: "text-indigo-400",
+    segment: "",
+    needle: "text-slate-200",
+    needleCap: "text-slate-200",
+    tick: "text-slate-600",
+    tickLabel: "text-slate-500",
+    scaleLabel: "text-slate-500",
+    value: "text-white",
+    unit: "text-slate-400",
+    label: "text-slate-500",
+    tooltip: "bg-slate-100 text-slate-900",
   },
 };
 
 export const gaugeThemes = {
-  light: lightTheme,
-  dark: darkTheme,
+  light: gaugeLightTheme,
+  dark: gaugeDarkTheme,
 } as const;
-export type GaugeThemeName = keyof typeof gaugeThemes;
+export const DEFAULT_GAUGE_THEME = gaugeLightTheme;
