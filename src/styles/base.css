@@ -22,33 +22,10 @@
   transition: padding 0.25s ease, gap 0.25s ease;
 }
 
-<<<<<<< HEAD
-
-@container anedya-card(min-width: 320px) {
-  .anedya-card {
-    --anedya-card-padding: 1.25rem;
-
-    --anedya-card-title-size: 1rem;
-    --anedya-card-value-size: 2.75rem;
-    --anedya-card-unit-size: 1.125rem;
-    --anedya-card-label-size: 0.875rem;
-
-    --anedya-card-gap: 0.75rem;
-  }
+.anedya-card>* {
+  transition: font-size 0.25s ease;
 }
 
-@container anedya-card(min-width: 420px) {
-  .anedya-card {
-    --anedya-card-padding: 1.5rem;
-
-    --anedya-card-title-size: 1.125rem;
-    --anedya-card-value-size: 3.5rem;
-    --anedya-card-unit-size: 1.25rem;
-    --anedya-card-label-size: 1rem;
-
-    --anedya-card-gap: 1rem;
-  }
-}
 
 .anedya-gauge {
   container-type: inline-size;
@@ -83,8 +60,4 @@
     --anedya-gauge-label-size: 1rem;
     --anedya-gauge-tick-size: 0.8125rem;
   }
-=======
-.anedya-card > * {
-  transition: font-size 0.25s ease;
->>>>>>> cd33dfd8d79dc13659866a58763b62db17a1511e
 }

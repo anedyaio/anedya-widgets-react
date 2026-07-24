@@ -4,7 +4,8 @@ import { CardWidget } from "../../../src";
 import "../../../dist/style.css";
 
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
-const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
+const token =
+  "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
 const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
@@ -17,7 +18,7 @@ const node = anedya.newNode(client, nodeId);
  * app. Only specify the slots you actually want to change from the
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
-const emeraldTheme= {
+const emeraldTheme = {
   classNames: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
@@ -30,21 +31,35 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-    <div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}>
+    <div
+      style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}
+    >
       {/* ============================================================
        * 1. Default appearance — no theme, no styles, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}  title="Default" unit="%" precision={1} />
+      <CardWidget {...commonProps} title="Default" unit="%" precision={1} />
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Emerald Theme" unit="%" precision={1} theme={emeraldTheme} />
+      <CardWidget
+        {...commonProps}
+        title="Emerald Theme"
+        unit="%"
+        precision={1}
+        theme={emeraldTheme}
+      />
 
       {/* Built-in preset names also work directly: */}
-      <CardWidget {...commonProps} title="Dark Preset" unit="%" precision={1} theme="dark" />
+      <CardWidget
+        {...commonProps}
+        title="Dark Preset"
+        unit="%"
+        precision={1}
+        theme="dark"
+      />
 
       {/* ============================================================
        * 3. styles vs className — THE distinction to understand:
@@ -75,7 +90,6 @@ export default function App() {
           value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
           title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
         }}
-        
       />
 
       {/* ============================================================
@@ -133,26 +147,24 @@ export default function App() {
         title="Threshold Coloring"
         unit="%"
         precision={1}
+        onDataChange={(data) => {
+          if (!data) return;
 
-       onDataChange={(data) => {
-    if (!data) return;
+          if (data.value > 80) {
+            return {
+              title: "High Humidity",
+              theme: "dark",
+              classNames: {
+                value: "text-red-500",
+              },
+            };
+          }
 
-    if (data.value > 80) {
-      return {
-        title: "High Humidity",
-        theme: "dark",
-        classNames: {
-          value: "text-red-500"
-        }
-      };
-    }
-
-    return {
-      title: "Humidity",
-      theme: "light"
-    };
-  }}
-  
+          return {
+            title: "Humidity",
+            theme: "light",
+          };
+        }}
       />
 
       {/* ============================================================
@@ -160,7 +172,15 @@ export default function App() {
        * applied as inline styles on the container, independent of the
        * whole classNames/theme system.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} />
+      <CardWidget
+        {...commonProps}
+        title="Custom Size"
+        unit="%"
+        width={320}
+        minWidth={280}
+        maxWidth={400}
+        height={200}
+      />
     </div>
   );
 }
