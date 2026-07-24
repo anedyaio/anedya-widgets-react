@@ -50,3 +50,19 @@ theme?: WidgetTheme<CardSlot> | BuiltInTheme;
   maxHeight?: number;
   aspectRatio?: number;
 }
+
+export type FormatPreset =
+  | "number"       // thousands separators, locale-aware
+  | "bytes"        // auto-scales B/KB/MB/GB
+  | "duration"     // seconds -> "2h 15m 30s"
+  | "length"       // auto-scales mm/cm/m/km
+  | "volume"       // auto-scales mL/L
+  | "dataRate"      // auto-scales bps/Kbps/Mbps
+  | "percent";
+
+export interface FormatOptions {
+  locale?: string;        // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
+  binary?: boolean;       // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
+  precision?: number;     // decimal places for the scaled number
+}
+export type FormatResult = { value: string; unit?: string };

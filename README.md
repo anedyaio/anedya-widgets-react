@@ -1,6 +1,5 @@
 [<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
-
 <!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
 <p align="center">
     <img src="https://cdn.anedya.io/anedya_black_banner.png" alt="Logo">
@@ -23,11 +22,13 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [Tailwind responsive utilities](#tailwind-responsive-utilities)
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
     - [How props are resolved](#how-props-are-resolved)
-    - [Formatting vs rendering](#formatting-vs-rendering)
-    - [Sizing](#sizing)
-    - [Responsive sizing](#responsive-sizing)
-    - [Loading & error states](#loading--error-states)
-    - [Other props](#other-props)
+  - [Formatting vs rendering](#formatting-vs-rendering)
+- [The last-updated label](#the-last-updated-label)
+- [Formatters export](#formatters-export)
+  - [Sizing](#sizing)
+  - [Responsive sizing](#responsive-sizing)
+  - [Loading & error states](#loading--error-states)
+  - [Other props](#other-props)
 - [Stylesheet import](#stylesheet-import)
 
 ---
@@ -60,7 +61,7 @@ const config = anedya.newConfig(tokenId, token);
 const client = anedya.newClient(config);
 const node = anedya.newNode(client, nodeId);
 
-<CardWidget node={node} variable="humidity" />
+<CardWidget node={node} variable="humidity" />;
 ```
 
 > `tokenId`, `token`, and `nodeId` come from your Anedya account/device setup — see the [Frontend SDK docs](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk) for details on obtaining these and on other `node`/`client` methods (fetching historical data, live streaming, key-value store, etc.) beyond what these widgets use directly.
@@ -74,15 +75,21 @@ const node = anedya.newNode(client, nodeId);
 A single-value display widget — shows the latest reading, a title, and a last-updated label.
 
 ```jsx
-<CardWidget node={node} variable="humidity" title="Humidity" unit="%" decimalPlaces={1} />
+<CardWidget
+  node={node}
+  variable="humidity"
+  title="Humidity"
+  unit="%"
+  decimalPlaces={1}
+/>
 ```
 
 #### Required props
 
-| Prop | Type | Description |
-|---|---|---|
-| `node` | `any` | `anedya.newNode(client, nodeId)` |
-| `variable` | `string` | Variable name to display |
+| Prop       | Type     | Description                      |
+| ---------- | -------- | -------------------------------- |
+| `node`     | `any`    | `anedya.newNode(client, nodeId)` |
+| `variable` | `string` | Variable name to display         |
 
 ---
 
@@ -102,17 +109,17 @@ type CardSlot = "container" | "title" | "value" | "unit" | "label";
 
 These look similar but do genuinely different things:
 
-| | Shape | Targets | Purpose |
-|---|---|---|---|
-| `styles` | object, keyed by slot | any inner slot (`title`, `value`, `unit`, `label`) *and* `container` | reach inside the widget |
-| `className` | plain string | only the outermost container element | the ordinary React convention every component supports |
+|             | Shape                 | Targets                                                              | Purpose                                                |
+| ----------- | --------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| `styles`    | object, keyed by slot | any inner slot (`title`, `value`, `unit`, `label`) _and_ `container` | reach inside the widget                                |
+| `className` | plain string          | only the outermost container element                                 | the ordinary React convention every component supports |
 
 ```jsx
 <CardWidget
-  className="shadow-lg"                 // outer box only
+  className="shadow-lg" // outer box only
   styles={{
-    value: "text-red-500 text-5xl",     // the "value" slot specifically
-    title: "uppercase tracking-wider",  // the "title" slot specifically
+    value: "text-red-500 text-5xl", // the "value" slot specifically
+    title: "uppercase tracking-wider", // the "title" slot specifically
   }}
 />
 ```
@@ -151,7 +158,7 @@ You can freely use Tailwind's responsive prefixes inside `styles`:
 ```tsx
 <CardWidget
   styles={{
-    value: "text-2xl md:text-4xl xl:text-6xl"
+    value: "text-2xl md:text-4xl xl:text-6xl",
   }}
 />
 ```
@@ -174,6 +181,7 @@ It receives the raw fetched data:
   timestamp: number;
 }
 ```
+
 (or `null` while no data is available).
 
 Instead of returning CSS classes, it returns a **partial set of widget props**. Those returned props temporarily override the widget's original props until the callback runs again.
@@ -225,34 +233,158 @@ Later layers win whenever two Tailwind utilities conflict. Conflicts are resolve
 
 #### Formatting vs rendering
 
-`formatValue` and `labelText` control **what text is displayed**.
+`format`, `formatOptions`, `decimalPlaces`, and `labelFormat` control **what text is displayed**.
 
 `styles` controls **how the widget looks**.
 
-`onDataChange` can override either one (along with most other widget props), allowing the widget to react to incoming data.
+`onDataChange` can override any of these (along with most other widget props), allowing the widget to react to incoming data.
+
+##### `format` — named presets for common unit types
+
+For values that need unit-aware scaling (bytes, durations, lengths, etc.), pass a `format` preset instead of manually computing a unit string:
+
+```tsx
+<CardWidget node={node} variable="freeMemory" format="bytes" />
+// renders "512" + "MB" — auto-scaled, no manual unit needed
+
+<CardWidget node={node} variable="uptime" format="duration" />
+// renders "2d 4h 12m"
+
+<CardWidget node={node} variable="distance" format="length" formatOptions={{ precision: 2 }} />
+// renders "1.25" + "km"
+```
+
+Available presets:
+
+| Preset     | Input           | Output example                                                                                  |
+| ---------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| `number`   | any             | `"123,456"` — locale-aware thousands separators                                                 |
+| `bytes`    | bytes           | `"500"` + `"KB"` — auto-scales B/KB/MB/GB/TB (or KiB/MiB/GiB with `formatOptions.binary: true`) |
+| `duration` | seconds         | `"2h 15m 30s"`                                                                                  |
+| `length`   | meters          | `"1.25"` + `"km"` — auto-scales mm/cm/m/km                                                      |
+| `volume`   | milliliters     | auto-scales mL/L                                                                                |
+| `dataRate` | bits per second | auto-scales bps/Kbps/Mbps                                                                       |
+| `percent`  | 0–100           | `"45%"`                                                                                         |
+
+`formatOptions` accepts:
+
+```ts
+{
+  locale?: string;      // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
+  binary?: boolean;     // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
+  precision?: number;   // decimal places for the scaled number
+}
+```
+
+**When to use each option:**
+
+- **`locale`** — force a specific number format instead of relying on the visitor's browser/OS locale. Useful for a dashboard serving a specific region, or an app with its own explicit language setting:
+```tsx
+  <CardWidget format="number" formatOptions={{ locale: "en-IN" }} />
+  // "1,23,456" (Indian digit grouping) instead of "123,456"
+
+  <CardWidget format="number" formatOptions={{ locale: "de-DE" }} />
+  // "123.456" (German uses "." as the thousands separator, "," as the decimal point)
+```
+
+- **`precision`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
+```tsx
+  <CardWidget format="bytes" formatOptions={{ precision: 2 }} />
+  // "512.34" + "MB" — more decimal places than the default
+
+  <CardWidget format="bytes" formatOptions={{ precision: 0 }} />
+  // "512" + "MB" — whole number, no decimals
+```
+
+- **`binary`** — *(`bytes` preset only)* choose between 1000-based and 1024-based scaling. These genuinely produce different numbers for the same raw byte count, so picking the wrong one can make a value look incorrect even though the math is technically right for the mode you're in:
+```tsx
+  <CardWidget format="bytes" formatOptions={{ binary: true }} />
+  // raw 1048576 -> "1" + "MiB" — matches how OS file managers/RAM usage are usually reported
+
+  <CardWidget format="bytes" />
+  // raw 1048576 -> "1.05" + "MB" — matches how storage manufacturers/network specs are usually reported
+```
+  As a rule of thumb: use `binary: true` for memory/RAM/file-size-on-disk readings, and the default (decimal) for network throughput or storage capacity marketing figures.
+  
+**`format` takes over the `unit` slot entirely.** When set, the preset determines its own unit per value (e.g. switching from `"KB"` to `"MB"` as a byte count grows) — the `unit` prop is ignored while `format` is active.
+
+> **Presets don't validate that they match your data's actual meaning** — they only know how to scale a raw number. Applying `format="length"` to a Celsius reading, for example, will scale it as if it were meters and display a plausible-looking but semantically wrong unit. Only use a preset that matches what the underlying value actually represents.
+
+##### Precedence
+
+`formatValue` always wins if provided — it's a full custom formatting function and bypasses `format`/`decimalPlaces` entirely:
 
 ```tsx
 <CardWidget
   formatValue={(v) => `${v.toFixed(2)} % RH`}
   labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
-  onDataChange={(data) => {
-    if (!data) return;
-
-    if (data.value > 80) {
-      return {
-        title: "High Humidity",
-        styles: {
-          value: "text-red-500",
-        },
-      };
-    }
-  }}
 />
 ```
 
 > Long `formatValue` output (e.g. `"56.00 % RH"`) may wrap onto a second line at small widths — the value slot wraps rather than overflowing. See [Sizing](#sizing) for how this interacts with a fixed `height`.
 
 ---
+
+#### The last-updated label
+
+By default, the label under the value shows a fixed clock time (`"Updated 14:32:10"`). This can be changed with `labelFormat`, or fully replaced with `labelText`.
+
+##### `labelFormat` — named presets
+
+```tsx
+<CardWidget {...commonProps} labelFormat="relative" />
+// "5 minutes ago" instead of "Updated 14:32:10"
+
+<CardWidget {...commonProps} labelFormat="date" />
+// "Updated 7/24/2026"
+```
+
+Available presets:
+
+| Preset           | Output example                    |
+| ---------------- | --------------------------------- |
+| `time` (default) | `"Updated 14:32:10"`              |
+| `date`           | `"Updated 7/24/2026"`             |
+| `datetime`       | `"Updated 7/24/2026, 2:32:10 PM"` |
+| `relative`       | `"5 minutes ago"`                 |
+| `iso`            | `"2026-07-24T14:32:10.000Z"`      |
+
+##### `labelText` — full custom control
+
+`labelText` always takes precedence over `labelFormat` and receives the raw timestamp, so you can use it for anything the presets don't cover — 12-hour/AM-PM formatting, hours-only, non-default locales, or combining relative time with custom surrounding text:
+
+```tsx
+// AM/PM, 12-hour
+<CardWidget
+  labelText={(ts) => {
+    const d = new Date(ts < 1e12 ? ts * 1000 : ts);
+    return `Updated ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+  }}
+/>;
+// "Updated 2:32 PM"
+
+// Combining relative time with custom text
+import { relativeTime } from "public-widget-sdk/formatters";
+
+<CardWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
+// "Last synced 5 minutes ago"
+```
+
+`labelFormat` covers the common cases with zero code; `labelText` is the general escape hatch for everything else — the same relationship `formatValue` has with `format`.
+
+---
+
+#### Formatters export
+
+The formatting helpers used internally are also available as a standalone import, for composing into your own `labelText`/`formatValue` functions:
+
+```tsx
+import { relativeTime } from "public-widget-sdk/formatters";
+```
+
+| Export         | Signature                                        | Description                                                                                             |
+| -------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `relativeTime` | `(timestamp: number, locale?: string) => string` | Converts a timestamp into a human-relative string (`"5 minutes ago"`). Accepts seconds or milliseconds. |
 
 #### Sizing
 
@@ -266,10 +398,10 @@ Later layers win whenever two Tailwind utilities conflict. Conflicts are resolve
 
 Whether you pass `height` changes how the card behaves — this is intentional, not a quirk:
 
-| | Behavior |
-|---|---|
-| **`height` omitted** | The card **auto-grows** to fit its content. If `formatValue`/`labelText` produce long text that wraps, the card simply becomes taller. Sizing scales with **width only**. |
-| **`height` passed** | The card becomes a **fixed-size box**. Sizing scales with **both width and height** (see [Responsive sizing](#responsive-sizing)). If content is too tall to fit (e.g. a long wrapped value at a small height), it is **clipped**, not overflowed — the card will not grow past the height you gave it. |
+|                      | Behavior                                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`height` omitted** | The card **auto-grows** to fit its content. If `formatValue`/`labelText` produce long text that wraps, the card simply becomes taller. Sizing scales with **width only**.                                                                                                                               |
+| **`height` passed**  | The card becomes a **fixed-size box**. Sizing scales with **both width and height** (see [Responsive sizing](#responsive-sizing)). If content is too tall to fit (e.g. a long wrapped value at a small height), it is **clipped**, not overflowed — the card will not grow past the height you gave it. |
 
 ```jsx
 // Auto-height: card grows to fit content, whatever that content turns out to be
@@ -309,7 +441,7 @@ If you provide your own font-size utility for a slot, you're opting out of the d
 ```tsx
 <CardWidget
   styles={{
-    value: "text-6xl"
+    value: "text-6xl",
   }}
 />
 ```
@@ -330,10 +462,10 @@ Neither state currently accepts style overrides via `styles` — flag it if you 
 
 #### Other props
 
-| Prop | Type | Description |
-|---|---|---|
-| `title` | `string` | Card title. Default: `"Latest Value"` |
-| `unit` | `string` | Unit suffix shown next to the value |
+| Prop            | Type     | Description                                                                        |
+| --------------- | -------- | ---------------------------------------------------------------------------------- |
+| `title`         | `string` | Card title. Default: `"Latest Value"`                                              |
+| `unit`          | `string` | Unit suffix shown next to the value                                                |
 | `decimalPlaces` | `number` | Decimal places for the displayed value (used only if `formatValue` isn't provided) |
 
 ---

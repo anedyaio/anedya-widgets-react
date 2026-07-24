@@ -8,7 +8,7 @@ import { CardWidget } from "public-widget-sdk";
 
 // Import your stylesheet via the industry-standard subpath
 import "public-widget-sdk/styles.css";
-
+import { relativeTime } from "public-widget-sdk/formatters";
 
 
 
@@ -40,12 +40,16 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-<div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+<div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}
+>
       {/* ============================================================
        * 1. Default appearance — no theme, no styles, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1} />
+      <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1}
+      labelText={(ts) => `Last synced ${relativeTime(ts)}`}
+    
+       />
 
 
       {/* ============================================================
