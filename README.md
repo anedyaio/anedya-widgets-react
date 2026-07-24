@@ -28,7 +28,7 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [Responsive sizing](#responsive-sizing)
     - [Loading & error states](#loading--error-states)
     - [Other props](#other-props)
-- [Build & distribution](#build--distribution--why-classes-render-unstyled-without-this)
+- [Stylesheet import](#stylesheet-import)
 
 ---
 
@@ -338,51 +338,16 @@ Neither state currently accepts style overrides via `styles` — flag it if you 
 
 ---
 
-## Build & distribution — why classes render unstyled without this
+## Stylesheet import
 
-Since this SDK is installed as a real package (not copied into the consumer's own repo, the way shadcn/ui works), the consumer's own Tailwind build **never scans this package's source files** by default — so every class string in `themes/defaultTheme.ts`/`CARD_DEFAULT_CLASSES` compiles to nothing in their app, and every widget renders with zero layout or color. This isn't a bug in the widget; it's a structural consequence of shipping Tailwind classes from an installable package.
+This SDK ships pre-compiled CSS alongside its JavaScript — you don't need Tailwind configured in your own project for these widgets to render correctly, even if you don't use Tailwind at all.
 
-**The fix: ship a pre-compiled stylesheet as part of this SDK's own build**, so consumers import real, already-compiled CSS rather than relying on their own Tailwind config to happen to pick up ours.
-
-**1. Create the input file**, `src/styles/base.css`:
-
-```css
-@import "tailwindcss";
-
-/* Explicit @source directives so Tailwind scans exactly the folders
-   containing our class strings, rather than relying purely on
-   automatic detection. Paths are relative to this file's location. */
-@source "../widgets/**/*.{ts,tsx}";
-@source "../themes/**/*.{ts,tsx}";
-@source "../common.ts";
-```
-
-**2. Install the Tailwind v4 CLI** (a separate package from core `tailwindcss` as of v4):
-
-```bash
-npm install -D @tailwindcss/cli
-```
-
-**3. Add a build script**, in `package.json`:
-
-```json
-{
-  "scripts": {
-    "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/style.css --minify"
-  }
-}
-```
-
-Run it as part of your normal publish/build step so `dist/style.css` always reflects the current source.
-
-**4. Consumers import it once**, via the package's `styles.css` subpath export:
+**Import the stylesheet once**, anywhere in your app's entry point (e.g. `main.tsx`, `App.tsx`, or your global styles file):
 
 ```jsx
 import "public-widget-sdk/styles.css";
 ```
 
-That's the entire integration on their end — no `content` glob changes, no Tailwind config coordination, no knowledge of how this SDK is built internally required.
+That's the entire integration on your end. No `content` glob changes to your `tailwind.config`, no build coordination, nothing else required — every widget in this SDK will render fully styled as soon as this import is present.
 
----
-
-- `style` (a plain inline-style object, part of the shared base props every widget accepts) isn't currently wired into the container's render — only `className` is. If you need it, flag it and it can be added the same way `className` already works.
+> **If styles aren't appearing:** double-check the import path matches your installed package name exactly, and that it's imported somewhere that actually runs before your widgets render (e.g. not inside a conditionally-loaded file). If you're using a bundler with strict CSS module resolution, confirm it supports subpath imports from `node_modules` (most modern bundlers — Vite, Webpack 5+, Next.js — do, out of the box).
