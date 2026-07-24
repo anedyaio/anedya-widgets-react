@@ -2,7 +2,7 @@ import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
-import "../../../dist/styles.css"
+import "../../../dist/styles.css";
 
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
 const token =
@@ -32,224 +32,10 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-    // <div
-    //   style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}
-    // >
-    //   {/* ============================================================
-    //    * 1. Default appearance — no theme, no styles, no
-    //    * formatting props. Every fallback in the widget in one place.
-    //    * ============================================================ */}
-    //   <CardWidget {...commonProps} title="Default" unit="%" precision={1} />
-
-    //   {/* ============================================================
-    //    * 2. theme — a reusable, shareable WidgetTheme object. Same
-    //    * effect across every widget instance that uses it.
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Emerald Theme"
-    //     unit="%"
-    //     precision={1}
-    //     theme={emeraldTheme}
-    //   />
-
-    //   {/* Built-in preset names also work directly: */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Dark Preset"
-    //     unit="%"
-    //     precision={1}
-    //     theme="dark"
-    //   />
-
-    //   {/* ============================================================
-    //    * 3. styles vs className — THE distinction to understand:
-    //    *
-    //    *   - `styles` (plural, an OBJECT): per-SLOT overrides.
-    //    *     Keys are "container" | "title" | "value" | "unit" | "label"
-    //    *     — lets you reach INSIDE the widget and style individual
-    //    *     pieces independently.
-    //    *
-    //    *   - `className` (singular, a STRING): the ordinary React
-    //    *     convention — one class applied ONLY to the widget's
-    //    *     outermost container element, same as you'd pass to any
-    //    *     other component. It's merged (via twMerge) with whatever
-    //    *     styles.container already resolved to, not a
-    //    *     replacement for it.
-    //    *
-    //    * This example uses BOTH at once so the difference is visible:
-    //    * className adds a shadow to the outer box, styles.value/
-    //    * styles.title style two INNER pieces independently.
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="classNames vs className"
-    //     unit="%"
-    //     precision={1}
-    //     className="shadow-lg" // <- outer box only, ordinary React convention
-    //     classNames={{
-    //       value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
-    //       title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
-    //     }}
-    //   />
-
-    //   {/* ============================================================
-    //    * 4. Plain CSS classes — classNames works with ANY class source,
-    //    * not just Tailwind. These reference plain hand-written CSS
-    //    * classes (e.g. defined in a .css file this app already imports).
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Plain CSS Classes"
-    //     unit="%"
-    //     precision={1}
-    //     classNames={{ container: "my-card", value: "my-card-value" }}
-    //   />
-
-    //   {/* ============================================================
-    //    * 5. Native Tailwind responsive prefixes — `sm:`/`md:`/`lg:`
-    //    * work exactly as they do anywhere else in your app, because
-    //    * classNames just forwards whatever string you write straight
-    //    * to `className`. This widget does NOT have its own custom
-    //    * breakpoint system — these prefixes are compiled by YOUR
-    //    * project's Tailwind config and respond to the BROWSER VIEWPORT,
-    //    * same as native Tailwind everywhere else. If your own
-    //    * tailwind.config.js customizes `theme.screens`, these prefixes
-    //    * automatically follow that customization too — nothing to
-    //    * configure on the widget's side.
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Responsive Text"
-    //     unit="%"
-    //     precision={1}
-    //     classNames={{ value: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl" }}
-    //   />
-
-    //   {/* ============================================================
-    //    * 3. Segmented variant — colored ranges (risk zones), with
-    //    * needle enabled to point at the current value (like your
-    //    * ChartExpo reference image).
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Custom Formatting"
-    //     formatValue={(v) => `${v.toFixed(2)} % RH`}
-    //     labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
-    //   />
-
-    //   {/* ============================================================
-    //    * 7. onStyleChange — conditional class overrides driven by the
-    //    * RAW fetched data ({ value, timestamp }), always applied on top
-    //    * of everything else (theme, classNames, className).
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Threshold Coloring"
-    //     unit="%"
-    //     precision={1}
-    //     onDataChange={(data) => {
-    //       if (!data) return;
-
-    //       if (data.value > 80) {
-    //         return {
-    //           title: "High Humidity",
-    //           theme: "dark",
-    //           classNames: {
-    //             value: "text-red-500",
-    //           },
-    //         };
-    //       }
-
-    //       return {
-    //         title: "Humidity",
-    //         theme: "light",
-    //       };
-    //     }}
-    //   />
-
-    //   {/* ============================================================
-    //    * 8. Sizing — width/height/minWidth/maxWidth are plain props,
-    //    * applied as inline styles on the container, independent of the
-    //    * whole classNames/theme system.
-    //    * ============================================================ */}
-    //   <CardWidget
-    //     {...commonProps}
-    //     title="Custom Size"
-    //     unit="%"
-    //     width={320}
-    //     minWidth={280}
-    //     maxWidth={400}
-    //     height={200}
-    //   />
-
-    //   <GaugeWidget
-    //     {...commonProps}
-    //     min={0}
-    //     max={100}
-    //     // size= not working proper
-    //     valueLabel={{ precision: 1 }}
-    //     arc={{
-    //       startAngle: -90,
-    //       endAngle: 90,
-    //       // radius: not working proper
-    //       thickness: 30,
-    //       // cornerRadius:100
-    //     }}
-    //     track={{
-    //       show: true,
-    //       color: "yellow",
-    //     }}
-    //     fillMode="progress"
-    //     color="#1fa2ff"
-    //     needle={{
-    //       show: true,
-    //       type: "triangle",
-    //       length: "medium",
-    //       width: 5,
-    //       color: "white",
-    //       capRadius: 7,
-    //     }}
-    //     needleLabel={{
-    //       show: true,
-    //       formatter: () => {
-    //         "Hello";
-    //       },
-    //     }}
-    //     labels={{
-    //       show: true,
-    //       position: "outside",
-    //     }}
-    //     scale={{
-    //       minLabel: "Minimum",
-    //       maxLabel: "Maximum",
-    //     }}
-    //     ticks={{
-    //       show: true,
-    //       count: 10,
-    //       position: "outside",
-    //       length: 10,
-    //       labels: true,
-    //     }}
-    //     animation={{
-    //       duration: 5000,
-    //       easing: "easeElasticOut",
-    //     }}
-    //     tooltip={{
-    //       show: false,
-    //     }}
-    //     classNames={{
-    //       title: "text-white",
-    //       tickLabel: "text-white text-lg",
-    //       label: "text-white",
-    //       value: "text-white",
-    //     }}
-    //   />
-    // </div>
+    
     <div
       style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}
     >
-     
       {/* <GaugeWidget
         {...commonProps}
         // label="Gauge Chart"
@@ -319,26 +105,155 @@ export default function App() {
         theme="dark"
       /> */}
 
-    <GaugeWidget 
-      {...commonProps} 
-      // color="#1fa2ff"
-      color={["red", "yellow"]}
-      arc={{
-        // radius:400,
-        // cornerRadius:10,
-        thickness:80,
-      }}
-      animation={{
-        duration: 4000,
-        easing: "easeElasticOut", // easeCubicOut, easeElasticOut
-      }}
-      needle={{
-        color:"white",
-        length:"short",
-        type:"triangle",
-        animation:true,
-      }}
-      theme="dark"  />
+      <GaugeWidget
+        {...commonProps}
+        // color="#1fa2ff"
+        // color={["#9796f0", "#fbc7d4"]}
+        // color={["#799F0C", "#FFE000"]}
+        color={["#A5FECB", "#20BDFF", "#5433FF"]}
+        title="Gauge Chart Widget"
+        // value={40}
+        // labelText={"Hello"}
+        // valueLabel={"Hello"}
+        arc={{
+          // radius:400,
+          // cornerRadius:10,
+          thickness: 80,
+        }}
+        animation={{
+          duration: 4000,
+          easing: "easeElasticOut", // easeCubicOut, easeElasticOut
+        }}
+        needle={{
+          color: "white",
+          length: "short",
+          type: "triangle",
+          animation: true,
+        }}
+        theme="dark"
+        styles={{
+          container: "",
+          title: "text-black text-[90px]",
+        }}
+      />
+
+      <GaugeWidget
+        title="Battery Level"
+        value={65}
+        unit="%"
+        min={0}
+        max={100}
+        className="w-64 mx-auto"
+        theme="dark"
+      />
+
+      <GaugeWidget
+        title="CPU Usage"
+        value={78}
+        unit="%"
+        theme="dark"
+        // 'style' affects ONLY the outer wrapper <div>
+        style={{
+          backgroundColor: "#1e1e2f",
+          borderRadius: "16px",
+          padding: "10px",
+        }}
+        // 'styles' affects specific internal SVG/HTML slots via Tailwind classes
+        styles={{
+          container: "border border-gray-700", // merges with outer wrapper
+          title: "text-purple-400 text-xs uppercase tracking-wider",
+          value: "text-white text-2xl font-mono",
+          unit: "text-gray-400 text-sm",
+          label: "text-gray-500 text-[10px]",
+          bar: "fill-gradient-to-r from-purple-500 to-pink-500", // if using Tailwind gradients
+          needle: "stroke-pink-400 stroke-2",
+          needleCap: "fill-pink-400",
+        }}
+      />
+
+      <GaugeWidget
+        value={85}
+        theme="dark" // Applies gaugeDarkTheme internally
+        // 1. style: Sets fixed size and injects CSS variables for text scaling
+        style={{
+          width: "400px",
+          height: "400px",
+          padding: 0,
+        }}
+        // 2. styles: Override internal slot classes
+        styles={{
+          container: "bg-gray-900 rounded-2xl border border-red-700", // Merged with dark theme's container
+          bar: "text-emerald-400", // Overrides dark theme's "text-indigo-400"
+          needle: "text-yellow-500",
+          needleCap: "red", // Makes the needle yellow
+          value: "text-emerald-50", // Overrides dark theme's "text-white"
+          label: "text-gray-400", // Overrides dark theme's "text-slate-500"
+        }}
+      />
+
+      <GaugeWidget
+        value={75}
+        needle={{
+          type: "triangle", // 'drop' or 'triangle' use fill
+        }}
+        styles={{
+          bar: "text-red-500",
+          track: "text-yellow-300",
+          needle: "text-green-600",
+          needleCap: "text-green-600",
+        }}
+      />
+
+      <GaugeWidget
+        responsive={true} // ensure it reacts to container
+        aspectRatio={1.6}
+        value={34}
+        valueLabel={{
+          show: true,
+        }}
+        // make it wider than tall, reducing overall height
+        // OR set fixed size:
+        size={300}
+        styles={{
+          container: "bg-gray-900 rounded-2xl border border-red-700",
+        }}
+      />
+
+      {/* // 1. Show a custom static text */}
+      <GaugeWidget
+        value={78}
+        labelText={() => "Last reading"} // Always shows "Last reading"
+      />
+
+      {/* // 2. Format the timestamp exactly how you want */}
+      <GaugeWidget
+        value={78}
+        labelText={(timestamp) =>
+          `Updated at ${new Date(timestamp).toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}`
+        }
+        // Output: "Updated at 02:30:45 PM"
+      />
+
+      {/* // 3. Show relative time with custom wording */}
+      <GaugeWidget
+        value={78}
+        labelText={(timestamp) => {
+          const diff = Math.floor((Date.now() - timestamp) / 60000);
+          if (diff < 1) return "Just now";
+          if (diff < 60) return `${diff} min ago`;
+          return `${Math.floor(diff / 60)} hours ago`;
+        }}
+      />
+
+      {/* // 4. Hide the label entirely (return null or empty string) */}
+      <GaugeWidget
+        value={78}
+        labelText={() => null} // No label shown
+      />
     </div>
   );
 }

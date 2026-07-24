@@ -145,7 +145,7 @@
 //     default: {
 //       const half = w / 2;
 //       // Teardrop: rounded base, sharp tip.
-//       const d = `M ${-half} 0 
+//       const d = `M ${-half} 0
 //                  C ${-half} ${-length * 0.35}, ${-w} ${
 //         -length * 0.7
 //       }, 0 ${-length}
@@ -928,12 +928,15 @@
 //   );
 // }
 
-
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { twMerge } from "tailwind-merge";
-import { AnedyaWidgetBaseProps } from "../../common";
+import {
+  AnedyaWidgetBaseProps,
+  FormatOptions,
+  FormatPreset,
+  LabelFormatPreset,
+} from "../../common";
 import { SlotClassNames, WidgetTheme } from "../../types/root";
 import {
   GaugeAnimationConfig,
@@ -951,9 +954,19 @@ import {
   gaugeLightTheme,
 } from "../../themes/gaugeTheme";
 import { useResizeObserver } from "../../hooks/useResizeObserver";
+import { FORMATTERS, LABEL_FORMATTERS } from "../../helpers/formatters";
+
+/** The raw data this widget fetched — exactly what comes back from the request, not yet formatted. */
+export interface GaugeData {
+  value: number;
+  timestamp: number;
+}
+
+export type GaugeWidgetUpdate = Partial<
+  Omit<GaugeWidgetProps, "node" | "variable" | "onDataChange">
+>;
 
 export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
-  /** Used before live data arrives, or standalone in dummy-data mode. */
   value?: number;
   min?: number;
   max?: number;
@@ -962,18 +975,27 @@ export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
 
   arc?: GaugeArcConfig;
   track?: GaugeTrackConfig;
-  /** Bar fill color. Pass an array of 2+ colors for a gradient. */
   color?: GaugeColor;
 
   needle?: GaugeNeedleConfig;
   valueLabel?: GaugeValueLabelConfig;
   animation?: GaugeAnimationConfig;
 
-  classNames?: SlotClassNames<GaugeSlot>;
+  // ---- Card-parity formatting props ----
+  unit?: string;
+  decimalPlaces?: number;
+  formatValue?: (value: number) => string;
+  format?: FormatPreset;
+  formatOptions?: FormatOptions;
+  labelText?: (timestamp: number) => string;
+  labelFormat?: LabelFormatPreset;
+
+  styles?: SlotClassNames<GaugeSlot>;
   style?: React.CSSProperties;
 
   onClick?: (value: number) => void;
   onValueChange?: (value: number) => void;
+  onDataChange?: (data: GaugeData | null) => GaugeWidgetUpdate | void;
 }
 
 const DEG2RAD = Math.PI / 180;
@@ -989,16 +1011,17 @@ const DEFAULT_ANIMATION: Required<GaugeAnimationConfig> = {
   easing: "easeCubicOut",
 };
 
-// A dome (semicircle-ish) gauge only uses the top half of its box, so its
-// natural height:width ratio is well under 1. This is the fallback used
-// when no explicit height/aspectRatio is given.
+const DEFAULT_WIDTH = 240;
 const DEFAULT_HEIGHT_RATIO = 0.68;
 
 function resolveEase(name: string) {
   return (d3 as any)[name] ?? d3.easeCubicOut;
 }
 
-function needlePixelLength(length: GaugeNeedleConfig["length"], radius: number) {
+function needlePixelLength(
+  length: GaugeNeedleConfig["length"],
+  radius: number
+) {
   if (typeof length === "number") return length;
   switch (length) {
     case "short":
@@ -1011,32 +1034,55 @@ function needlePixelLength(length: GaugeNeedleConfig["length"], radius: number) 
   }
 }
 
-/** Builds a needle shape pointing "up" (-y) from the origin; rotated into place via a group transform. */
-function needleShape(type: NonNullable<GaugeNeedleConfig["type"]>, length: number, width: number) {
+function needleShape(
+  type: NonNullable<GaugeNeedleConfig["type"]>,
+  length: number,
+  width: number
+) {
   const w = width;
   switch (type) {
     case "line":
       return {
         tag: "line",
-        attrs: { x1: 0, y1: 0, x2: 0, y2: -length, strokeWidth: w, strokeLinecap: "butt" },
+        attrs: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: -length,
+          strokeWidth: w,
+          strokeLinecap: "butt",
+        },
       };
     case "rounded":
       return {
         tag: "line",
-        attrs: { x1: 0, y1: 0, x2: 0, y2: -length, strokeWidth: w, strokeLinecap: "round" },
+        attrs: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: -length,
+          strokeWidth: w,
+          strokeLinecap: "round",
+        },
       };
     case "triangle": {
       const half = w / 2;
       return {
         tag: "polygon",
-        attrs: { points: `0,0 ${-half},${-length * 0.15} 0,${-length} ${half},${-length * 0.15}` },
+        attrs: {
+          points: `0,0 ${-half},${-length * 0.15} 0,${-length} ${half},${
+            -length * 0.15
+          }`,
+        },
       };
     }
     case "drop":
     default: {
       const half = w / 2;
       const d = `M ${-half} 0
-                 C ${-half} ${-length * 0.35}, ${-w} ${-length * 0.7}, 0 ${-length}
+                 C ${-half} ${-length * 0.35}, ${-w} ${
+        -length * 0.7
+      }, 0 ${-length}
                  C ${w} ${-length * 0.7}, ${half} ${-length * 0.35}, ${half} 0
                  A ${half} ${half} 0 1 1 ${-half} 0 Z`;
       return { tag: "path", attrs: { d } };
@@ -1048,7 +1094,6 @@ function isGradientColor(c?: GaugeColor): c is string[] {
   return Array.isArray(c) && c.length >= 2;
 }
 
-/** Ensures a <linearGradient> with the given id/colors exists in <defs> and returns its url() reference. */
 function resolveFill(
   defs: d3.Selection<SVGDefsElement, unknown, null, undefined>,
   id: string,
@@ -1073,14 +1118,16 @@ function resolveFill(
   return `url(#${id})`;
 }
 
-/** Normalized (r=1) bounding box of an arc sweep — handles semicircle, 270°, full circle, custom. */
 function getArcBounds(startDeg: number, endDeg: number) {
   const lo = Math.min(startDeg, endDeg);
   const hi = Math.max(startDeg, endDeg);
   const angles = [startDeg, endDeg];
   for (let k = Math.ceil(lo / 90) * 90; k <= hi; k += 90) angles.push(k);
 
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
   angles.forEach((deg) => {
     const a = deg * DEG2RAD;
     const x = Math.sin(a);
@@ -1096,7 +1143,7 @@ function getArcBounds(startDeg: number, endDeg: number) {
 export function GaugeWidget({
   node,
   variable,
-  title,
+  title = "Latest Value",
   theme,
   className,
   style,
@@ -1122,36 +1169,86 @@ export function GaugeWidget({
   valueLabel,
   animation,
 
-  classNames = {},
+  unit,
+  decimalPlaces,
+  formatValue,
+  format,
+  formatOptions,
+  labelText,
+  labelFormat,
+
+  styles = {},
   onClick,
   onValueChange,
+  onDataChange,
 }: GaugeWidgetProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const prevValueRef = useRef<number>(min);
+  // const prevValueRef = useRef<number>(min);
 
   const [fetchedValue, setFetchedValue] = useState<number | null>(null);
+  const [timestamp, setTimestamp] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // ---- Live data fetch (mirrors CardWidget) ----
+  const [dynamicProps, setDynamicProps] = useState<GaugeWidgetUpdate>({});
+
+  const mountedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+
+  // ---- Live data fetch (mirrors CardWidget, plus timestamp) ----
   useEffect(() => {
     if (!node) return;
-    let mounted = true;
+    mountedRef.current = true;
 
-    node
-      .getLatestData(variable)
-      .then((res: any) => {
-        if (!mounted) return;
-        if (res?.isSuccess && res?.isDataAvailable) {
+    const fetchLatest = async () => {
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await node.getLatestData(variable);
+        if (!mountedRef.current) return;
+
+        if (res.isSuccess && res.isDataAvailable) {
           setFetchedValue(res.data.value);
+          setTimestamp(res.data.timestamp);
+        } else {
+          setFetchedValue(null);
+          setError(res.error?.errorMessage ?? "No data available");
         }
-      })
-      .catch(() => {
-        /* fall back to `value` prop / dummy data silently */
-      });
+      } catch (err: any) {
+        if (!mountedRef.current) return;
+        setFetchedValue(null);
+        setError(err?.message ?? "Failed to fetch data");
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+          isFetchingRef.current = false;
+        }
+      }
+    };
 
+    fetchLatest();
     return () => {
-      mounted = false;
+      mountedRef.current = false;
     };
   }, [node, variable]);
+
+  // ---- onDataChange resolution (identical pattern to CardWidget) ----
+  useEffect(() => {
+    if (!onDataChange) {
+      setDynamicProps({});
+      return;
+    }
+
+    const data =
+      fetchedValue != null && timestamp != null
+        ? { value: fetchedValue, timestamp }
+        : null;
+
+    setDynamicProps(onDataChange(data) ?? {});
+  }, [fetchedValue, timestamp, onDataChange]);
 
   const rawValue = fetchedValue ?? valueProp ?? min;
   const clampedValue = Math.min(max, Math.max(min, rawValue));
@@ -1160,63 +1257,154 @@ export function GaugeWidget({
     onValueChange?.(clampedValue);
   }, [clampedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ---- Responsive sizing ----
-  // Disabled once `size` is set, since that fixes both dimensions explicitly.
   const { ref: wrapperRef, size: dims } = useResizeObserver<HTMLDivElement>(
     responsive && size == null
   );
 
+  const mergedStyles = useMemo(
+    () => ({ ...(styles ?? {}), ...(dynamicProps.styles ?? {}) }),
+    [styles, dynamicProps.styles]
+  );
+
+  // ---- Merge static props with dynamic onDataChange overrides ----
+  const resolvedProps = {
+    title,
+    theme,
+    className,
+    width,
+    height,
+    minWidth,
+    maxWidth,
+    minHeight,
+    maxHeight,
+    aspectRatio,
+    min,
+    max,
+    size,
+    responsive,
+    arc,
+    track,
+    color,
+    needle,
+    valueLabel,
+    animation,
+    unit,
+    decimalPlaces,
+    formatValue,
+    format,
+    formatOptions,
+    labelText,
+    labelFormat,
+    ...dynamicProps,
+    styles: mergedStyles,
+  };
+
   // ---- Resolved config ----
-  const resolvedArc = { ...DEFAULT_ARC, ...arc };
+  const resolvedArc = { ...DEFAULT_ARC, ...resolvedProps.arc };
 
   const resolvedTrack: Required<GaugeTrackConfig> = {
-    show: track?.show ?? true,
-    color: track?.color ?? "",
+    show: resolvedProps.track?.show ?? true,
+    color: resolvedProps.track?.color ?? "",
   };
 
   const resolvedNeedle: Required<Omit<GaugeNeedleConfig, "length">> & {
     length: NonNullable<GaugeNeedleConfig["length"]>;
   } = {
-    show: needle?.show ?? true,
-    type: needle?.type ?? "rounded",
-    length: needle?.length ?? "medium",
-    width: needle?.width ?? 4,
-    color: needle?.color ?? "",
-    capRadius: needle?.capRadius ?? 6,
-    animation: needle?.animation ?? true,
+    show: resolvedProps.needle?.show ?? true,
+    type: resolvedProps.needle?.type ?? "rounded",
+    length: resolvedProps.needle?.length ?? "medium",
+    width: resolvedProps.needle?.width ?? 4,
+    color: resolvedProps.needle?.color ?? "",
+    capRadius: resolvedProps.needle?.capRadius ?? 6,
+    animation: resolvedProps.needle?.animation ?? true,
   };
 
-  const resolvedValueLabel: Required<Omit<GaugeValueLabelConfig, "formatter">> & {
-    formatter?: (v: number) => string;
-  } = {
-    show: valueLabel?.show ?? true,
-    precision: valueLabel?.precision ?? 0,
-    prefix: valueLabel?.prefix ?? "",
-    suffix: valueLabel?.suffix ?? "",
-    formatter: valueLabel?.formatter,
+  const resolvedValueLabel: Required<Pick<GaugeValueLabelConfig, "show">> = {
+    show: resolvedProps.valueLabel?.show ?? true,
   };
 
-  const resolvedAnimation = { ...DEFAULT_ANIMATION, ...animation };
+  const resolvedAnimation = {
+    ...DEFAULT_ANIMATION,
+    ...resolvedProps.animation,
+  };
 
-  // ---- Theme + slot classes (identical precedence chain to CardWidget) ----
+  // ---- Theme + slot classes ----
   const resolvedTheme: WidgetTheme<GaugeSlot> =
-    theme === "dark"
+    resolvedProps.theme === "dark"
       ? gaugeDarkTheme
-      : theme === "light"
+      : resolvedProps.theme === "light"
       ? gaugeLightTheme
-      : (theme as WidgetTheme<GaugeSlot>) ?? DEFAULT_GAUGE_THEME;
+      : (resolvedProps.theme as WidgetTheme<GaugeSlot>) ?? DEFAULT_GAUGE_THEME;
 
   const resolveSlot = useCallback(
     (slot: GaugeSlot) =>
-      twMerge(GAUGE_DEFAULT_CLASSES[slot], resolvedTheme.styles[slot], classNames[slot]),
-    [resolvedTheme, classNames]
+      twMerge(
+        GAUGE_DEFAULT_CLASSES[slot],
+        resolvedTheme.styles[slot],
+        resolvedProps.styles[slot]
+      ),
+    [resolvedTheme, resolvedProps.styles]
   );
 
+  // ---- Value + unit formatting (same precedence as CardWidget) ----
+  const { displayValue, displayUnit } = useMemo(() => {
+    if (resolvedProps.formatValue) {
+      return {
+        displayValue: resolvedProps.formatValue(clampedValue),
+        displayUnit: resolvedProps.unit,
+      };
+    }
+
+    if (resolvedProps.format) {
+      const result = FORMATTERS[resolvedProps.format](
+        clampedValue,
+        resolvedProps.formatOptions
+      );
+      return { displayValue: result.value, displayUnit: result.unit };
+    }
+
+    if (resolvedProps.decimalPlaces != null) {
+      return {
+        displayValue: clampedValue.toFixed(resolvedProps.decimalPlaces),
+        displayUnit: resolvedProps.unit,
+      };
+    }
+
+    return {
+      displayValue: String(clampedValue),
+      displayUnit: resolvedProps.unit,
+    };
+  }, [
+    clampedValue,
+    resolvedProps.formatValue,
+    resolvedProps.format,
+    resolvedProps.formatOptions,
+    resolvedProps.decimalPlaces,
+    resolvedProps.unit,
+  ]);
+
+  // ---- Last-updated label — THIS is what shows the time ----
+  const displayLabel = useMemo(() => {
+    if (timestamp == null) return null;
+
+    if (resolvedProps.labelText) return resolvedProps.labelText(timestamp);
+
+    const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "time"];
+    return formatter(timestamp, resolvedProps.formatOptions?.locale);
+  }, [
+    timestamp,
+    resolvedProps.labelText,
+    resolvedProps.labelFormat,
+    resolvedProps.formatOptions?.locale,
+  ]);
+
   // ---- Geometry ----
-  // `size` fixes both dimensions in real CSS px so the wrapper's rendered
-  // box exactly matches the SVG viewBox (boxWidth === boxHeight === size).
-  const boxWidth = size ?? width ?? (dims.width || 240);
-  const boxHeight = size ?? height ?? (dims.height || boxWidth * DEFAULT_HEIGHT_RATIO);
+  const boxWidth =
+    resolvedProps.size ?? resolvedProps.width ?? (dims.width || DEFAULT_WIDTH);
+  const boxHeight =
+    resolvedProps.size ??
+    resolvedProps.height ??
+    (dims.height || boxWidth * DEFAULT_HEIGHT_RATIO);
 
   const bounds = useMemo(
     () => getArcBounds(resolvedArc.startAngle, resolvedArc.endAngle),
@@ -1224,9 +1412,8 @@ export function GaugeWidget({
   );
 
   const pad = 8;
-  // Reserve room below the arc for the value + label text so the dome
-  // never gets crowded.
-  const textReserve = resolvedValueLabel.show ? 0.34 : 0.16;
+  // const textReserve = resolvedValueLabel.show ? 0.34 : 0.16;
+  const textReserve = 0; 
   const availW = boxWidth - pad * 2;
   const availH = boxHeight * (1 - textReserve) - pad * 2;
 
@@ -1235,26 +1422,32 @@ export function GaugeWidget({
     Math.min(availW / (bounds.w || 1), availH / (bounds.h || 1))
   );
 
-  // An explicit `arc.radius` is honored, but clamped so the arc can never
-  // overflow the container and get clipped by the SVG viewBox.
   const outerRadius = resolvedArc.radius
     ? Math.min(resolvedArc.radius, maxFitRadius)
     : maxFitRadius;
 
   const thickness = resolvedArc.thickness ?? Math.max(6, outerRadius * 0.18);
 
-  // Center the arc's bounding box within the available width, anchor its top at `pad`.
-  const cx = pad - bounds.minX * outerRadius + (availW - bounds.w * outerRadius) / 2;
+  const cx =
+    pad - bounds.minX * outerRadius + (availW - bounds.w * outerRadius) / 2;
   const cy = pad - bounds.minY * outerRadius;
 
   const angleScale = useMemo(
     () =>
       d3
         .scaleLinear()
-        .domain([min, max])
-        .range([resolvedArc.startAngle * DEG2RAD, resolvedArc.endAngle * DEG2RAD])
+        .domain([resolvedProps.min, resolvedProps.max])
+        .range([
+          resolvedArc.startAngle * DEG2RAD,
+          resolvedArc.endAngle * DEG2RAD,
+        ])
         .clamp(true),
-    [min, max, resolvedArc.startAngle, resolvedArc.endAngle]
+    [
+      resolvedProps.min,
+      resolvedProps.max,
+      resolvedArc.startAngle,
+      resolvedArc.endAngle,
+    ]
   );
 
   // ---- D3 draw ----
@@ -1267,8 +1460,6 @@ export function GaugeWidget({
     root.attr("transform", `translate(${cx},${cy})`);
 
     const ease = resolveEase(resolvedAnimation.easing);
-    // A cornerRadius larger than half the bar's thickness produces
-    // self-intersecting, glitchy arcs — clamp it to a safe maximum.
     const safeCornerRadius = Math.min(resolvedArc.cornerRadius, thickness / 2);
 
     const arcGen = d3
@@ -1282,37 +1473,52 @@ export function GaugeWidget({
     const startA = resolvedArc.startAngle * DEG2RAD;
     const endA = resolvedArc.endAngle * DEG2RAD;
 
-    // --- Track ---
-    const trackSel = root.select<SVGPathElement>("path.anedya-gauge-track-path");
+    const trackSel = root.select<SVGPathElement>(
+      "path.anedya-gauge-track-path"
+    );
     if (resolvedTrack.show) {
       trackSel
-        .attr("d", arcGen({ startAngle: startA, endAngle: endA, r: outerRadius })!)
+        .attr(
+          "d",
+          arcGen({ startAngle: startA, endAngle: endA, r: outerRadius })!
+        )
         .attr("fill", resolvedTrack.color || "currentColor")
         .attr("opacity", 1);
     } else {
       trackSel.attr("opacity", 0);
     }
 
-    // --- Bar (animated fill toward the current value) ---
     const barGroup = root.select<SVGGElement>("g.anedya-gauge-bar-group");
-    barGroup.selectAll("*").remove();
 
-    const valueAngle = angleScale(clampedValue);
-    const barFill = resolveFill(defs, "anedya-gauge-bar-fill", color, "currentColor");
+    const barValue = loading || error ? resolvedProps.min : clampedValue;
+    const valueAngle = angleScale(barValue);
+    const barFill = resolveFill(
+      defs,
+      "anedya-gauge-bar-fill",
+      resolvedProps.color,
+      "currentColor"
+    );
 
-    const path = barGroup
-      .append("path")
-      .attr("class", resolveSlot("bar"))
-      .attr("fill", barFill)
-      .attr("stroke", "none");
+    let path = barGroup.select<SVGPathElement>("path.anedya-gauge-bar-path");
+    if (path.empty()) {
+      path = barGroup
+        .append("path")
+        .attr("class", "anedya-gauge-bar-path")
+        .attr("data-end-angle", String(startA));
+    }
 
     path
-      .datum({
-        startAngle: startA,
-        endAngle:
-          prevValueRef.current != null ? angleScale(prevValueRef.current) : startA,
-        r: outerRadius,
-      })
+      .attr("class", twMerge("anedya-gauge-bar-path", resolveSlot("bar")))
+      .attr("fill", barFill)
+      .attr("stroke", "none")
+      .attr("opacity", loading ? 0.4 : 1);
+
+    const currentEndAngle = path.attr("data-end-angle")
+      ? +path.attr("data-end-angle")!
+      : startA;
+
+    path
+      .datum({ startAngle: startA, endAngle: currentEndAngle, r: outerRadius })
       .transition()
       .duration(resolvedAnimation.duration)
       .ease(ease)
@@ -1320,33 +1526,52 @@ export function GaugeWidget({
         const interp = d3.interpolate(d.endAngle, valueAngle);
         return (t) => {
           d.endAngle = interp(t);
-          return arcGen({ startAngle: startA, endAngle: d.endAngle, r: outerRadius })!;
+          path.attr("data-end-angle", String(d.endAngle));
+          return arcGen({
+            startAngle: startA,
+            endAngle: d.endAngle,
+            r: outerRadius,
+          })!;
         };
       });
 
-    // --- Needle ---
     const needleGroup = root.select<SVGGElement>("g.anedya-gauge-needle");
     if (resolvedNeedle.show) {
       const len = needlePixelLength(resolvedNeedle.length, outerRadius);
       const shape = needleShape(resolvedNeedle.type, len, resolvedNeedle.width);
 
       needleGroup.selectAll("*:not(circle.anedya-gauge-needle-cap)").remove();
-      const needleEl = needleGroup.insert(shape.tag as any, "circle.anedya-gauge-needle-cap");
+      const needleEl = needleGroup.insert(
+        shape.tag as any,
+        "circle.anedya-gauge-needle-cap"
+      );
       needleEl
         .attr("class", resolveSlot("needle"))
         .attr("fill", resolvedNeedle.color || "currentColor")
-        .attr("stroke", resolvedNeedle.color || "currentColor");
+        .attr("stroke", resolvedNeedle.color || "currentColor")
+        .attr("opacity", loading ? 0.4 : 1);
       Object.entries(shape.attrs).forEach(([k, v]) =>
-        needleEl.attr(k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase()), v as any)
+        needleEl.attr(
+          k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase()),
+          v as any
+        )
       );
 
-      let cap = needleGroup.select<SVGCircleElement>("circle.anedya-gauge-needle-cap");
+      let cap = needleGroup.select<SVGCircleElement>(
+        "circle.anedya-gauge-needle-cap"
+      );
       if (cap.empty()) {
         cap = needleGroup
           .append("circle")
-          .attr("class", twMerge("anedya-gauge-needle-cap", resolveSlot("needleCap")));
+          .attr(
+            "class",
+            twMerge("anedya-gauge-needle-cap", resolveSlot("needleCap"))
+          );
       }
-      cap.attr("r", resolvedNeedle.capRadius).attr("fill", resolvedNeedle.color || "currentColor");
+      cap
+        .attr("r", resolvedNeedle.capRadius)
+        .attr("fill", resolvedNeedle.color || "currentColor")
+        .attr("opacity", loading ? 0.4 : 1);
 
       const targetDeg = valueAngle / DEG2RAD;
       if (resolvedNeedle.animation) {
@@ -1366,14 +1591,16 @@ export function GaugeWidget({
             };
           });
       } else {
-        needleGroup.attr("transform", `rotate(${targetDeg})`).attr("data-angle", String(targetDeg));
+        needleGroup
+          .attr("transform", `rotate(${targetDeg})`)
+          .attr("data-angle", String(targetDeg));
       }
       needleGroup.attr("opacity", 1);
     } else {
       needleGroup.attr("opacity", 0);
     }
 
-    prevValueRef.current = clampedValue;
+    // prevValueRef.current = barValue;
   }, [
     boxWidth,
     boxHeight,
@@ -1382,9 +1609,11 @@ export function GaugeWidget({
     outerRadius,
     thickness,
     clampedValue,
-    min,
-    max,
-    color,
+    loading,
+    error,
+    resolvedProps.min,
+    resolvedProps.max,
+    resolvedProps.color,
     resolvedArc.cornerRadius,
     resolvedTrack.show,
     resolvedTrack.color,
@@ -1400,30 +1629,38 @@ export function GaugeWidget({
     resolveSlot,
   ]);
 
-  const handleClick = useCallback(() => onClick?.(clampedValue), [onClick, clampedValue]);
-
-  const formattedValue = resolvedValueLabel.formatter
-    ? resolvedValueLabel.formatter(clampedValue)
-    : `${resolvedValueLabel.prefix}${clampedValue.toFixed(resolvedValueLabel.precision)}${resolvedValueLabel.suffix}`;
+  const handleClick = useCallback(
+    () => onClick?.(clampedValue),
+    [onClick, clampedValue]
+  );
 
   return (
     <div
       ref={wrapperRef}
-      className={twMerge("anedya-gauge relative", resolveSlot("container"), className)}
+      className={twMerge(
+        "anedya-gauge relative",
+        resolveSlot("container"),
+        resolvedProps.className
+      )}
       style={{
-        width: size ?? width ?? "100%",
-        height: size ?? height ?? undefined,
-        minWidth,
-        maxWidth,
-        minHeight,
-        maxHeight,
-        aspectRatio: size || height ? undefined : aspectRatio ?? 1 / DEFAULT_HEIGHT_RATIO,
+        width: resolvedProps.size ?? resolvedProps.width ?? "100%",
+        height: resolvedProps.size ?? resolvedProps.height ?? undefined,
+        minWidth: resolvedProps.minWidth,
+        maxWidth: resolvedProps.maxWidth,
+        minHeight: resolvedProps.minHeight,
+        maxHeight: resolvedProps.maxHeight,
+        aspectRatio:
+          resolvedProps.size || resolvedProps.height
+            ? undefined
+            : resolvedProps.aspectRatio ?? 1 / DEFAULT_HEIGHT_RATIO,
         boxSizing: "border-box",
         ...style,
       }}
       onClick={handleClick}
     >
-      {title && <span className={resolveSlot("title")}>{title}</span>}
+      {resolvedProps.title && (
+        <span className={resolveSlot("title")}>{resolvedProps.title}</span>
+      )}
 
       <svg
         ref={svgRef}
@@ -1440,17 +1677,132 @@ export function GaugeWidget({
           <g className="anedya-gauge-bar-group" />
           <g className="anedya-gauge-needle">
             <circle
-              className={twMerge("anedya-gauge-needle-cap", resolveSlot("needleCap"))}
+              className={twMerge(
+                "anedya-gauge-needle-cap",
+                resolveSlot("needleCap")
+              )}
             />
           </g>
         </g>
       </svg>
 
-      {resolvedValueLabel.show && (
-        <span className={resolveSlot("value")}>{formattedValue}</span>
+      {loading ? (
+        <div className="flex flex-col gap-[var(--anedya-gauge-gap)] w-full items-center justify-center">
+          <div
+            className="w-2/3 bg-slate-200 dark:bg-slate-700 rounded-md animate-pulse"
+            style={{
+              height: "var(--anedya-gauge-value-size)",
+              backgroundColor:
+                resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb",
+            }}
+          />
+          <div
+            className="w-1/2 bg-slate-200 dark:bg-slate-700 rounded-md animate-pulse"
+            style={{
+              height: "var(--anedya-gauge-label-size)",
+              backgroundColor:
+                resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb",
+            }}
+          />
+        </div>
+      ) : error ? (
+        <span className="text-red-600 text-sm">{error}</span>
+      ) : (
+        <>
+          {resolvedValueLabel.show && (
+            <span
+              className={twMerge(
+                "inline-flex items-baseline justify-center gap-1",
+                resolveSlot("value")
+              )}
+            >
+              <span className="min-w-0 break-words">{displayValue}</span>
+              {displayUnit && (
+                <span className={resolveSlot("unit")}>{displayUnit}</span>
+              )}
+            </span>
+          )}
+
+          {displayLabel && (
+            <span className={resolveSlot("label")}>{displayLabel}</span>
+          )}
+        </>
       )}
 
-      {variable && <span className={resolveSlot("label")}>{variable}</span>}
+      {/* <g
+        className="anedya-gauge-labels"
+        transform={`translate(${boxWidth / 2}, ${boxHeight - 24})`} // Adjust Y to position text neatly
+      >
+        {loading ? (
+          // Loading skeletons inside SVG
+          <>
+            <rect
+              x="-40"
+              y="-12"
+              width="80"
+              height="20"
+              rx="4"
+              fill={resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb"}
+              className="animate-pulse"
+            />
+            <rect
+              x="-30"
+              y="12"
+              width="60"
+              height="14"
+              rx="4"
+              fill={resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb"}
+              className="animate-pulse"
+            />
+          </>
+        ) : error ? (
+          <text
+            x="0"
+            y="0"
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="text-red-600"
+            style={{ fontSize: "14px" }}
+          >
+            {error}
+          </text>
+        ) : (
+          <>
+            {/* Value + Unit */}
+            {/* <text
+              x="0"
+              y="0"
+              textAnchor="middle"
+              dominantBaseline="central"
+              className={resolveSlot("value")}
+            >
+              {displayValue}
+              {displayUnit && (
+                <tspan
+                  className={resolveSlot("unit")}
+                  dy="-6"
+                  style={{ fontSize: "0.6em" }}
+                >
+                  {displayUnit}
+                </tspan>
+              )}
+            </text> */}
+
+            {/* Label (timestamp) */}
+            {/* {displayLabel && (
+              <text
+                x="0"
+                y="24"
+                textAnchor="middle"
+                dominantBaseline="central"
+                className={resolveSlot("label")}
+              >
+                {displayLabel}
+              </text>
+            )} */}
+          {/* </> */}
+        {/* )} */}
+      {/* </g> */}
     </div>
   );
 }
