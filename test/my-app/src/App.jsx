@@ -9,8 +9,12 @@ import { CardWidget } from "public-widget-sdk";
 // Import your stylesheet via the industry-standard subpath
 import "public-widget-sdk/styles.css";
 import { relativeTime } from "public-widget-sdk/formatters";
-
-
+import "./index.css"; 
+// This demo has its own Tailwind build (see vite.config.js + src/index.css),
+// specifically to test consumer-side class overrides via `className`/`styles`.
+// A real consumer app needs the same setup — the widget package's own
+// precompiled stylesheet only covers its built-in default classes, not
+// arbitrary classes a consumer passes in.
 
 const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
 const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
@@ -47,7 +51,16 @@ export default function App() {
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
       <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1}
-      labelText={(ts) => `Last synced ${relativeTime(ts)}`}
+  //  timezone="Asia/Kolkata"
+// timezone="America/Los_Angeles"
+        onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="text-orange-500 italic">Sensor unreachable</span> };
+    }
+    if (meta.kind === "empty") {
+      return { renderEmpty: () => <span className="text-slate-300">— no reading yet —</span> };
+    }
+  }}
     
        />
 
@@ -85,11 +98,16 @@ export default function App() {
         title="styles vs className"
         unit="%"
         decimalPlaces={1}
-        className="shadow-lg" // <- outer box only, ordinary React convention
+        className="shadow-lg bg-blue-50 border-blue-300" // <- outer box only, ordinary React convention
+        // styles={{
+        //   value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
+        //   title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
+        // }}
         styles={{
-          value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
-          title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
-        }}
+  container: "bg-blue-50 border-blue-300", // background/border of the card itself
+  value: "text-red-500 text-5xl",
+  title: "uppercase tracking-wider text-blue-700", // added color here
+}}
         
       />
 

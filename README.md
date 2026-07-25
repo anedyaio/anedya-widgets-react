@@ -24,6 +24,7 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [How props are resolved](#how-props-are-resolved)
   - [Formatting vs rendering](#formatting-vs-rendering)
 - [The last-updated label](#the-last-updated-label)
+- [Error & empty states](#error--empty-states)
 - [Formatters export](#formatters-export)
   - [Sizing](#sizing)
   - [Responsive sizing](#responsive-sizing)
@@ -250,7 +251,7 @@ For values that need unit-aware scaling (bytes, durations, lengths, etc.), pass 
 <CardWidget node={node} variable="uptime" format="duration" />
 // renders "2d 4h 12m"
 
-<CardWidget node={node} variable="distance" format="length" formatOptions={{ precision: 2 }} />
+<CardWidget node={node} variable="distance" format="length" formatOptions={{ formatOptions: 2 }} />
 // renders "1.25" + "km"
 ```
 
@@ -272,7 +273,7 @@ Available presets:
 {
   locale?: string;      // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
   binary?: boolean;     // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
-  precision?: number;   // decimal places for the scaled number
+  formatOptions?: number;   // decimal places for the scaled number
 }
 ```
 
@@ -287,12 +288,12 @@ Available presets:
   // "123.456" (German uses "." as the thousands separator, "," as the decimal point)
 ```
 
-- **`precision`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
+- **`formatOptions`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
 ```tsx
-  <CardWidget format="bytes" formatOptions={{ precision: 2 }} />
+  <CardWidget format="bytes" formatOptions={{ formatOptions: 2 }} />
   // "512.34" + "MB" — more decimal places than the default
 
-  <CardWidget format="bytes" formatOptions={{ precision: 0 }} />
+  <CardWidget format="bytes" formatOptions={{ formatOptions: 0 }} />
   // "512" + "MB" — whole number, no decimals
 ```
 
@@ -328,6 +329,17 @@ Available presets:
 #### The last-updated label
 
 By default, the label under the value shows a fixed clock time (`"Updated 14:32:10"`). This can be changed with `labelFormat`, or fully replaced with `labelText`.
+
+##### `timezone` — override auto-detection
+
+```tsx
+<CardWidget {...commonProps} labelFormat="datetime" timezone="America/New_York" />
+// shows the timestamp converted to Eastern time, regardless of the visitor's own browser timezone
+```
+
+If omitted, the widget uses `Intl.DateTimeFormat().resolvedOptions().timeZone` — the browser's own detected timezone. Pass any IANA timezone name (e.g. `"Asia/Kolkata"`, `"Europe/London"`) to force a specific one instead — useful for dashboards where all viewers should see times in the device's local timezone rather than their own.
+
+`timezone` affects the `time`, `date`, and `datetime` label presets. It has no effect on `relative` (a time difference is timezone-independent) or `iso` (ISO 8601 output is always UTC by definition).
 
 ##### `labelFormat` — named presets
 
@@ -371,6 +383,76 @@ import { relativeTime } from "public-widget-sdk/formatters";
 ```
 
 `labelFormat` covers the common cases with zero code; `labelText` is the general escape hatch for everything else — the same relationship `formatValue` has with `format`.
+
+---
+
+
+#### Error & empty states
+
+The card distinguishes between three outcomes of a fetch, each rendered differently:
+
+| State | When it happens | Default appearance |
+|---|---|---|
+| Success | Data was fetched normally | The formatted value, unit, and label |
+| Error | The fetch failed (network error, bad request, etc.) | The error message, styled via the `error` slot |
+| Empty | The fetch succeeded, but no data exists yet for this variable | `"N/A"`, styled via the `empty` slot |
+
+Both `error` and `empty` are real slots, so they pick up theme colors automatically and can be restyled the same way as any other slot:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  styles={{
+    error: "text-orange-500 italic",
+    empty: "text-slate-300",
+  }}
+/>
+```
+
+##### `renderError` / `renderEmpty` — full custom rendering
+
+For full control beyond just restyling text, `renderError` and `renderEmpty` let you replace the entire error/empty state with your own JSX:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  renderError={(error) => (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-orange-500">⚠ Sensor unreachable</span>
+      <span className="text-xs text-slate-400">{error}</span>
+    </div>
+  )}
+  renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
+/>
+```
+
+`renderError` receives the raw error message string; `renderEmpty` takes no arguments. When either is provided, it fully replaces the default `error`/`empty` slot rendering — the corresponding `styles.error`/`styles.empty` classes are ignored in that case, since there's no default element left for them to apply to.
+
+##### Reacting to errors/empty state via `onDataChange`
+
+`onDataChange` now receives a second argument describing which state just occurred, so you can react to errors or empty data the same way you already react to values:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="italic">Offline</span> };
+    }
+    if (meta.kind === "empty") {
+      return { renderEmpty: () => <span className="text-slate-300">Waiting for first reading…</span> };
+    }
+    if (!data) return;
+    if (data.value > 80) {
+      return { title: "High Humidity", theme: "dark" };
+    }
+  }}
+/>
+```
+
+`meta.kind` is one of `"success"`, `"error"`, or `"empty"`; `meta.error` is present only when `meta.kind === "error"`, carrying the underlying error message.
+
+This is backwards compatible — existing `onDataChange={(data) => {...}}` callbacks that ignore the second argument continue to work unchanged.
 
 ---
 
