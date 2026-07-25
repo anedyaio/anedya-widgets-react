@@ -95,7 +95,7 @@ export default function App() {
         className="shadow-lg shadow-amber-400" // <- outer box only, ordinary React convention
         styles={{
           value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
-          title: "uppercase tracking-wider text-yellow-500", // <- targets the INNER "title" slot specifically
+          title: "lowercase tracking-wider text-yellow-500", // <- targets the INNER "title" slot specifically
         }}
       />
       {/* ============================================================
@@ -179,7 +179,7 @@ export default function App() {
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
       <GaugeWidget {...commonProps} title="API Value" />
-     
+
       <GaugeWidget
         value={72}
         min={0}
@@ -226,28 +226,40 @@ export default function App() {
           cornerRadius: 10,
         }}
       />
+
       <GaugeWidget
         value={80}
         title="No Track"
         track={{ show: false }}
         color="#FFE000"
       />
+
       <GaugeWidget
         value={80}
         title="Gradient Bar"
         color={["#03001e", "#7303c0", "#ec38bc", "#fdeff9"]}
         track={{ color: "#e0e7ff" }}
+        tick={{
+          show: false,
+        }}
+        animation={{
+          show: true,
+          easing: "easeCubicInOut",
+        }}
       />
+
       <GaugeWidget
         value={50}
         title='Needle "line" length "full"'
         needle={{ type: "line", width: 2, length: "full", capRadius: 12 }}
       />
+
       <GaugeWidget
         value={50}
         title='Needle "rounded" length "number"'
         needle={{ type: "rounded", width: 12, length: 50, capRadius: 12 }}
       />
+
       <GaugeWidget
         value={70}
         title='Needle "triangle" length "short"'
@@ -261,6 +273,7 @@ export default function App() {
           capColor: "green",
         }}
       />
+
       <GaugeWidget
         value={85}
         title='Needle "drop" length "full"'
@@ -271,17 +284,21 @@ export default function App() {
           color: "#db2777",
         }}
       />
+
       <GaugeWidget value={25} title="No Needle" needle={{ show: false }} />
+
       <GaugeWidget
         value={75}
         title="Slow Elastic"
         animation={{ duration: 3000, easing: "easeElasticOut" }}
       />
+
       <GaugeWidget
         value={90}
         title="No Animation"
         animation={{ duration: 0 }}
       />
+
       <div
         style={{
           width: 300,
@@ -350,7 +367,7 @@ export default function App() {
         onDataChange={(data) => {
           if (!data) return {};
           const { value } = data;
-          if (value > 80) return { title: "🔴 Critical", color: "#dc2626" };
+          if (value > 60) return { title: "🔴 Critical", color: "#dc2626" };
           if (value > 50) return { title: "🟡 Warning", color: "#f59e0b" };
           return { title: "🟢 Normal", color: "#10b981" };
         }}
@@ -366,7 +383,43 @@ export default function App() {
       <GaugeWidget
         value={72}
         className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
-      />{" "}
+      />
+
+      {/* <GaugeWidget
+        min={0}
+        max={50}
+        value={35}
+        tick={{
+          show: true,
+          count: 5,
+          size: 10,
+          color: "#000000",
+          radiusOffset: 5,
+          labelGap: 40,
+          labelSize: 15,
+          labelColor: "#000000",
+          labelFormat: (val) => val + " km/h",
+        }}
+        animation={{
+          show: true,
+          duration: 3000,
+          easing: "bounceIn",
+        }}
+        style={{ backgroundColor: "yellow" }}
+      /> */}
+
+      {/* <h1 style={{color:"red"}}>Testing All Gauge Widget Props</h1>
+
+
+      <GaugeWidget/>
+      <GaugeWidget {...commonProps}/>
+      <GaugeWidget 
+        {...commonProps}
+        title="Custom Title"
+        styles={{
+          title:"lowercase text-yellow-500 font-bold text-[50px] italic"
+        }}/> */}
+      
     </div>
   );
 }
