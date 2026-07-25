@@ -2,7 +2,7 @@ import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
-import "../../../dist/styles.css";
+import "public-widget-sdk/styles.css";
 
 import { relativeTime } from "../../../src/helpers/formatters";
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
@@ -179,13 +179,15 @@ export default function App() {
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
       <GaugeWidget {...commonProps} title="API Value" />
+     
       <GaugeWidget
         value={72}
         min={0}
-        max={100}
+        max={80}
         title="Light Theme"
         theme="light"
       />
+
       <GaugeWidget
         value={72}
         min={0}
@@ -198,6 +200,7 @@ export default function App() {
           needleCap: "text-yellow-500",
         }}
       />
+
       <GaugeWidget
         value={25.445678}
         min={0}
@@ -206,11 +209,13 @@ export default function App() {
         decimalPlaces={3}
         title="Temperature - Decimal Place 3"
       />
+
       <GaugeWidget
         value={55}
         title="No Value Label"
         valueLabel={{ show: false }}
       />
+
       <GaugeWidget
         value={60}
         title="270° Arc"
@@ -270,7 +275,7 @@ export default function App() {
       <GaugeWidget
         value={75}
         title="Slow Elastic"
-        animation={{ duration: 4500, easing: "easeElasticOut" }}
+        animation={{ duration: 3000, easing: "easeElasticOut" }}
       />
       <GaugeWidget
         value={90}
@@ -333,7 +338,6 @@ export default function App() {
         labelText={(ts) => `recorded ${new Date(ts).toLocaleString()}`}
         timestamp={Date.now() - 86400000} // 1 day ago
         onClick={(v) => console.log("Clicked", v)}
-        onValueChange={(v) => console.log("Changed to", v)}
       />
       <GaugeWidget
         {...commonProps}
@@ -350,7 +354,6 @@ export default function App() {
           if (value > 50) return { title: "🟡 Warning", color: "#f59e0b" };
           return { title: "🟢 Normal", color: "#10b981" };
         }}
-        onValueChange={(v) => console.log("Live value:", v)}
         // styles={{
         //   container:"",
         //     // "bg-slate-50 dark:bg-slate-800 rounded-2xl shadow-lg border",
@@ -362,7 +365,7 @@ export default function App() {
       />
       <GaugeWidget
         value={72}
-        className="bg-slate-100 rounded-2xl p-6 shadow-md w-64 h-48"
+        className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
       />{" "}
     </div>
   );
