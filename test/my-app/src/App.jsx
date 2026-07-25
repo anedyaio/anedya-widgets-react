@@ -1,12 +1,7 @@
-
-
-
-
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { CardWidget } from "public-widget-sdk";
-
-// Import your stylesheet via the industry-standard subpath
+import { CardWidget } from "../../../src";
+import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
 import "public-widget-sdk/styles.css";
 import { relativeTime } from "public-widget-sdk/formatters";
 import "./index.css"; 
@@ -20,6 +15,11 @@ const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
 const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
 const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
 
+import { relativeTime } from "../../../src/helpers/formatters";
+const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
+const token =
+  "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
+const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -31,8 +31,8 @@ const node = anedya.newNode(client, nodeId);
  * app. Only specify the slots you actually want to change from the
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
-const emeraldTheme= {
-  styles: {
+const emeraldTheme = {
+  classNames: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
     value: "text-emerald-900",
@@ -69,11 +69,21 @@ export default function App() {
        * 2. theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it.
        * ============================================================ */}
-      <CardWidget {...commonProps} title="Emerald Theme" unit="%" decimalPlaces={1} theme={emeraldTheme} />
-
+      <CardWidget
+        {...commonProps}
+        title="Emerald Theme"
+        unit="%"
+        decimalPlaces={1}
+        theme={emeraldTheme}
+      />
       {/* Built-in preset names also work directly: */}
-      <CardWidget {...commonProps} title="Dark Preset" unit="%" decimalPlaces={1} theme="dark" />
-
+      <CardWidget
+        {...commonProps}
+        title="Dark Preset"
+        unit="%"
+        decimalPlaces={1}
+        theme="dark"
+      />
       {/* ============================================================
        * 3. styles vs className — THE distinction to understand:
        *
@@ -110,7 +120,6 @@ export default function App() {
 }}
         
       />
-
       {/* ============================================================
        * 4. Plain CSS classes — styles works with ANY class source,
        * not just Tailwind. These reference plain hand-written CSS
@@ -123,7 +132,6 @@ export default function App() {
         decimalPlaces={1}
         styles={{ container: "my-card", value: "my-card-value" }}
       /> */}
-
       {/* ============================================================
        * 5. Native Tailwind responsive prefixes — `sm:`/`md:`/`lg:`
        * work exactly as they do anywhere else in your app, because
@@ -143,7 +151,6 @@ export default function App() {
         decimalPlaces={1}
         styles={{ value: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl" }}
       /> */}
-
       {/* ============================================================
        * 6. formatValue / labelText — simple formatting hooks, distinct
        * from styling. formatValue controls the displayed number's
@@ -156,7 +163,6 @@ export default function App() {
         labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
        
       /> */}
-
       {/* ============================================================
        * 7. onStyleChange — conditional class overrides driven by the
        * RAW fetched data ({ value, timestamp }), always applied on top
@@ -188,13 +194,209 @@ export default function App() {
   }}
   
       /> */}
-
       {/* ============================================================
        * 8. Sizing — width/height/minWidth/maxWidth are plain props,
        * applied as inline styles on the container, independent of the
        * whole styles/theme system.
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
+      <GaugeWidget {...commonProps} title="API Value" />
+     
+      <GaugeWidget
+        value={72}
+        min={0}
+        max={80}
+        title="Light Theme"
+        theme="light"
+      />
+
+      <GaugeWidget
+        value={72}
+        min={0}
+        max={100}
+        title="Dark Theme"
+        theme="dark"
+        styles={{
+          value: "text-red-500",
+          needle: "text-red-500",
+          needleCap: "text-yellow-500",
+        }}
+      />
+
+      <GaugeWidget
+        value={25.445678}
+        min={0}
+        max={50}
+        unit="°C"
+        decimalPlaces={3}
+        title="Temperature - Decimal Place 3"
+      />
+
+      <GaugeWidget
+        value={55}
+        title="No Value Label"
+        valueLabel={{ show: false }}
+      />
+
+      <GaugeWidget
+        value={60}
+        title="270° Arc"
+        arc={{
+          startAngle: -135,
+          endAngle: 135,
+          thickness: 30,
+          cornerRadius: 10,
+        }}
+      />
+      <GaugeWidget
+        value={80}
+        title="No Track"
+        track={{ show: false }}
+        color="#FFE000"
+      />
+      <GaugeWidget
+        value={80}
+        title="Gradient Bar"
+        color={["#03001e", "#7303c0", "#ec38bc", "#fdeff9"]}
+        track={{ color: "#e0e7ff" }}
+      />
+      <GaugeWidget
+        value={50}
+        title='Needle "line" length "full"'
+        needle={{ type: "line", width: 2, length: "full", capRadius: 12 }}
+      />
+      <GaugeWidget
+        value={50}
+        title='Needle "rounded" length "number"'
+        needle={{ type: "rounded", width: 12, length: 50, capRadius: 12 }}
+      />
+      <GaugeWidget
+        value={70}
+        title='Needle "triangle" length "short"'
+        needle={{
+          type: "triangle",
+          width: 8,
+          length: "short",
+          capRadius: 12,
+          color: "#7303c0",
+          needleColor: "#f05053",
+          capColor: "green",
+        }}
+      />
+      <GaugeWidget
+        value={85}
+        title='Needle "drop" length "full"'
+        needle={{
+          type: "drop",
+          length: "full",
+          capRadius: 8,
+          color: "#db2777",
+        }}
+      />
+      <GaugeWidget value={25} title="No Needle" needle={{ show: false }} />
+      <GaugeWidget
+        value={75}
+        title="Slow Elastic"
+        animation={{ duration: 3000, easing: "easeElasticOut" }}
+      />
+      <GaugeWidget
+        value={90}
+        title="No Animation"
+        animation={{ duration: 0 }}
+      />
+      <div
+        style={{
+          width: 300,
+          border: "1px dashed gray",
+          backgroundColor: "#ec38bc",
+        }}
+      >
+        <GaugeWidget
+          value={40}
+          title="Responsive inside container"
+          responsive
+          styles={{
+            title: "text-white text-lg",
+          }}
+        />
+      </div>
+      <GaugeWidget
+        value={60}
+        title="200×150 px"
+        width={200}
+        height={150}
+        styles={{ value: "text-md" }}
+        color="green"
+      />
+      <GaugeWidget
+        value={66}
+        title="Clickable"
+        onClick={(v) => alert(`Clicked ${v}`)}
+      />
+      {/* <GaugeWidget title="Loading Skeleton (no value provided)" /> */}
+      {/* <GaugeWidget title="Error Demo (replace with a failing node)" /> */}
+      <GaugeWidget
+        {...commonProps}
+        // value={42}
+        timestamp={Date.now() - 3600000} // 1 hour ago
+        title="Relative Time"
+        labelFormat="relative"
+      />
+      <GaugeWidget
+        {...commonProps}
+        // value={42}
+        timestamp={Date.now()}
+        title="Custom Label"
+        labelText={(ts) => `Last seen: ${new Date(ts).toLocaleTimeString()}`}
+      />
+      <GaugeWidget
+        {...commonProps}
+        title="Custom Formatter"
+        // value={66.7}
+        min={0}
+        max={100}
+        formatValue={(v) => `⭐ ${Math.round(v)}%`} // your own text
+        unit="" // hide unit
+        labelText={(ts) => `recorded ${new Date(ts).toLocaleString()}`}
+        timestamp={Date.now() - 86400000} // 1 day ago
+        onClick={(v) => console.log("Clicked", v)}
+      />
+      <GaugeWidget
+        {...commonProps}
+        // value={78}
+        unit="(*)"
+        title="Dynamic Gauge"
+        min={0}
+        max={100}
+        // className="border-2 border-blue-200 hover:border-blue-400 transition-colors"
+        onDataChange={(data) => {
+          if (!data) return {};
+          const { value } = data;
+          if (value > 80) return { title: "🔴 Critical", color: "#dc2626" };
+          if (value > 50) return { title: "🟡 Warning", color: "#f59e0b" };
+          return { title: "🟢 Normal", color: "#10b981" };
+        }}
+        // styles={{
+        //   container:"",
+        //     // "bg-slate-50 dark:bg-slate-800 rounded-2xl shadow-lg border",
+        //   title: "text-base font-bold tracking-wide",
+        //   value: "text-[100px]",
+        //   unit: "text-[200px] opacity-75",
+        //   label: "text-xs italic text-gray-500",
+        // }}
+      />
+      <GaugeWidget
+        value={72}
+        className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
+      />{" "}
     </div>
   );
+}
+
+{
+  /* 
+//create react app
+//link public-widget-sdk
+//npm run dev
+//send this file tp yash to copy paste  */
 }

@@ -3,6 +3,7 @@
 @source "../widgets/**/*.{ts,tsx}";
 @source "../themes/**/*.{ts,tsx}";
 @source "../common.ts";
+@source "../types/gauge.ts";
 
 .anedya-card-container {
   container-type: size;
@@ -21,6 +22,42 @@
   transition: padding 0.25s ease, gap 0.25s ease;
 }
 
-.anedya-card > * {
+.anedya-card>* {
   transition: font-size 0.25s ease;
+}
+
+
+.anedya-gauge {
+  container-type: inline-size;
+  container-name: anedya-gauge;
+
+  --anedya-gauge-padding: 0.75rem;
+  --anedya-gauge-gap: 0.25rem;
+
+  --anedya-gauge-title-size: 0.875rem;
+  --anedya-gauge-value-size: 1.75rem;
+  --anedya-gauge-unit-size: 0.875rem;
+  --anedya-gauge-label-size: 0.75rem;
+  --anedya-gauge-tick-size: 0.625rem;
+}
+
+@container anedya-gauge (min-width: 260px) {
+  .anedya-gauge {
+    --anedya-gauge-padding: 1rem;
+    --anedya-gauge-value-size: 2.25rem;
+    --anedya-gauge-unit-size: 1rem;
+    --anedya-gauge-label-size: 0.875rem;
+    --anedya-gauge-tick-size: 0.75rem;
+  }
+}
+
+@container anedya-gauge (min-width: 380px) {
+  .anedya-gauge {
+    --anedya-gauge-padding: 1.25rem;
+    --anedya-gauge-title-size: 1rem;
+    --anedya-gauge-value-size: 3rem;
+    --anedya-gauge-unit-size: 1.125rem;
+    --anedya-gauge-label-size: 1rem;
+    --anedya-gauge-tick-size: 0.8125rem;
+  }
 }

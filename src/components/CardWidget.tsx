@@ -277,8 +277,8 @@ export function CardWidget({
   const resolveSlot = (slot: CardSlot) =>
     twMerge(
       CARD_DEFAULT_CLASSES[slot],
-      resolvedTheme.styles[slot],
-      resolvedProps.styles[slot],
+      resolvedTheme.styles?.[slot],
+      resolvedProps.styles?.[slot],
     );
 
   const { displayValue, displayUnit } = useMemo(() => {
