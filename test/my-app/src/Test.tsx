@@ -2,7 +2,7 @@ import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
 import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
-import "public-widget-sdk/styles.css";
+import "../../../dist/styles.css";
 
 import { relativeTime } from "../../../src/helpers/formatters";
 const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
@@ -29,45 +29,31 @@ const emeraldTheme = {
   },
 };
 
+
 const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
+    
     <div
-      style={{
-        padding: "2rem",
-        display: "flex",
-        gap: 24,
-        flexWrap: "wrap",
-        backgroundColor: "white",
-      }}
+      style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap" }}
     >
-      <CardWidget
-        {...commonProps}
-        title="Default"
-        unit="%"
-        decimalPlaces={1}
-        labelText={(ts) => `Last synced ${relativeTime(ts)}`}
-      />
+
+<CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1}
+      labelText={(ts) => `Last synced ${relativeTime(ts)}`}
+    
+       />
+
+
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it.
        * ============================================================ */}
-      <CardWidget
-        {...commonProps}
-        title="Emerald Theme"
-        unit="%"
-        decimalPlaces={1}
-        theme={emeraldTheme}
-      />
+      <CardWidget {...commonProps} title="Emerald Theme" unit="%" decimalPlaces={1} theme={emeraldTheme} />
+
       {/* Built-in preset names also work directly: */}
-      <CardWidget
-        {...commonProps}
-        title="Dark Preset"
-        unit="%"
-        decimalPlaces={1}
-        theme="dark"
-      />
+      <CardWidget {...commonProps} title="Dark Preset" unit="%" decimalPlaces={1} theme="dark" />
+
       {/* ============================================================
        * 3. styles vs className — THE distinction to understand:
        *
@@ -97,7 +83,9 @@ export default function App() {
           value: "text-red-500 text-5xl", // <- targets the INNER "value" slot specifically
           title: "uppercase tracking-wider text-yellow-500", // <- targets the INNER "title" slot specifically
         }}
+        
       />
+
       {/* ============================================================
        * 4. Plain CSS classes — styles works with ANY class source,
        * not just Tailwind. These reference plain hand-written CSS
@@ -110,6 +98,7 @@ export default function App() {
         decimalPlaces={1}
         styles={{ container: "my-card", value: "my-card-value" }}
       /> */}
+
       {/* ============================================================
        * 5. Native Tailwind responsive prefixes — `sm:`/`md:`/`lg:`
        * work exactly as they do anywhere else in your app, because
@@ -129,6 +118,7 @@ export default function App() {
         decimalPlaces={1}
         styles={{ value: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl" }}
       /> */}
+
       {/* ============================================================
        * 6. formatValue / labelText — simple formatting hooks, distinct
        * from styling. formatValue controls the displayed number's
@@ -141,6 +131,7 @@ export default function App() {
         labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
        
       /> */}
+
       {/* ============================================================
        * 7. onStyleChange — conditional class overrides driven by the
        * RAW fetched data ({ value, timestamp }), always applied on top
@@ -172,201 +163,233 @@ export default function App() {
   }}
   
       /> */}
+
       {/* ============================================================
        * 8. Sizing — width/height/minWidth/maxWidth are plain props,
        * applied as inline styles on the container, independent of the
        * whole styles/theme system.
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
-      <GaugeWidget {...commonProps} title="API Value" />
-     
-      <GaugeWidget
-        value={72}
-        min={0}
-        max={80}
-        title="Light Theme"
-        theme="light"
-      />
+    
+
+      {/* <GaugeWidget
+        {...commonProps}
+        // label="Gauge Chart"
+        // min={0}
+        // max={100}
+        // size={400}
+        // value={99}
+        // width={400}
+        // height={400}
+        // valueLabel={{ precision: 1 }}
+        // arc={{
+        //   startAngle: -90,
+        //   endAngle: 90,
+        //   // radius: not working proper
+        //   thickness: 70,
+        //   // cornerRadius:100
+        // }}
+        track={{
+          show: true,
+          color: "",
+        }}
+        fillMode="progress"
+        // color={["red","orange", "yellow", "green"]}
+        color="#1fa2ff"
+        needle={{
+          show: true,
+          type: "line",
+          length: "medium",
+          width: 3,
+          color: "white",
+          capRadius: 7,
+        }}
+        // needleLabel={{
+        //   show: true,
+        //   formatter: () => {
+        //     "Hello";
+        //   },
+        // }}
+        // labels={{
+        //   show: true,
+        //   position: "outside",
+        // }}
+        // scale={{
+        //   minLabel: "Hello",
+        //   maxLabel: "World",
+        // }}
+        // ticks={{
+        //   show: true,
+        //   count: 10,
+        //   position: "outside",
+        //   length: 10,
+        //   labels: true,
+        // }}
+        animation={{
+          duration: 4000,
+          easing: "easeElasticOut", // easeCubicOut, easeElasticOut
+        }}
+        // tooltip={{
+        //   show:false,
+        // }}
+        // classNames={{
+        //   title: "text-white",
+        //   tickLabel: "text-white text-lg",
+        //   label: "text-red",
+        //   value: "text-white",
+        // }}
+        theme="dark"
+      /> */}
 
       <GaugeWidget
-        value={72}
-        min={0}
-        max={100}
-        title="Dark Theme"
+        {...commonProps}
+        // color="#1fa2ff"
+        // color={["#9796f0", "#fbc7d4"]}
+        // color={["#799F0C", "#FFE000"]}
+        color={["#A5FECB", "#20BDFF", "#5433FF"]}
+        title="Gauge Chart Widget"
+        // value={40}
+        // labelText={"Hello"}
+        // valueLabel={"Hello"}
+        arc={{
+          // radius:400,
+          // cornerRadius:10,
+          thickness: 80,
+        }}
+        animation={{
+          duration: 4000,
+          easing: "easeElasticOut", // easeCubicOut, easeElasticOut
+        }}
+        needle={{
+          color: "white",
+          length: "short",
+          type: "triangle",
+          animation: true,
+        }}
         theme="dark"
         styles={{
-          value: "text-red-500",
-          needle: "text-red-500",
-          needleCap: "text-yellow-500",
+          container: "",
+          title: "text-black text-[90px]",
         }}
       />
 
       <GaugeWidget
-        value={25.445678}
+        title="Battery Level"
+        value={65}
+        unit="%"
         min={0}
-        max={50}
-        unit="°C"
-        decimalPlaces={3}
-        title="Temperature - Decimal Place 3"
+        max={100}
+        className="w-64 mx-auto"
+        theme="dark"
       />
 
       <GaugeWidget
-        value={55}
-        title="No Value Label"
-        valueLabel={{ show: false }}
+        title="CPU Usage"
+        value={78}
+        unit="%"
+        theme="dark"
+        // 'style' affects ONLY the outer wrapper <div>
+        style={{
+          backgroundColor: "#1e1e2f",
+          borderRadius: "16px",
+          padding: "10px",
+        }}
+        // 'styles' affects specific internal SVG/HTML slots via Tailwind classes
+        styles={{
+          container: "border border-gray-700", // merges with outer wrapper
+          title: "text-purple-400 text-xs uppercase tracking-wider",
+          value: "text-white text-2xl font-mono",
+          unit: "text-gray-400 text-sm",
+          label: "text-gray-500 text-[10px]",
+          bar: "fill-gradient-to-r from-purple-500 to-pink-500", // if using Tailwind gradients
+          needle: "stroke-pink-400 stroke-2",
+          needleCap: "fill-pink-400",
+        }}
       />
 
-      <GaugeWidget
-        value={60}
-        title="270° Arc"
-        arc={{
-          startAngle: -135,
-          endAngle: 135,
-          thickness: 30,
-          cornerRadius: 10,
-        }}
-      />
-      <GaugeWidget
-        value={80}
-        title="No Track"
-        track={{ show: false }}
-        color="#FFE000"
-      />
-      <GaugeWidget
-        value={80}
-        title="Gradient Bar"
-        color={["#03001e", "#7303c0", "#ec38bc", "#fdeff9"]}
-        track={{ color: "#e0e7ff" }}
-      />
-      <GaugeWidget
-        value={50}
-        title='Needle "line" length "full"'
-        needle={{ type: "line", width: 2, length: "full", capRadius: 12 }}
-      />
-      <GaugeWidget
-        value={50}
-        title='Needle "rounded" length "number"'
-        needle={{ type: "rounded", width: 12, length: 50, capRadius: 12 }}
-      />
-      <GaugeWidget
-        value={70}
-        title='Needle "triangle" length "short"'
-        needle={{
-          type: "triangle",
-          width: 8,
-          length: "short",
-          capRadius: 12,
-          color: "#7303c0",
-          needleColor: "#f05053",
-          capColor: "green",
-        }}
-      />
       <GaugeWidget
         value={85}
-        title='Needle "drop" length "full"'
-        needle={{
-          type: "drop",
-          length: "full",
-          capRadius: 8,
-          color: "#db2777",
+        theme="dark" // Applies gaugeDarkTheme internally
+        // 1. style: Sets fixed size and injects CSS variables for text scaling
+        style={{
+          width: "400px",
+          height: "400px",
+          padding: 0,
+        }}
+        // 2. styles: Override internal slot classes
+        styles={{
+          container: "bg-gray-900 rounded-2xl border border-red-700", // Merged with dark theme's container
+          bar: "text-emerald-400", // Overrides dark theme's "text-indigo-400"
+          needle: "text-yellow-500",
+          needleCap: "red", // Makes the needle yellow
+          value: "text-emerald-50", // Overrides dark theme's "text-white"
+          label: "text-gray-400", // Overrides dark theme's "text-slate-500"
         }}
       />
-      <GaugeWidget value={25} title="No Needle" needle={{ show: false }} />
+
       <GaugeWidget
         value={75}
-        title="Slow Elastic"
-        animation={{ duration: 3000, easing: "easeElasticOut" }}
-      />
-      <GaugeWidget
-        value={90}
-        title="No Animation"
-        animation={{ duration: 0 }}
-      />
-      <div
-        style={{
-          width: 300,
-          border: "1px dashed gray",
-          backgroundColor: "#ec38bc",
+        needle={{
+          type: "triangle", // 'drop' or 'triangle' use fill
         }}
-      >
-        <GaugeWidget
-          value={40}
-          title="Responsive inside container"
-          responsive
-          styles={{
-            title: "text-white text-lg",
-          }}
-        />
-      </div>
-      <GaugeWidget
-        value={60}
-        title="200×150 px"
-        width={200}
-        height={150}
-        styles={{ value: "text-md" }}
-        color="green"
-      />
-      <GaugeWidget
-        value={66}
-        title="Clickable"
-        onClick={(v) => alert(`Clicked ${v}`)}
-      />
-      {/* <GaugeWidget title="Loading Skeleton (no value provided)" /> */}
-      {/* <GaugeWidget title="Error Demo (replace with a failing node)" /> */}
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now() - 3600000} // 1 hour ago
-        title="Relative Time"
-        labelFormat="relative"
-      />
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now()}
-        title="Custom Label"
-        labelText={(ts) => `Last seen: ${new Date(ts).toLocaleTimeString()}`}
-      />
-      <GaugeWidget
-        {...commonProps}
-        title="Custom Formatter"
-        // value={66.7}
-        min={0}
-        max={100}
-        formatValue={(v) => `⭐ ${Math.round(v)}%`} // your own text
-        unit="" // hide unit
-        labelText={(ts) => `recorded ${new Date(ts).toLocaleString()}`}
-        timestamp={Date.now() - 86400000} // 1 day ago
-        onClick={(v) => console.log("Clicked", v)}
-      />
-      <GaugeWidget
-        {...commonProps}
-        // value={78}
-        unit="(*)"
-        title="Dynamic Gauge"
-        min={0}
-        max={100}
-        // className="border-2 border-blue-200 hover:border-blue-400 transition-colors"
-        onDataChange={(data) => {
-          if (!data) return {};
-          const { value } = data;
-          if (value > 80) return { title: "🔴 Critical", color: "#dc2626" };
-          if (value > 50) return { title: "🟡 Warning", color: "#f59e0b" };
-          return { title: "🟢 Normal", color: "#10b981" };
+        styles={{
+          bar: "text-red-500",
+          track: "text-yellow-300",
+          needle: "text-green-600",
+          needleCap: "text-green-600",
         }}
-        // styles={{
-        //   container:"",
-        //     // "bg-slate-50 dark:bg-slate-800 rounded-2xl shadow-lg border",
-        //   title: "text-base font-bold tracking-wide",
-        //   value: "text-[100px]",
-        //   unit: "text-[200px] opacity-75",
-        //   label: "text-xs italic text-gray-500",
-        // }}
       />
+
       <GaugeWidget
-        value={72}
-        className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
-      />{" "}
+        responsive={true} // ensure it reacts to container
+        aspectRatio={1.6}
+        value={34}
+        valueLabel={{
+          show: true,
+        }}
+        // make it wider than tall, reducing overall height
+        // OR set fixed size:
+        size={300}
+        styles={{
+          container: "bg-gray-900 rounded-2xl border border-red-700",
+        }}
+      />
+
+      {/* // 1. Show a custom static text */}
+      <GaugeWidget
+        value={78}
+        labelText={() => "Last reading"} // Always shows "Last reading"
+      />
+
+      {/* // 2. Format the timestamp exactly how you want */}
+      <GaugeWidget
+        value={78}
+        labelText={(timestamp) =>
+          `Updated at ${new Date(timestamp).toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}`
+        }
+        // Output: "Updated at 02:30:45 PM"
+      />
+
+      {/* // 3. Show relative time with custom wording */}
+      <GaugeWidget
+        value={78}
+        labelText={(timestamp) => {
+          const diff = Math.floor((Date.now() - timestamp) / 60000);
+          if (diff < 1) return "Just now";
+          if (diff < 60) return `${diff} min ago`;
+          return `${Math.floor(diff / 60)} hours ago`;
+        }}
+      />
+
+      {/* // 4. Hide the label entirely (return null or empty string) */}
+      <GaugeWidget
+        value={78}
+        labelText={() => null} // No label shown
+      />
     </div>
   );
 }
