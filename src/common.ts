@@ -63,7 +63,9 @@ export type FormatPreset =
 export interface FormatOptions {
   locale?: string;        // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
   binary?: boolean;       // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
-  precision?: number;     // decimal places for the scaled number
+   /** Decimal places for the scaled number output by a `format` preset. */
+  toDecimalPlaces?: number;
+
 }
 export type FormatResult = { value: string; unit?: string };
 
