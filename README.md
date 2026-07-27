@@ -12,6 +12,7 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
 
 ## Table of Contents
 
+- [Installation & Setup](#installation--setup)
 - [Widgets](#widgets)
   - [CardWidget](#cardwidget)
     - [Required props](#required-props)
@@ -22,18 +23,31 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
     - [How props are resolved](#how-props-are-resolved)
   - [Formatting vs rendering](#formatting-vs-rendering)
-  - [GaugeWidget](#gaugewidget)                              
-    - [Required props](#required-props-1)
-    - [The styling model](#the-styling-model-1)
-    - [Theming](#theming-1)
-    - [Manual value mode](#manual-value-mode--using-gauge-without-a-node)
-    - [Arc, track, bar & needle](#arc-track-bar--needle)
-    - [Tick marks](#tick-marks)
-    - [Animation](#animation)
-    - [Sizing](#sizing-1)
 - [The last-updated label](#the-last-updated-label)
 - [Error & empty states](#error--empty-states)
 - [Formatters export](#formatters-export)
+  - [Sizing](#sizing)
+  - [Responsive sizing](#responsive-sizing)
+  - [Loading & error states](#loading--error-states)
+  - [Other props](#other-props)
+- [GaugeWidget](#gaugewidget)
+  - [Required props](#required-props-1)
+  - [Manual vs live values](#manual-vs-live-values)
+  - [Slots & styling](#slots--styling)
+  - [Arc configuration](#arc-configuration)
+  - [Track configuration](#track-configuration)
+  - [Bar color & gradients](#bar-color--gradients)
+  - [Needle configuration](#needle-configuration)
+  - [Needle-less (donut) mode](#needle-less-donut-mode)
+  - [Tick marks](#tick-marks)
+  - [Animation configuration](#animation-configuration)
+  - [Formatting the value](#formatting-the-value)
+  - [The last-updated label](#the-last-updated-label-1)
+  - [Error & empty states](#error--empty-states-1)
+  - [Sizing](#sizing-1)
+  - [Responsive sizing](#responsive-sizing-1)
+  - [Other props](#other-props-1)
+- [Stylesheet import](#stylesheet-import)
 
 ---
 
@@ -557,16 +571,16 @@ Neither state currently accepts style overrides via `styles` — flag it if you 
 
 ### GaugeWidget
 
-An arc-style dial widget — shows a single value as a needle or filled arc between a `min` and `max`, with optional tick marks, a title, and a last-updated label.
+A radial arc gauge — shows a single value as a filled arc with an optional needle, min/max tick marks, and a last-updated label.
 
 ```jsx
 <GaugeWidget
   node={node}
-  variable="windSpeed"
-  title="Wind Speed"
+  variable="temperature"
+  title="Temperature"
+  unit="°C"
   min={0}
   max={100}
-  unit="km/h"
 />
 ```
 
@@ -577,447 +591,309 @@ An arc-style dial widget — shows a single value as a needle or filled arc betw
 | `node`     | `any`    | `anedya.newNode(client, nodeId)` |
 | `variable` | `string` | Variable name to display         |
 
-> `node` is only required for **live-fetch mode**. `GaugeWidget` also supports a manual/static `value` mode that doesn't need a `node` at all — see [Manual value mode](#manual-value-mode--using-gauge-without-a-node) below.
+---
+
+#### Manual vs live values
+
+Unlike `CardWidget`, `GaugeWidget` can also render **without** a live `node` fetch — pass `value` directly for a fully controlled gauge (e.g. driven by your own state, a slider, or a value computed elsewhere in your app):
+
+```jsx
+<GaugeWidget value={72} min={0} max={100} unit="%" />
+```
+
+If both a `node`/`variable` fetch *and* a `value` prop are present, the fetched value takes over once it arrives — `value` acts as the initial/fallback reading until then.
+
+`min` and `max` (default `0` / `100`) define the gauge's range regardless of which mode you're in. The displayed value is always clamped into `[min, max]` before it's drawn or formatted.
 
 ---
 
-#### The styling model
+#### Slots & styling
 
-Like `CardWidget`, every visual piece of the gauge is a named **slot**, styled via CSS classes rather than inline styles:
+Like `CardWidget`, every part of the gauge is a named **slot**, and the same `styles` (per-slot) / `className` (outer container only) / `theme` system applies:
 
 ```ts
 type GaugeSlot =
-  | "container"
-  | "title"
-  | "unit"
-  | "track"
-  | "bar"
-  | "needle"
-  | "needleCap"
-  | "value"
-  | "label"
-  | "tick"
-  | "tickLabel"
-  | "error"
-  | "empty";
+  | "container" | "title" | "unit" | "track" | "bar"
+  | "needle" | "needleCap" | "value" | "label"
+  | "tick" | "tickLabel" | "error" | "empty";
 ```
-
-`track`, `bar`, `needle`, `needleCap`, `tick`, and `tickLabel` are all SVG elements — their color comes from the CSS `color` property via `currentColor` (e.g. `styles={{ bar: "text-indigo-500" }}`), rather than `fill`/`stroke`-specific Tailwind utilities.
-
-> **`track`, `bar`, `needle`, and `needleCap` have no default color class** — unlike `title`/`value`/`label`/`unit`, these four slots render invisible/black unless a theme (built-in or custom) sets a color, or you supply one directly via the `color`/`track.color`/`needle.needleColor` props (see [Arc, track, bar & needle](#arc-track-bar--needle) below).
-
----
-
-#### `styles` vs `className`
-
-Identical behavior to `CardWidget` — `styles` reaches any inner slot, `className` only touches the outermost container, and both compose together via `twMerge`:
 
 ```jsx
 <GaugeWidget
-  className="shadow-lg"
+  className="shadow-lg"          // outer box only
   styles={{
-    value: "text-red-500 text-5xl",
-    title: "uppercase tracking-wider",
-    bar: "text-emerald-500",
+    value: "text-red-500 text-4xl",
+    bar: "text-emerald-500",     // arc fill reads this via currentColor
+    needle: "text-slate-800",
   }}
 />
 ```
 
-> Same rule as Card: `styles` classes must already exist in your app's compiled CSS — the widget doesn't generate CSS for them at build time.
-
----
-
-#### Theming
-
-`theme` accepts a built-in preset name or a full custom `WidgetTheme<GaugeSlot>` object:
+`theme` works exactly as it does for `CardWidget` — a preset name or a custom `WidgetTheme<GaugeSlot>` object:
 
 ```jsx
-const emeraldTheme = {
+const emeraldGaugeTheme = {
   styles: {
-    container: "",
-    title: "text-emerald-700",
-    unit: "text-emerald-600",
-    label: "text-emerald-400",
-    track: "text-emerald-100",
     bar: "text-emerald-500",
-    needle: "text-emerald-800",
-    needleCap: "text-emerald-800",
+    track: "text-emerald-100",
     value: "text-emerald-900",
-    tick: "text-emerald-200",
-    tickLabel: "text-emerald-500",
-    error: "text-red-600",
-    empty: "text-emerald-300",
+    needle: "text-emerald-700",
+    needleCap: "text-emerald-700",
   },
 };
 
-<GaugeWidget theme={emeraldTheme} />
+<GaugeWidget theme={emeraldGaugeTheme} />
 // or
 <GaugeWidget theme="dark" />   // built-in preset, or "light" (default)
 ```
 
-Since `track`/`bar`/`needle`/`needleCap` have no built-in default color, a custom theme should set all of them explicitly — otherwise those elements fall back to unstyled `currentColor` inheritance from the page, not a sensible default.
+Slot resolution order is the same defaults → theme → `styles` → `onDataChange` chain described under CardWidget, and `onDataChange` on `GaugeWidget` can likewise return a partial set of props (including `styles`) to temporarily override the widget based on the incoming reading — see [`onDataChange`](#ondatachange--data-driven-rendering) above; the gauge version has the same signature, just with `GaugeData`/`GaugeDataMeta` in place of the card's types.
+
+> **Note:** `track`, `bar`, `needle`, and `needleCap` are SVG shapes, not text — their "color" comes from `currentColor`, which is why these slots are styled with Tailwind text-color utilities (`text-emerald-500`) rather than `fill-*`/`stroke-*` classes.
 
 ---
 
-#### Tailwind responsive utilities
+#### Arc configuration
 
-Same mechanism as `CardWidget` — Tailwind's responsive prefixes work inside `styles` and are driven by the **browser viewport**, independent of the widget's own size:
+`arc` controls the shape of the gauge itself:
 
 ```jsx
 <GaugeWidget
-  styles={{
-    value: "text-2xl md:text-4xl xl:text-6xl",
+  arc={{
+    startAngle: -120,   // degrees, 0 = 12 o'clock, clockwise-positive
+    endAngle: 120,
+    radius: 90,          // px; auto-fit to the container if omitted
+    thickness: 14,        // px; defaults to ~18% of radius if omitted
+    cornerRadius: 6,      // rounds the ends of the arc/bar
   }}
 />
 ```
 
-> **Exception — `tickLabel` font size:** the `tickLabel` slot's font size is always set via inline style from `tick.labelSize` (so it reliably scales with the tick geometry), which wins over any `text-*` class you put on `styles.tickLabel`. Use `tick.labelSize` to change tick label size; use `styles.tickLabel` for everything else (color, weight, tracking).
+| Prop           | Type     | Default                    | Description                                                        |
+| -------------- | -------- | --------------------------- | -------------------------------------------------------------------- |
+| `startAngle`   | `number` | `-90`                       | Degrees, `0` = 12 o'clock, clockwise-positive                        |
+| `endAngle`     | `number` | `90`                        | Degrees, same convention as `startAngle`                             |
+| `radius`       | `number` | auto-fit to container       | Capped to whatever actually fits the current width/height/tick space |
+| `thickness`    | `number` | `~18%` of resolved radius   | Arc/bar stroke width in px                                           |
+| `cornerRadius` | `number` | `0`                         | Rounds the ends of both the track and the value bar                  |
+
+A default `startAngle`/`endAngle` of `-90`/`90` draws the classic bottom half-circle speedometer; narrowing the range (e.g. `-120`/`120`) draws a fuller arc.
+
+`radius` is a *maximum* — the gauge always shrinks it further if needed so the arc (plus tick marks, if shown) fits inside the widget's actual rendered box.
 
 ---
 
-#### `onDataChange` — data-driven rendering
+#### Track configuration
 
-Same shape and precedence rules as `CardWidget`, with a gauge-specific data payload:
+`track` is the background arc the value bar sits on top of:
 
-```ts
-{
-  value: number;
-  timestamp: number;
-}
+```jsx
+<GaugeWidget track={{ show: true, color: "#e2e8f0" }} />
 ```
 
-```tsx
-<GaugeWidget
-  onDataChange={(data, meta) => {
-    if (!data) return;
+| Prop    | Type      | Default              | Description                                    |
+| ------- | --------- | ---------------------- | ----------------------------------------------- |
+| `show`  | `boolean` | `true`                 | Whether the background track arc is drawn       |
+| `color` | `string`  | theme's `track` slot   | Overrides the track color directly (any CSS color) |
 
-    const isCritical = data.value > 90;
-    return {
-      title: isCritical ? "Critical" : "Normal",
-      color: isCritical ? "#ef4444" : "#10b981",
-      needle: { needleColor: isCritical ? "#ef4444" : "#10b981" },
-      styles: {
-        value: isCritical ? "text-red-500 animate-pulse" : "text-white",
-      },
-    };
+---
+
+#### Bar color & gradients
+
+`color` sets the fill of the value arc — a single color, or 2+ colors for a gradient:
+
+```jsx
+<GaugeWidget color="#f97316" />
+
+<GaugeWidget color={["#22c55e", "#eab308", "#ef4444"]} />
+// renders a left-to-right gradient across the filled portion of the arc
+```
+
+If omitted, the bar falls back to the theme's `bar` slot color via `currentColor`.
+
+---
+
+#### Needle configuration
+
+```jsx
+<GaugeWidget
+  needle={{
+    show: true,
+    type: "drop",          // "line" | "rounded" | "drop" | "triangle"
+    length: "medium",      // "short" | "medium" | "full" | number (px)
+    width: 6,
+    color: "#334155",      // shorthand: sets both needleColor and capColor
+    capRadius: 8,
+    animation: true,
   }}
 />
 ```
 
-Returning `undefined` (or nothing) clears any previous overrides and restores the widget's original props. `meta` behaves identically to Card's — see [Error & empty states](#error--empty-states).
+| Prop          | Type                                            | Default        | Description                                                                 |
+| ------------- | ------------------------------------------------ | -------------- | ----------------------------------------------------------------------------- |
+| `show`        | `boolean`                                        | `true`          | Whether the needle is drawn at all                                            |
+| `type`        | `"line" \| "rounded" \| "drop" \| "triangle"`     | `"rounded"`     | Needle shape                                                                   |
+| `length`      | `"short" \| "medium" \| "full" \| number`         | `"medium"`      | Preset (relative to the resolved radius) or an explicit px value              |
+| `width`       | `number`                                         | `4`             | Needle thickness in px                                                        |
+| `color`       | `string`                                         | —               | Shorthand — sets both `needleColor` and `capColor` at once                    |
+| `needleColor` | `string`                                         | `color` or theme | Color of the needle shape specifically, overrides `color` for the shape only |
+| `capColor`    | `string`                                         | `color` or theme | Color of the center cap circle specifically                                   |
+| `capRadius`   | `number`                                         | `6`             | Radius of the center cap circle in px                                         |
+| `animation`   | `boolean`                                        | `true`          | Whether the needle rotates smoothly to its new position                       |
 
-> **`onDataChange` only fires from live-fetch data.** In [manual value mode](#manual-value-mode--using-gauge-without-a-node) (no `node`), the fetch effect never runs, so `onDataChange` is always called with `data: null` exactly once and never again — it will not react to changes in your static `value` prop.
-
----
-
-#### How props are resolved
-
-Same layering as `CardWidget`:
-
-1. The props you pass to `<GaugeWidget />`
-2. Any temporary overrides returned from `onDataChange`
-3. Theme resolution (`"light"`, `"dark"`, or a custom `WidgetTheme`)
-4. Per-slot class resolution
-
-For each slot, classes are merged in this order:
-
-1. `GAUGE_DEFAULT_CLASSES`
-2. Active theme classes
-3. `styles`
-
-Later layers win on Tailwind conflicts, resolved via `twMerge`. `className` is separate from this chain and merges onto the outer container after `container` resolves.
-
-> **Rule of thumb:** defaults → theme → `styles` → `onDataChange`. User overrides always win.
+`needle.animation` and the top-level `animation.show` (below) are independent switches — **both** must be `true` for the needle to animate. This lets you, for example, animate the bar fill while snapping the needle instantly, or vice versa.
 
 ---
 
-#### Formatting vs rendering
+#### Needle-less (donut) mode
 
-`format`, `formatOptions`, `decimalPlaces`, and `formatValue` follow the exact same precedence as `CardWidget`: `formatValue` → `format` → `decimalPlaces` → raw value.
+Setting `needle={{ show: false }}` turns the gauge into a donut-style indicator — the value/unit/label block is centered directly over the arc instead of rendered below it:
 
-```tsx
-<GaugeWidget node={node} variable="freeMemory" min={0} max={1e9} format="bytes" />
-// renders "512" + "MB"
-
-<GaugeWidget node={node} variable="temperature" formatValue={(v) => `${v.toFixed(1)}°`} />
-```
-
-Preset table is identical to Card's — see [Formatters export](#formatters-export). `formatOptions` uses the same shape:
-
-```ts
-{
-  locale?: string;
-  binary?: boolean;      // bytes only
-  toDecimalPlaces?: number;
-}
-```
-
-> **Gauge clamps the value before formatting.** Unlike Card (which displays the raw fetched number as-is), Gauge always clamps the value to `[min, max]` first — `formatValue`/`format`/`decimalPlaces` all receive the **clamped** value, not the raw one. A reading of `120` on a `min={0} max={100}` gauge displays as `100`.
-
-##### Tick labels reuse the same `format` preset
-
-If `tick.show` is `true` and you haven't set `tick.labelFormat`, tick labels automatically use the same `format`/`formatOptions` as the main value — so the big number and the ring of tick labels stay unit-consistent without extra config:
-
-```tsx
-<GaugeWidget
-  min={0}
-  max={1000}
-  format="bytes"
-  tick={{ show: true, count: 4 }}
-/>
-// tick labels: 0 B, 250 B, 500 B, 750 B, 1000 B — same scaling as the main value
-```
-
-Set `tick.labelFormat` to override just the ticks independently of the main value's formatting.
-
----
-
-#### The last-updated label
-
-Identical to `CardWidget` — `timezone`, `labelFormat`, `labelText` all work the same way, with the same preset table and precedence (`labelText` > `labelFormat` > default `"time"`).
-
-```tsx
-<GaugeWidget {...commonProps} labelFormat="relative" timezone="Asia/Kolkata" />
-```
-
-One gauge-specific addition: in [manual value mode](#manual-value-mode--using-gauge-without-a-node), there's no fetched timestamp to show a label for — Gauge falls back to the time the component **mounted**, captured once, so the label still renders something meaningful instead of disappearing entirely when you're driving the gauge with a static `value` prop.
-
----
-
-#### Manual value mode — using Gauge without a `node`
-
-Unlike `CardWidget`, `GaugeWidget` accepts a plain `value` prop and can render without ever fetching data:
-
-```tsx
-<GaugeWidget value={73} min={0} max={100} title="Custom Level" />
-```
-
-This is useful for gauges driven by something other than an Anedya node — a slider, computed value, form state, or a preview/demo context.
-
-When both `node` and `value` are supplied, live-fetched data always wins once it arrives — `value` only shows while no fetched value is available yet (e.g. before the first fetch resolves, or if `node` is omitted entirely).
-
-> `loading`, `error`, and empty states are exclusively products of the live-fetch path — they never trigger in manual value mode, since the fetch effect itself never runs without a `node`.
-
----
-
-#### Error & empty states
-
-Same three-outcome model as `CardWidget`, applicable only when using `node` (live-fetch mode):
-
-| State | When it happens | Default appearance |
-|---|---|---|
-| Success | Data was fetched normally | The arc/needle at the value, plus formatted value and label |
-| Error | The fetch failed | The error message, styled via the `error` slot |
-| Empty | The fetch succeeded, but no data exists yet | `"N/A"`, styled via the `empty` slot |
-
-```tsx
-<GaugeWidget
-  {...commonProps}
-  styles={{ error: "text-orange-500 italic", empty: "text-slate-300" }}
-/>
-```
-
-##### `renderError` / `renderEmpty`
-
-```tsx
-<GaugeWidget
-  {...commonProps}
-  renderError={(error) => (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-orange-500">⚠ Sensor unreachable</span>
-      <span className="text-xs text-slate-400">{error}</span>
-    </div>
-  )}
-  renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
-/>
-```
-
-Same rule as Card: when either is provided, it fully replaces the default `error`/`empty` element, so `styles.error`/`styles.empty` no longer apply.
-
-##### `onDataChange` meta
-
-```tsx
-<GaugeWidget
-  {...commonProps}
-  onDataChange={(data, meta) => {
-    if (meta.kind === "error") return { renderError: () => <span className="italic">Offline</span> };
-    if (meta.kind === "empty") return { renderEmpty: () => <span>Waiting…</span> };
-    if (!data) return;
-    if (data.value > 90) return { title: "Critical", color: "#ef4444" };
-  }}
-/>
-```
-
-`meta.kind` is `"success" | "error" | "empty"`; `meta.error` is present only when `meta.kind === "error"`.
-
----
-
-#### Arc, track, bar & needle
-
-Gauge geometry is configured through four independent props.
-
-##### `arc` — the shape of the dial
-
-```ts
-interface GaugeArcConfig {
-  startAngle?: number;   // degrees, 0 = 12 o'clock, clockwise-positive. Default -90
-  endAngle?: number;     // Default 90
-  radius?: number;       // px — auto-fit to available space if omitted
-  thickness?: number;    // px — auto-computed from radius if omitted
-  cornerRadius?: number; // rounds the ends of the bar/track. Default 0
-}
-```
-
-```tsx
-<GaugeWidget arc={{ startAngle: -135, endAngle: 135 }} />  // wider, near-full-circle dial
-<GaugeWidget arc={{ startAngle: 0, endAngle: 360 }} />     // full circle / donut
-<GaugeWidget arc={{ cornerRadius: 8 }} />                  // rounded bar ends
-```
-
-##### `track` — the background ring
-
-```ts
-interface GaugeTrackConfig {
-  show?: boolean;  // default true
-  color?: string;  // any CSS color — hex/rgb/hsl/named. Falls back to `currentColor` (styles.track) if unset
-}
-```
-
-##### `color` — the filled bar
-
-Accepts a flat color or a gradient array — **this is a raw SVG fill value, not a Tailwind class**:
-
-```tsx
-<GaugeWidget color="#10b981" />
-<GaugeWidget color="rgb(99,102,241)" />
-<GaugeWidget color={["#000000", "#8b5cf6", "#f9a8d4"]} />  // linear gradient across the bar
-```
-
-For a Tailwind-class-driven bar color instead, use `styles={{ bar: "text-indigo-500" }}` — the two mechanisms are independent; `color` always wins over `styles.bar` when both are set, since `color` overrides the `currentColor` fallback entirely.
-
-##### `needle`
-
-```ts
-interface GaugeNeedleConfig {
-  show?: boolean;                                  // default true
-  type?: "line" | "rounded" | "drop" | "triangle";  // default "rounded"
-  length?: "short" | "medium" | "full" | number;    // default "medium"
-  width?: number;                                   // default 4
-  color?: string;                                   // shorthand for both needleColor and capColor
-  needleColor?: string;
-  capColor?: string;
-  capRadius?: number;                                // default 6
-  animation?: boolean;                               // default true — see Animation below
-}
-```
-
-```tsx
-<GaugeWidget needle={{ type: "triangle", length: "full", needleColor: "#334155" }} />
-```
-
-##### No-needle ("donut") mode
-
-Setting `needle={{ show: false }}` switches the gauge into a donut-style display — the value/unit/label are centered directly over the arc instead of rendered below it:
-
-```tsx
-<GaugeWidget needle={{ show: false }} color="#10b981" />
+```jsx
+<GaugeWidget needle={{ show: false }} arc={{ startAngle: -180, endAngle: 180 }} />
 ```
 
 ---
 
 #### Tick marks
 
-```ts
-interface GaugeTickConfig {
-  show?: boolean;                          // default false
-  count?: number;                          // number of INTERVALS, not marks. Default 10 → 11 marks (0,10,...100)
-  size?: number;                           // tick line length in px. Default 6
-  color?: string;                          // falls back to currentColor (styles.tick)
-  radiusOffset?: number;                   // gap between arc's outer edge and tick line start. Default 4
-  labelGap?: number;                       // gap between tick line and its label. Default 4
-  labelSize?: number;                      // tick label font size in px. Default 10
-  labelColor?: string;                     // falls back to currentColor (styles.tickLabel)
-  labelFormat?: (value: number) => string; // overrides the auto-reused `format` preset (see above)
-}
+`tick` draws radial marks (and optional labels) around the arc between `min` and `max`. Off by default:
+
+```jsx
+<GaugeWidget
+  tick={{
+    show: true,
+    count: 10,          // number of INTERVALS, so 10 -> 11 marks (0,10,...,100)
+    size: 6,
+    radiusOffset: 4,     // gap between the arc's outer edge and the tick line
+    labelGap: 4,          // gap between the tick line and its label
+    labelSize: 10,         // px — always wins over any styles.tickLabel font-size class
+    color: "#cbd5e1",
+    labelColor: "#94a3b8",
+    labelFormat: (v) => `${v}°`,
+  }}
+/>
 ```
 
-```tsx
-<GaugeWidget min={0} max={50} tick={{ show: true, count: 5 }} />
-// marks at 0, 10, 20, 30, 40, 50
-```
+| Prop           | Type                       | Default | Description                                                                                   |
+| -------------- | -------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `show`         | `boolean`                  | `false` | Whether tick marks are drawn                                                                    |
+| `count`        | `number`                   | `10`    | Number of **intervals** between `min` and `max` — `count: 10` draws 11 marks                    |
+| `size`         | `number`                   | `6`     | Tick line length in px                                                                          |
+| `color`        | `string`                   | —       | Tick line color; falls back to the theme's `tick` slot via `currentColor`                       |
+| `radiusOffset` | `number`                   | `4`     | Gap in px between the arc's outer edge and the start of the tick line                           |
+| `labelGap`     | `number`                   | `4`     | Gap in px between the end of the tick line and its label                                        |
+| `labelSize`    | `number`                   | `10`    | Tick label font size in px — set as an inline style, so it always wins over `styles.tickLabel`   |
+| `labelColor`   | `string`                   | —       | Tick label color; falls back to the theme's `tickLabel` slot                                    |
+| `labelFormat`  | `(value: number) => string`| —       | Custom formatter for tick numbers. If omitted, reuses the widget's `format` preset if one is set, otherwise a plain rounded number |
 
-The gauge automatically reserves extra space around the arc for the tick ring so ticks are never clipped by the SVG viewBox — this shrinks the drawn arc radius slightly whenever `tick.show` is `true`, which is expected.
+Enabling ticks reserves extra space inside the widget for the line + gaps + label, shrinking the arc's radius slightly so the ring is never clipped — you don't need to size the container any differently to accommodate it.
+
+> Because `labelSize` is applied as an inline style, a `styles.tickLabel` class controlling font size will have no effect — use the `labelSize` prop for sizing, and `styles.tickLabel` / `tickLabel` theme classes for anything else (weight, tracking, etc.).
 
 ---
 
-#### Animation
+#### Animation configuration
 
-```ts
-interface GaugeAnimationConfig {
-  show?: boolean;      // default true
-  duration?: number;   // ms. Default 1000
-  easing?: GaugeEasing; // default "cubicOut"
-}
+`animation` controls the transition when the value (and, if enabled, the needle) moves to a new reading:
+
+```jsx
+<GaugeWidget animation={{ show: true, duration: 800, easing: "elasticOut" }} />
 ```
 
-```tsx
-<GaugeWidget animation={{ duration: 400, easing: "elasticOut" }} />
-<GaugeWidget animation={{ show: false }} />  // arc/needle snap to value instantly, no tween
+| Prop       | Type          | Default      | Description                                            |
+| ---------- | ------------- | ------------ | -------------------------------------------------------- |
+| `show`     | `boolean`     | `true`       | Whether the bar (and needle, if also enabled) animates    |
+| `duration` | `number`      | `1000`       | Transition duration in ms                                |
+| `easing`   | `GaugeEasing` | `"cubicOut"` | Any of the standard d3-ease families — `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out/InOut`, `expIn/Out/InOut`, `circleIn/Out/InOut`, `backIn/Out/InOut`, `elasticIn/Out/InOut`, `bounceIn/Out/InOut` |
+
+With `animation.show: false`, both the bar and needle snap directly to the new value with no transition, regardless of `needle.animation`.
+
+---
+
+#### Formatting the value
+
+`GaugeWidget` uses the exact same formatting system as `CardWidget` — `format` (named presets), `formatOptions`, `decimalPlaces`, and `formatValue` all behave identically and share the same precedence (`formatValue` > `format` > `decimalPlaces` > raw value). See [Formatting vs rendering](#formatting-vs-rendering) above for the full preset table and examples; everything there applies unchanged here, e.g.:
+
+```jsx
+<GaugeWidget node={node} variable="freeMemory" format="bytes" />
+<GaugeWidget node={node} variable="uptime" format="duration" />
+<GaugeWidget formatValue={(v) => `${v.toFixed(1)}%`} />
 ```
 
-`easing` accepts any of d3-ease's standard names in short form: `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out/InOut`, `expIn/Out/InOut`, `circleIn/Out/InOut`, `backIn/Out/InOut`, `elasticIn/Out/InOut`, `bounceIn/Out/InOut`.
+As with Card, `format` takes over the `unit` slot entirely while active, and presets don't validate that they semantically match your data — only use one that fits what the value actually represents.
 
-> The needle only animates when **both** `needle.animation` and `animation.show` are `true`. `animation.show: false` disables the bar's arc-fill animation as well as the needle's, regardless of `needle.animation`; `needle.animation: false` disables only the needle while the bar still tweens.
+---
+
+#### The last-updated label
+
+Also identical to `CardWidget` — `labelFormat` presets (`time`, `date`, `datetime`, `relative`, `iso`), the `labelText` escape hatch, and `timezone` override all work the same way. See [The last-updated label](#the-last-updated-label) above.
+
+```jsx
+<GaugeWidget labelFormat="relative" />
+<GaugeWidget timezone="Asia/Kolkata" />
+```
+
+One gauge-specific note: in **manual mode** (a `value` prop with no `node`), there's no fetched timestamp to show. In that case the label falls back to the moment the widget first mounted, so the label still renders something meaningful instead of disappearing.
+
+---
+
+#### Error & empty states
+
+Same three outcomes as `CardWidget` — success, error (fetch failed), and empty (fetch succeeded, no data yet) — styled via the `error`/`empty` slots, with `renderError(error)` / `renderEmpty()` available for full custom rendering. See [Error & empty states](#error--empty-states) above; behavior and precedence are unchanged for `GaugeWidget`.
+
+```jsx
+<GaugeWidget
+  renderError={(error) => <span className="text-orange-500">⚠ {error}</span>}
+  renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
+/>
+```
+
+`onDataChange` also receives the same `(data, meta)` shape as Card, where `meta.kind` is `"success" | "error" | "empty"`.
 
 ---
 
 #### Sizing
 
 ```jsx
-<GaugeWidget width={320} height={200} minWidth={200} maxWidth={480} />
+<GaugeWidget width={280} height={200} />
+<GaugeWidget size={220} />   // shorthand: sets width AND height to the same value (a square gauge)
 ```
 
-Unlike `CardWidget`, the gauge has no auto-grow-to-content mode — it always fills whatever box it's given (its own container, or `width`/`height`/`size`), and the arc's radius is computed to fit that box.
+`size` takes priority over `width`/`height` when set. Without `size` or `height`, the gauge fills its container's width and derives a proportional height automatically (unless `aspectRatio` is set).
 
-##### `size`
-
-A single number that fixes both width and height to a square-ish box and disables automatic size-tracking entirely — use this for a fixed, non-fluid gauge:
-
-```tsx
-<GaugeWidget size={200} />
-```
-
-##### Automatic sizing
-
-Without `size`, the gauge always tracks its parent container's actual rendered dimensions (via a `ResizeObserver`) and redraws the arc to fit — no separate flag needed to enable this, it's the default behavior whenever `size` is unset:
-
-```tsx
-<GaugeWidget width="100%" height={240} />        // fixed pixel height, fluid width
-<GaugeWidget style={{ width: "100%", height: "100%" }} />  // fills a sized parent
-```
-
-If neither the parent nor `width`/`height`/`aspectRatio` constrain the box, the gauge falls back to a `240×163`px default.
+| Prop          | Type     | Description                                                             |
+| ------------- | -------- | -------------------------------------------------------------------------- |
+| `size`        | `number` | Shorthand for equal `width`/`height` — a fixed square gauge                |
+| `width`       | `number` | Container width in px                                                      |
+| `height`      | `number` | Container height in px                                                     |
+| `minWidth`    | `number` | Minimum container width in px                                              |
+| `maxWidth`    | `number` | Maximum container width in px                                              |
+| `minHeight`   | `number` | Minimum container height in px                                             |
+| `maxHeight`   | `number` | Maximum container height in px                                             |
+| `aspectRatio` | `number` | Width-to-height ratio used when neither `size` nor `height` is set         |
 
 ---
 
-#### Loading & error states
+#### Responsive sizing
 
-While the initial fetch is in flight (live-fetch mode only), the gauge renders pulsing skeleton blocks in place of the value and label, sized to the current `--anedya-gauge-value-size` / `--anedya-gauge-label-size` CSS variables. The arc itself dims to reduced opacity rather than being replaced by a skeleton.
+Like `CardWidget`, the gauge uses CSS Container Queries to scale internal typography and spacing (title/value/unit/label font sizes, gaps) based on its own rendered box, not the browser viewport — no configuration needed, and it composes the same way with Tailwind responsive prefixes in `styles` as described under [Responsive sizing](#responsive-sizing) above.
 
-Neither loading nor error states currently accept style overrides via `styles` beyond the `error`/`empty` slots described above.
+The arc's radius itself is handled separately (it's a geometry calculation, not a CSS variable) — it auto-fits to whatever space is left after padding and, if enabled, tick-mark space is subtracted, capped by `arc.radius` when you set one explicitly.
 
 ---
 
 #### Other props
 
-| Prop            | Type     | Description                                                                        |
-| --------------- | -------- | ------------------------------------------------------------------------------------ |
-| `title`         | `string` | Gauge title. Default: `"Latest Value"`                                              |
-| `value`         | `number` | Manual/static value — see [Manual value mode](#manual-value-mode--using-gauge-without-a-node) |
-| `min`           | `number` | Minimum of the value range. Default `0`                                             |
-| `max`           | `number` | Maximum of the value range. Default `100`                                           |
-| `unit`          | `string` | Unit suffix shown next to the value (ignored while `format` is active)              |
-| `decimalPlaces` | `number` | Decimal places for the displayed value (used only if `formatValue`/`format` aren't provided) |
+| Prop            | Type                                        | Description                                                                          |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `title`         | `string`                                     | Gauge title. Default: `"Latest Value"`                                                    |
+| `value`         | `number`                                     | Manual/controlled value. Used as the initial value, or the only value if no `node` is given |
+| `min`           | `number`                                     | Minimum of the gauge's range. Default: `0`                                                |
+| `max`           | `number`                                     | Maximum of the gauge's range. Default: `100`                                              |
+| `unit`          | `string`                                     | Unit suffix shown next to the value                                                       |
+| `decimalPlaces` | `number`                                     | Decimal places for the displayed value (used only if `formatValue` isn't provided)        |
+
 
 ## Stylesheet import
 
