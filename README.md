@@ -12,7 +12,6 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
 
 ## Table of Contents
 
-- [Installation & Setup](#installation--setup)
 - [Widgets](#widgets)
   - [CardWidget](#cardwidget)
     - [Required props](#required-props)
@@ -23,14 +22,18 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
     - [How props are resolved](#how-props-are-resolved)
   - [Formatting vs rendering](#formatting-vs-rendering)
+  - [GaugeWidget](#gaugewidget)                              
+    - [Required props](#required-props-1)
+    - [The styling model](#the-styling-model-1)
+    - [Theming](#theming-1)
+    - [Manual value mode](#manual-value-mode--using-gauge-without-a-node)
+    - [Arc, track, bar & needle](#arc-track-bar--needle)
+    - [Tick marks](#tick-marks)
+    - [Animation](#animation)
+    - [Sizing](#sizing-1)
 - [The last-updated label](#the-last-updated-label)
 - [Error & empty states](#error--empty-states)
 - [Formatters export](#formatters-export)
-  - [Sizing](#sizing)
-  - [Responsive sizing](#responsive-sizing)
-  - [Loading & error states](#loading--error-states)
-  - [Other props](#other-props)
-- [Stylesheet import](#stylesheet-import)
 
 ---
 
