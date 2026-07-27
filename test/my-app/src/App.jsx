@@ -15,8 +15,6 @@ const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
 const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
 const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
 
-import { relativeTime } from "../../../src/helpers/formatters";
-
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
 const client = anedya.newClient(config);

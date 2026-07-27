@@ -1,10 +1,16 @@
-import { a as LabelFormatPreset, n as FormatOptions, o as SlotClassNames, r as FormatPreset, t as AnedyaWidgetBaseProps } from "./common-DARTvNue.mjs";
+import { a as LabelFormatPreset, n as FormatOptions, o as SlotClassNames, r as FormatPreset, t as AnedyaWidgetBaseProps } from "./common-DoLkuLwh.mjs";
 //#region src/components/CardWidget.d.ts
-type CardSlot = "container" | "title" | "value" | "unit" | "label";
+type CardSlot = "container" | "title" | "value" | "unit" | "label" | "error" | "empty";
 /** The raw data this widget fetched — exactly what comes back from the request, not yet formatted. */
 interface CardData {
   value: number;
   timestamp: number;
+}
+/** Describes which state the widget just landed in, passed alongside `data` to `onDataChange`. */
+interface CardDataMeta {
+  kind: "success" | "error" | "empty";
+  /** Present only when kind === "error". */
+  error?: string;
 }
 type CardWidgetUpdate = Partial<Omit<CardWidgetProps, "node" | "variable" | "onDataChange">>;
 interface CardWidgetProps extends AnedyaWidgetBaseProps {
@@ -57,7 +63,7 @@ interface CardWidgetProps extends AnedyaWidgetBaseProps {
    *   }
    * }}
    */
-  onDataChange?: (data: CardData | null) => CardWidgetUpdate | void;
+  onDataChange?: (data: CardData | null, meta: CardDataMeta) => CardWidgetUpdate | void;
   /**
    * Named formatting preset for common unit types — auto-scales both
    * the displayed number and its unit (e.g. `"bytes"` turns `500000`
@@ -69,7 +75,7 @@ interface CardWidgetProps extends AnedyaWidgetBaseProps {
    * Ignored if `formatValue` is also provided.
    */
   format?: FormatPreset;
-  /** Options for the active `format` preset — e.g. `{ precision: 2, locale: "en-IN" }`. */
+  /** Options for the active `format` preset — e.g. `{ formatOptions: 2, locale: "en-IN" }`. */
   formatOptions?: FormatOptions;
   /**
    * Named preset for the last-updated label's format. Ignored if
@@ -77,7 +83,17 @@ interface CardWidgetProps extends AnedyaWidgetBaseProps {
    * Defaults to `"time"`, matching the widget's previous fixed behavior.
    */
   labelFormat?: LabelFormatPreset;
+  /** Custom render for the error state. Return JSX to fully replace the default error text. */
+  renderError?: (error: string) => React.ReactNode;
+  /** Custom render when the fetch succeeds but no data is available. Defaults to a greyed-out "N/A". */
+  renderEmpty?: () => React.ReactNode;
+  /**
+   * IANA timezone name (e.g. "Asia/Kolkata", "America/New_York") used when
+   * formatting the last-updated label. Defaults to the browser's
+   * auto-detected timezone if omitted.
+   */
+  timezone?: string;
 }
-declare function CardWidget({ node, variable, title, unit, decimalPlaces, formatValue, labelText, styles, onDataChange, theme, className, width, height, minWidth, maxWidth, format, formatOptions, labelFormat }: CardWidgetProps): React.JSX.Element;
+declare function CardWidget({ node, variable, title, unit, decimalPlaces, formatValue, labelText, styles, onDataChange, theme, className, width, height, minWidth, maxWidth, format, formatOptions, labelFormat, timezone, renderError, renderEmpty }: CardWidgetProps): React.JSX.Element;
 //#endregion
 export { CardWidget };
