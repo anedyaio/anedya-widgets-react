@@ -15,7 +15,9 @@ unit:
 label:
   "text-[length:var(--anedya-card-label-size)]",
 container:
-  "flex flex-col items-center justify-center text-center border rounded-xl p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)]"
+  "flex flex-col items-center justify-center text-center border rounded-xl p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)]",
+  error: "text-sm font-medium",
+  empty: "text-[length:var(--anedya-card-value-size)] font-bold",
 };
 
 
@@ -25,6 +27,8 @@ export const lightTheme: WidgetTheme<CardSlot> = {
     title: "text-slate-500",
     value: "text-slate-900",
     label: "text-slate-400",
+    error: "text-red-600",
+empty: "text-slate-400",
   },
 };
 
@@ -34,6 +38,8 @@ export const darkTheme: WidgetTheme<CardSlot> = {
     title: "text-slate-400",
     value: "text-white",
     label: "text-slate-500",
+    error: "text-red-400",
+empty: "text-slate-500",
   },
 };
 export const themes = { light: lightTheme, dark: darkTheme } as const;
