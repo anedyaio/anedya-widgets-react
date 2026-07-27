@@ -4,7 +4,7 @@ import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
 import "public-widget-sdk/styles.css";
 import { relativeTime } from "public-widget-sdk/formatters";
-import "./index.css"; 
+import "./index.css";
 // This demo has its own Tailwind build (see vite.config.js + src/index.css),
 // specifically to test consumer-side class overrides via `className`/`styles`.
 // A real consumer app needs the same setup — the widget package's own
@@ -16,10 +16,6 @@ const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
 const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
 
 import { relativeTime } from "../../../src/helpers/formatters";
-const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
-const token =
-  "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
-const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -76,26 +72,45 @@ const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-<div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}
->
+    <div
+      style={{
+        padding: "2rem",
+        display: "flex",
+        gap: 24,
+        flexWrap: "wrap",
+        alignItems: "flex-start",
+      }}
+    >
       {/* ============================================================
        * 1. Default appearance — no theme, no styles, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1}
-  //  timezone="Asia/Kolkata"
-// timezone="America/Los_Angeles"
+      <CardWidget
+        {...commonProps}
+        title="Default"
+        unit="%"
+        decimalPlaces={1}
+        //  timezone="Asia/Kolkata"
+        // timezone="America/Los_Angeles"
         onDataChange={(data, meta) => {
-    if (meta.kind === "error") {
-      return { renderError: () => <span className="text-orange-500 italic">Sensor unreachable</span> };
-    }
-    if (meta.kind === "empty") {
-      return { renderEmpty: () => <span className="text-slate-300">— no reading yet —</span> };
-    }
-  }}
-    
-       />
-
+          if (meta.kind === "error") {
+            return {
+              renderError: () => (
+                <span className="text-orange-500 italic">
+                  Sensor unreachable
+                </span>
+              ),
+            };
+          }
+          if (meta.kind === "empty") {
+            return {
+              renderEmpty: () => (
+                <span className="text-slate-300">— no reading yet —</span>
+              ),
+            };
+          }
+        }}
+      />
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
@@ -146,11 +161,10 @@ export default function App() {
         //   title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
         // }}
         styles={{
-  container: "bg-blue-50 border-blue-300", // background/border of the card itself
-  value: "text-red-500 text-5xl",
-  title: "uppercase tracking-wider text-blue-700", // added color here
-}}
-        
+          container: "bg-blue-50 border-blue-300", // background/border of the card itself
+          value: "text-red-500 text-5xl",
+          title: "uppercase tracking-wider text-blue-700", // added color here
+        }}
       />
       {/* ============================================================
        * 4. Plain CSS classes — styles works with ANY class source,
@@ -398,7 +412,6 @@ export default function App() {
           };
         }}
       />
-
     </div>
   );
 }
