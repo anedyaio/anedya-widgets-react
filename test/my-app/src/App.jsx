@@ -378,13 +378,14 @@ export default function App() {
       <GaugeWidget
         {...commonProps}
         // value={90}
-
+        styles={{
+          container: "p-0 gap-0",
+        }}
         onDataChange={(data) => {
           if (!data) {
             return {
               title: "No Data",
               color: "#6b7280",
-              styles: { value: "text-slate-500" },
             };
           }
 
@@ -404,7 +405,9 @@ export default function App() {
 
             // per-slot class overrides — merges with (doesn't replace) the static `styles` prop
             styles: {
-              value: isCritical ? "text-red-500 animate-pulse" : "text-black",
+              value: isCritical
+                ? "text-red-500 animate-pulse"
+                : "text-yellow-500",
               title: isCritical ? "text-red-400" : "text-slate-400",
             },
           };
@@ -413,9 +416,11 @@ export default function App() {
 
       <GaugeWidget
         {...commonProps}
+        color="#1fa2ff"
         styles={{
           error: "text-orange-500 italic",
           empty: "text-slate-300",
+          // container:"p-0 gap-0"
         }}
         theme="dark"
         renderError={(error) => (
@@ -431,17 +436,68 @@ export default function App() {
 
       <GaugeWidget
         {...commonProps}
+        color="yellow"
         theme="dark"
         title="IST"
         timezone="Asia/Kolkata"
+        // styles={{
+        // container:"p-0 gap-0"
+        // }}
       />
       <GaugeWidget
-        {...commonProps}
+        // {...commonProps}
+        value={95}
+        needle={{
+          length:"full",
+          type:"line",
+          // show:false
+        }}
+        tick={{
+          // show:true,
+        }}
+        color={[
+          "#ff75c3",
+          "#ffa647",
+          "#ffe83f",
+          "#9fff5b",
+          "#70e2ff",
+          "#7e22ce",
+        ]}
         theme="dark"
         title="EST"
         timezone="America/New_York"
+        // width={520}
+        // height={300}
+        // styles={{
+        //   container:"p-0 gap-0"
+        // }}
       />
-      <GaugeWidget {...commonProps} theme="dark" title="UTC" timezone="UTC" />
+
+      <GaugeWidget
+        {...commonProps}
+        color="rgb(255,0,127)"
+        theme="dark"
+        title="UTC"
+        timezone="UTC"
+        animation={{
+          easing:"quadIn"
+        }}
+        // styles={{
+        //   container:"p-0 gap-0"
+        // }}
+        // needle={{
+        //   show:false,
+        // }}
+        // tick={{
+        //   show:true,
+        // }}
+        
+        arc={{
+          startAngle: -180,
+          endAngle: 90,
+        }}
+        size={400}
+      />
     </div>
   );
 }

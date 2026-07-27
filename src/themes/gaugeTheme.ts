@@ -5,7 +5,7 @@ import { WidgetTheme } from "../types/root";
 
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   container:
-    "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)]",
+    "flex flex-col items-center justify-center text-center",
   title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
   unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
   track: "",

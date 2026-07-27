@@ -52,7 +52,7 @@ export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
   min?: number;
   max?: number;
   size?: number;
-  responsive?: boolean;
+  // responsive?: boolean;
 
   arc?: GaugeArcConfig;
   track?: GaugeTrackConfig;
@@ -288,7 +288,7 @@ export function GaugeWidget({
   min = 0,
   max = 100,
   size,
-  responsive = true,
+  // responsive = true,
   arc,
   track,
   color,
@@ -406,7 +406,7 @@ export function GaugeWidget({
   // );
 
   const { ref: arcWrapperRef, size: dims } = useResizeObserver<HTMLDivElement>(
-    responsive && size == null
+    size == null
   );
 
   const mergedStyles = useMemo(
@@ -447,7 +447,7 @@ export function GaugeWidget({
     renderEmpty,
     ...dynamicProps,
     styles: mergedStyles,
-    responsive, // not work
+    // responsive, // not work
   };
 
   // ---- Resolved config ----

@@ -75,13 +75,13 @@ export interface GaugeNeedleConfig {
   animation?: boolean;
 }
 
-export interface GaugeValueLabelConfig {
-  show?: boolean;
-  precision?: number;
-  prefix?: string;
-  suffix?: string;
-  formatter?: (value: number) => string;
-}
+// export interface GaugeValueLabelConfig {
+//   show?: boolean;
+//   precision?: number;
+//   prefix?: string;
+//   suffix?: string;
+//   formatter?: (value: number) => string;
+// }
 
 /** REQUIREMENT 3/4: radial min/max tick marks drawn around the arc. */
 export interface GaugeTickConfig {
