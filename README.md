@@ -22,31 +22,29 @@ A collection of pre-built, themeable React widgets for displaying Anedya IoT dat
     - [Tailwind responsive utilities](#tailwind-responsive-utilities)
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
     - [How props are resolved](#how-props-are-resolved)
+  - [GaugeWidget](#gaugewidget)
+    - [Required props](#required-props-1)
+    - [Manual vs live values](#manual-vs-live-values)
+    - [Slots & styling](#slots--styling)
+    - [Theming](#theming-1)
+    - [Arc configuration](#arc-configuration)
+    - [Track configuration](#track-configuration)
+    - [Bar color & gradients](#bar-color--gradients)
+    - [Needle configuration](#needle-configuration)
+    - [Needle-less (donut) mode](#needle-less-donut-mode)
+    - [Tick marks](#tick-marks)
+    - [Animation configuration](#animation-configuration)
+    - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering-1)
+    - [How props are resolved](#how-props-are-resolved-1)
+- [Common](#common)
   - [Formatting vs rendering](#formatting-vs-rendering)
-- [The last-updated label](#the-last-updated-label)
-- [Error & empty states](#error--empty-states)
-- [Formatters export](#formatters-export)
+  - [The last-updated label](#the-last-updated-label)
+  - [Error & empty states](#error--empty-states)
+  - [Formatters export](#formatters-export)
   - [Sizing](#sizing)
   - [Responsive sizing](#responsive-sizing)
   - [Loading & error states](#loading--error-states)
   - [Other props](#other-props)
-- [GaugeWidget](#gaugewidget)
-  - [Required props](#required-props-1)
-  - [Manual vs live values](#manual-vs-live-values)
-  - [Slots & styling](#slots--styling)
-  - [Arc configuration](#arc-configuration)
-  - [Track configuration](#track-configuration)
-  - [Bar color & gradients](#bar-color--gradients)
-  - [Needle configuration](#needle-configuration)
-  - [Needle-less (donut) mode](#needle-less-donut-mode)
-  - [Tick marks](#tick-marks)
-  - [Animation configuration](#animation-configuration)
-  - [Formatting the value](#formatting-the-value)
-  - [The last-updated label](#the-last-updated-label-1)
-  - [Error & empty states](#error--empty-states-1)
-  - [Sizing](#sizing-1)
-  - [Responsive sizing](#responsive-sizing-1)
-  - [Other props](#other-props-1)
 - [Stylesheet import](#stylesheet-import)
 
 ---
@@ -105,7 +103,7 @@ A single-value display widget — shows the latest reading, a title, and a last-
 #### Required props
 
 | Prop       | Type     | Description                      |
-| ---------- | -------- | -------------------------------- |
+| ---------- | -------- | --------------------------------- |
 | `node`     | `any`    | `anedya.newNode(client, nodeId)` |
 | `variable` | `string` | Variable name to display         |
 
@@ -128,9 +126,9 @@ type CardSlot = "container" | "title" | "value" | "unit" | "label";
 These look similar but do genuinely different things:
 
 |             | Shape                 | Targets                                                              | Purpose                                                |
-| ----------- | --------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| `styles`    | object, keyed by slot | any inner slot (`title`, `value`, `unit`, `label`) _and_ `container` | reach inside the widget                                |
-| `className` | plain string          | only the outermost container element                                 | the ordinary React convention every component supports |
+| ----------- | ---------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| `styles`    | object, keyed by slot  | any inner slot (`title`, `value`, `unit`, `label`) _and_ `container` | reach inside the widget                                  |
+| `className` | plain string           | only the outermost container element                                  | the ordinary React convention every component supports  |
 
 ```jsx
 <CardWidget
@@ -224,6 +222,8 @@ Instead of returning CSS classes, it returns a **partial set of widget props**. 
 
 Returning `undefined` (or nothing) clears any previous overrides and restores the widget's original props.
 
+`onDataChange` also receives a second argument describing which state just occurred — see [Error & empty states](#error--empty-states) below for the full `meta` shape and examples reacting to errors/empty data.
+
 ---
 
 #### How props are resolved
@@ -246,326 +246,6 @@ Later layers win whenever two Tailwind utilities conflict. Conflicts are resolve
 `className` is separate from this chain — it is merged onto the outer container after the container slot has been resolved.
 
 > **Rule of thumb:** defaults → theme → `styles` → `onDataChange`. User overrides always win.
-
----
-
-#### Formatting vs rendering
-
-`format`, `formatOptions`, `decimalPlaces`, and `labelFormat` control **what text is displayed**.
-
-`styles` controls **how the widget looks**.
-
-`onDataChange` can override any of these (along with most other widget props), allowing the widget to react to incoming data.
-
-##### `format` — named presets for common unit types
-
-For values that need unit-aware scaling (bytes, durations, lengths, etc.), pass a `format` preset instead of manually computing a unit string:
-
-```tsx
-<CardWidget node={node} variable="freeMemory" format="bytes" />
-// renders "512" + "MB" — auto-scaled, no manual unit needed
-
-<CardWidget node={node} variable="uptime" format="duration" />
-// renders "2d 4h 12m"
-
-<CardWidget node={node} variable="distance" format="length" formatOptions={{ formatOptions: 2 }} />
-// renders "1.25" + "km"
-```
-
-Available presets:
-
-| Preset     | Input           | Output example                                                                                  |
-| ---------- | --------------- | ----------------------------------------------------------------------------------------------- |
-| `number`   | any             | `"123,456"` — locale-aware thousands separators                                                 |
-| `bytes`    | bytes           | `"500"` + `"KB"` — auto-scales B/KB/MB/GB/TB (or KiB/MiB/GiB with `formatOptions.binary: true`) |
-| `duration` | seconds         | `"2h 15m 30s"`                                                                                  |
-| `length`   | meters          | `"1.25"` + `"km"` — auto-scales mm/cm/m/km                                                      |
-| `volume`   | milliliters     | auto-scales mL/L                                                                                |
-| `dataRate` | bits per second | auto-scales bps/Kbps/Mbps                                                                       |
-| `percent`  | 0–100           | `"45%"`                                                                                         |
-
-`formatOptions` accepts:
-
-```ts
-{
-  locale?: string;      // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
-  binary?: boolean;     // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
-  formatOptions?: number;   // decimal places for the scaled number
-}
-```
-
-**When to use each option:**
-
-- **`locale`** — force a specific number format instead of relying on the visitor's browser/OS locale. Useful for a dashboard serving a specific region, or an app with its own explicit language setting:
-```tsx
-  <CardWidget format="number" formatOptions={{ locale: "en-IN" }} />
-  // "1,23,456" (Indian digit grouping) instead of "123,456"
-
-  <CardWidget format="number" formatOptions={{ locale: "de-DE" }} />
-  // "123.456" (German uses "." as the thousands separator, "," as the decimal point)
-```
-
-- **`formatOptions`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
-```tsx
-  <CardWidget format="bytes" formatOptions={{ formatOptions: 2 }} />
-  // "512.34" + "MB" — more decimal places than the default
-
-  <CardWidget format="bytes" formatOptions={{ formatOptions: 0 }} />
-  // "512" + "MB" — whole number, no decimals
-```
-
-- **`binary`** — *(`bytes` preset only)* choose between 1000-based and 1024-based scaling. These genuinely produce different numbers for the same raw byte count, so picking the wrong one can make a value look incorrect even though the math is technically right for the mode you're in:
-```tsx
-  <CardWidget format="bytes" formatOptions={{ binary: true }} />
-  // raw 1048576 -> "1" + "MiB" — matches how OS file managers/RAM usage are usually reported
-
-  <CardWidget format="bytes" />
-  // raw 1048576 -> "1.05" + "MB" — matches how storage manufacturers/network specs are usually reported
-```
-  As a rule of thumb: use `binary: true` for memory/RAM/file-size-on-disk readings, and the default (decimal) for network throughput or storage capacity marketing figures.
-  
-**`format` takes over the `unit` slot entirely.** When set, the preset determines its own unit per value (e.g. switching from `"KB"` to `"MB"` as a byte count grows) — the `unit` prop is ignored while `format` is active.
-
-> **Presets don't validate that they match your data's actual meaning** — they only know how to scale a raw number. Applying `format="length"` to a Celsius reading, for example, will scale it as if it were meters and display a plausible-looking but semantically wrong unit. Only use a preset that matches what the underlying value actually represents.
-
-##### Precedence
-
-`formatValue` always wins if provided — it's a full custom formatting function and bypasses `format`/`decimalPlaces` entirely:
-
-```tsx
-<CardWidget
-  formatValue={(v) => `${v.toFixed(2)} % RH`}
-  labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
-/>
-```
-
-> Long `formatValue` output (e.g. `"56.00 % RH"`) may wrap onto a second line at small widths — the value slot wraps rather than overflowing. See [Sizing](#sizing) for how this interacts with a fixed `height`.
-
----
-
-#### The last-updated label
-
-By default, the label under the value shows a fixed clock time (`"Updated 14:32:10"`). This can be changed with `labelFormat`, or fully replaced with `labelText`.
-
-##### `timezone` — override auto-detection
-
-```tsx
-<CardWidget {...commonProps} labelFormat="datetime" timezone="America/New_York" />
-// shows the timestamp converted to Eastern time, regardless of the visitor's own browser timezone
-```
-
-If omitted, the widget uses `Intl.DateTimeFormat().resolvedOptions().timeZone` — the browser's own detected timezone. Pass any IANA timezone name (e.g. `"Asia/Kolkata"`, `"Europe/London"`) to force a specific one instead — useful for dashboards where all viewers should see times in the device's local timezone rather than their own.
-
-`timezone` affects the `time`, `date`, and `datetime` label presets. It has no effect on `relative` (a time difference is timezone-independent) or `iso` (ISO 8601 output is always UTC by definition).
-
-##### `labelFormat` — named presets
-
-```tsx
-<CardWidget {...commonProps} labelFormat="relative" />
-// "5 minutes ago" instead of "Updated 14:32:10"
-
-<CardWidget {...commonProps} labelFormat="date" />
-// "Updated 7/24/2026"
-```
-
-Available presets:
-
-| Preset           | Output example                    |
-| ---------------- | --------------------------------- |
-| `time` (default) | `"Updated 14:32:10"`              |
-| `date`           | `"Updated 7/24/2026"`             |
-| `datetime`       | `"Updated 7/24/2026, 2:32:10 PM"` |
-| `relative`       | `"5 minutes ago"`                 |
-| `iso`            | `"2026-07-24T14:32:10.000Z"`      |
-
-##### `labelText` — full custom control
-
-`labelText` always takes precedence over `labelFormat` and receives the raw timestamp, so you can use it for anything the presets don't cover — 12-hour/AM-PM formatting, hours-only, non-default locales, or combining relative time with custom surrounding text:
-
-```tsx
-// AM/PM, 12-hour
-<CardWidget
-  labelText={(ts) => {
-    const d = new Date(ts < 1e12 ? ts * 1000 : ts);
-    return `Updated ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-  }}
-/>;
-// "Updated 2:32 PM"
-
-// Combining relative time with custom text
-import { relativeTime } from "public-widget-sdk/formatters";
-
-<CardWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
-// "Last synced 5 minutes ago"
-```
-
-`labelFormat` covers the common cases with zero code; `labelText` is the general escape hatch for everything else — the same relationship `formatValue` has with `format`.
-
----
-
-
-#### Error & empty states
-
-The card distinguishes between three outcomes of a fetch, each rendered differently:
-
-| State | When it happens | Default appearance |
-|---|---|---|
-| Success | Data was fetched normally | The formatted value, unit, and label |
-| Error | The fetch failed (network error, bad request, etc.) | The error message, styled via the `error` slot |
-| Empty | The fetch succeeded, but no data exists yet for this variable | `"N/A"`, styled via the `empty` slot |
-
-Both `error` and `empty` are real slots, so they pick up theme colors automatically and can be restyled the same way as any other slot:
-
-```tsx
-<CardWidget
-  {...commonProps}
-  styles={{
-    error: "text-orange-500 italic",
-    empty: "text-slate-300",
-  }}
-/>
-```
-
-##### `renderError` / `renderEmpty` — full custom rendering
-
-For full control beyond just restyling text, `renderError` and `renderEmpty` let you replace the entire error/empty state with your own JSX:
-
-```tsx
-<CardWidget
-  {...commonProps}
-  renderError={(error) => (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-orange-500">⚠ Sensor unreachable</span>
-      <span className="text-xs text-slate-400">{error}</span>
-    </div>
-  )}
-  renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
-/>
-```
-
-`renderError` receives the raw error message string; `renderEmpty` takes no arguments. When either is provided, it fully replaces the default `error`/`empty` slot rendering — the corresponding `styles.error`/`styles.empty` classes are ignored in that case, since there's no default element left for them to apply to.
-
-##### Reacting to errors/empty state via `onDataChange`
-
-`onDataChange` now receives a second argument describing which state just occurred, so you can react to errors or empty data the same way you already react to values:
-
-```tsx
-<CardWidget
-  {...commonProps}
-  onDataChange={(data, meta) => {
-    if (meta.kind === "error") {
-      return { renderError: () => <span className="italic">Offline</span> };
-    }
-    if (meta.kind === "empty") {
-      return { renderEmpty: () => <span className="text-slate-300">Waiting for first reading…</span> };
-    }
-    if (!data) return;
-    if (data.value > 80) {
-      return { title: "High Humidity", theme: "dark" };
-    }
-  }}
-/>
-```
-
-`meta.kind` is one of `"success"`, `"error"`, or `"empty"`; `meta.error` is present only when `meta.kind === "error"`, carrying the underlying error message.
-
-This is backwards compatible — existing `onDataChange={(data) => {...}}` callbacks that ignore the second argument continue to work unchanged.
-
----
-
-#### Formatters export
-
-The formatting helpers used internally are also available as a standalone import, for composing into your own `labelText`/`formatValue` functions:
-
-```tsx
-import { relativeTime } from "public-widget-sdk/formatters";
-```
-
-| Export         | Signature                                        | Description                                                                                             |
-| -------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `relativeTime` | `(timestamp: number, locale?: string) => string` | Converts a timestamp into a human-relative string (`"5 minutes ago"`). Accepts seconds or milliseconds. |
-
-#### Sizing
-
-`width` / `height` / `minWidth` / `maxWidth` are plain props, applied as inline styles on the container — independent of the whole `styles`/theme system:
-
-```jsx
-<CardWidget width={320} height={200} minWidth={280} maxWidth={400} />
-```
-
-##### `height` has two distinct modes
-
-Whether you pass `height` changes how the card behaves — this is intentional, not a quirk:
-
-|                      | Behavior                                                                                                                                                                                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`height` omitted** | The card **auto-grows** to fit its content. If `formatValue`/`labelText` produce long text that wraps, the card simply becomes taller. Sizing scales with **width only**.                                                                                                                               |
-| **`height` passed**  | The card becomes a **fixed-size box**. Sizing scales with **both width and height** (see [Responsive sizing](#responsive-sizing)). If content is too tall to fit (e.g. a long wrapped value at a small height), it is **clipped**, not overflowed — the card will not grow past the height you gave it. |
-
-```jsx
-// Auto-height: card grows to fit content, whatever that content turns out to be
-<CardWidget node={node} variable="humidity" />
-
-// Fixed-height: card is exactly 300px tall; content that doesn't fit is clipped
-<CardWidget node={node} variable="humidity" height={300} width={700} />
-```
-
-If you're using a `formatValue` that can produce long strings, either don't pass a fixed `height` (let the card grow to fit), or pass a `height` generous enough for the wrapped text at your chosen `width`.
-
----
-
-#### Responsive sizing
-
-The widget automatically scales its internal spacing and typography using **CSS Container Queries** — based on the card's own rendered size, not the browser viewport.
-
-By default the following properties scale automatically:
-
-- container padding
-- title font size
-- value font size
-- unit font size
-- label font size
-- spacing (`gap`)
-
-**When `height` is omitted**, scaling responds to the card's **width only** (`cqw`).
-
-**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size card renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect.
-
-A card inside a narrow dashboard column will use smaller typography than the same card rendered full-width, even on the same screen — this behavior is built in and needs no configuration.
-
-##### Overriding responsive sizing
-
-If you provide your own font-size utility for a slot, you're opting out of the default responsive sizing for that slot.
-
-```tsx
-<CardWidget
-  styles={{
-    value: "text-6xl",
-  }}
-/>
-```
-
-The value will always render at `text-6xl`. Likewise, responsive Tailwind classes (`text-2xl md:text-5xl`) take precedence over the widget's default responsive sizing — your classes always win over the widget defaults.
-
----
-
-#### Loading & error states
-
-While the initial fetch is in flight, the card renders **skeleton loaders** in place of the value and label — pulsing placeholder blocks sized to match each slot's current font-size variable (`var(--anedya-card-value-size)` / `var(--anedya-card-label-size)`), so the skeleton scales along with the card exactly like the real content would.
-
-If the fetch fails or no data is available, the card renders the error message text in place of the value (title still renders normally).
-
-Neither state currently accepts style overrides via `styles` — flag it if you need to customize their appearance.
-
----
-
-#### Other props
-
-| Prop            | Type     | Description                                                                        |
-| --------------- | -------- | ---------------------------------------------------------------------------------- |
-| `title`         | `string` | Card title. Default: `"Latest Value"`                                              |
-| `unit`          | `string` | Unit suffix shown next to the value                                                |
-| `decimalPlaces` | `number` | Decimal places for the displayed value (used only if `formatValue` isn't provided) |
 
 ---
 
@@ -609,7 +289,7 @@ If both a `node`/`variable` fetch *and* a `value` prop are present, the fetched 
 
 #### Slots & styling
 
-Like `CardWidget`, every part of the gauge is a named **slot**, and the same `styles` (per-slot) / `className` (outer container only) / `theme` system applies:
+Like `CardWidget`, every part of the gauge is a named **slot**, and the same `styles` (per-slot) / `className` (outer container only) system applies:
 
 ```ts
 type GaugeSlot =
@@ -629,7 +309,13 @@ type GaugeSlot =
 />
 ```
 
-`theme` works exactly as it does for `CardWidget` — a preset name or a custom `WidgetTheme<GaugeSlot>` object:
+> **Note:** `track`, `bar`, `needle`, and `needleCap` are SVG shapes, not text — their "color" comes from `currentColor`, which is why these slots are styled with Tailwind text-color utilities (`text-emerald-500`) rather than `fill-*`/`stroke-*` classes.
+
+---
+
+#### Theming
+
+`theme` works exactly as it does for `CardWidget` — a preset name, or a custom `WidgetTheme<GaugeSlot>` object:
 
 ```jsx
 const emeraldGaugeTheme = {
@@ -646,10 +332,6 @@ const emeraldGaugeTheme = {
 // or
 <GaugeWidget theme="dark" />   // built-in preset, or "light" (default)
 ```
-
-Slot resolution order is the same defaults → theme → `styles` → `onDataChange` chain described under CardWidget, and `onDataChange` on `GaugeWidget` can likewise return a partial set of props (including `styles`) to temporarily override the widget based on the incoming reading — see [`onDataChange`](#ondatachange--data-driven-rendering) above; the gauge version has the same signature, just with `GaugeData`/`GaugeDataMeta` in place of the card's types.
-
-> **Note:** `track`, `bar`, `needle`, and `needleCap` are SVG shapes, not text — their "color" comes from `currentColor`, which is why these slots are styled with Tailwind text-color utilities (`text-emerald-500`) rather than `fill-*`/`stroke-*` classes.
 
 ---
 
@@ -669,13 +351,13 @@ Slot resolution order is the same defaults → theme → `styles` → `onDataCha
 />
 ```
 
-| Prop           | Type     | Default                    | Description                                                        |
-| -------------- | -------- | --------------------------- | -------------------------------------------------------------------- |
-| `startAngle`   | `number` | `-90`                       | Degrees, `0` = 12 o'clock, clockwise-positive                        |
-| `endAngle`     | `number` | `90`                        | Degrees, same convention as `startAngle`                             |
-| `radius`       | `number` | auto-fit to container       | Capped to whatever actually fits the current width/height/tick space |
-| `thickness`    | `number` | `~18%` of resolved radius   | Arc/bar stroke width in px                                           |
-| `cornerRadius` | `number` | `0`                         | Rounds the ends of both the track and the value bar                  |
+| Prop           | Type     | Default                    | Description                                                          |
+| -------------- | -------- | ---------------------------- | ------------------------------------------------------------------------ |
+| `startAngle`   | `number` | `-90`                        | Degrees, `0` = 12 o'clock, clockwise-positive                            |
+| `endAngle`     | `number` | `90`                         | Degrees, same convention as `startAngle`                                 |
+| `radius`       | `number` | auto-fit to container        | Capped to whatever actually fits the current width/height/tick space     |
+| `thickness`    | `number` | `~18%` of resolved radius     | Arc/bar stroke width in px                                                |
+| `cornerRadius` | `number` | `0`                           | Rounds the ends of both the track and the value bar                       |
 
 A default `startAngle`/`endAngle` of `-90`/`90` draws the classic bottom half-circle speedometer; narrowing the range (e.g. `-120`/`120`) draws a fuller arc.
 
@@ -691,10 +373,10 @@ A default `startAngle`/`endAngle` of `-90`/`90` draws the classic bottom half-ci
 <GaugeWidget track={{ show: true, color: "#e2e8f0" }} />
 ```
 
-| Prop    | Type      | Default              | Description                                    |
-| ------- | --------- | ---------------------- | ----------------------------------------------- |
-| `show`  | `boolean` | `true`                 | Whether the background track arc is drawn       |
-| `color` | `string`  | theme's `track` slot   | Overrides the track color directly (any CSS color) |
+| Prop    | Type      | Default              | Description                                          |
+| ------- | --------- | ---------------------- | ------------------------------------------------------- |
+| `show`  | `boolean` | `true`                 | Whether the background track arc is drawn                |
+| `color` | `string`  | theme's `track` slot   | Overrides the track color directly (any CSS color)        |
 
 ---
 
@@ -729,17 +411,17 @@ If omitted, the bar falls back to the theme's `bar` slot color via `currentColor
 />
 ```
 
-| Prop          | Type                                            | Default        | Description                                                                 |
-| ------------- | ------------------------------------------------ | -------------- | ----------------------------------------------------------------------------- |
-| `show`        | `boolean`                                        | `true`          | Whether the needle is drawn at all                                            |
-| `type`        | `"line" \| "rounded" \| "drop" \| "triangle"`     | `"rounded"`     | Needle shape                                                                   |
-| `length`      | `"short" \| "medium" \| "full" \| number`         | `"medium"`      | Preset (relative to the resolved radius) or an explicit px value              |
-| `width`       | `number`                                         | `4`             | Needle thickness in px                                                        |
-| `color`       | `string`                                         | —               | Shorthand — sets both `needleColor` and `capColor` at once                    |
-| `needleColor` | `string`                                         | `color` or theme | Color of the needle shape specifically, overrides `color` for the shape only |
-| `capColor`    | `string`                                         | `color` or theme | Color of the center cap circle specifically                                   |
-| `capRadius`   | `number`                                         | `6`             | Radius of the center cap circle in px                                         |
-| `animation`   | `boolean`                                        | `true`          | Whether the needle rotates smoothly to its new position                       |
+| Prop          | Type                                            | Default          | Description                                                                     |
+| ------------- | ------------------------------------------------ | ----------------- | ----------------------------------------------------------------------------------- |
+| `show`        | `boolean`                                        | `true`             | Whether the needle is drawn at all                                                   |
+| `type`        | `"line" \| "rounded" \| "drop" \| "triangle"`     | `"rounded"`        | Needle shape                                                                          |
+| `length`      | `"short" \| "medium" \| "full" \| number`         | `"medium"`         | Preset (relative to the resolved radius) or an explicit px value                     |
+| `width`       | `number`                                         | `4`                | Needle thickness in px                                                               |
+| `color`       | `string`                                         | —                  | Shorthand — sets both `needleColor` and `capColor` at once                           |
+| `needleColor` | `string`                                         | `color` or theme   | Color of the needle shape specifically, overrides `color` for the shape only         |
+| `capColor`    | `string`                                         | `color` or theme   | Color of the center cap circle specifically                                          |
+| `capRadius`   | `number`                                         | `6`                | Radius of the center cap circle in px                                                |
+| `animation`   | `boolean`                                        | `true`             | Whether the needle rotates smoothly to its new position                              |
 
 `needle.animation` and the top-level `animation.show` (below) are independent switches — **both** must be `true` for the needle to animate. This lets you, for example, animate the bar fill while snapping the needle instantly, or vice versa.
 
@@ -775,17 +457,17 @@ Setting `needle={{ show: false }}` turns the gauge into a donut-style indicator 
 />
 ```
 
-| Prop           | Type                       | Default | Description                                                                                   |
-| -------------- | -------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `show`         | `boolean`                  | `false` | Whether tick marks are drawn                                                                    |
-| `count`        | `number`                   | `10`    | Number of **intervals** between `min` and `max` — `count: 10` draws 11 marks                    |
-| `size`         | `number`                   | `6`     | Tick line length in px                                                                          |
-| `color`        | `string`                   | —       | Tick line color; falls back to the theme's `tick` slot via `currentColor`                       |
-| `radiusOffset` | `number`                   | `4`     | Gap in px between the arc's outer edge and the start of the tick line                           |
-| `labelGap`     | `number`                   | `4`     | Gap in px between the end of the tick line and its label                                        |
-| `labelSize`    | `number`                   | `10`    | Tick label font size in px — set as an inline style, so it always wins over `styles.tickLabel`   |
-| `labelColor`   | `string`                   | —       | Tick label color; falls back to the theme's `tickLabel` slot                                    |
-| `labelFormat`  | `(value: number) => string`| —       | Custom formatter for tick numbers. If omitted, reuses the widget's `format` preset if one is set, otherwise a plain rounded number |
+| Prop           | Type                        | Default | Description                                                                                     |
+| -------------- | ---------------------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `show`         | `boolean`                    | `false` | Whether tick marks are drawn                                                                         |
+| `count`        | `number`                     | `10`    | Number of **intervals** between `min` and `max` — `count: 10` draws 11 marks                          |
+| `size`         | `number`                     | `6`     | Tick line length in px                                                                                |
+| `color`        | `string`                     | —       | Tick line color; falls back to the theme's `tick` slot via `currentColor`                            |
+| `radiusOffset` | `number`                     | `4`     | Gap in px between the arc's outer edge and the start of the tick line                                 |
+| `labelGap`     | `number`                     | `4`     | Gap in px between the end of the tick line and its label                                              |
+| `labelSize`    | `number`                     | `10`    | Tick label font size in px — set as an inline style, so it always wins over `styles.tickLabel`         |
+| `labelColor`   | `string`                     | —       | Tick label color; falls back to the theme's `tickLabel` slot                                          |
+| `labelFormat`  | `(value: number) => string`  | —       | Custom formatter for tick numbers. If omitted, reuses the widget's `format` preset if one is set, otherwise a plain rounded number |
 
 Enabling ticks reserves extra space inside the widget for the line + gaps + label, shrinking the arc's radius slightly so the ring is never clipped — you don't need to size the container any differently to accommodate it.
 
@@ -801,66 +483,402 @@ Enabling ticks reserves extra space inside the widget for the line + gaps + labe
 <GaugeWidget animation={{ show: true, duration: 800, easing: "elasticOut" }} />
 ```
 
-| Prop       | Type          | Default      | Description                                            |
-| ---------- | ------------- | ------------ | -------------------------------------------------------- |
-| `show`     | `boolean`     | `true`       | Whether the bar (and needle, if also enabled) animates    |
-| `duration` | `number`      | `1000`       | Transition duration in ms                                |
+| Prop       | Type          | Default      | Description                                                |
+| ---------- | ------------- | ------------ | -------------------------------------------------------------- |
+| `show`     | `boolean`     | `true`       | Whether the bar (and needle, if also enabled) animates          |
+| `duration` | `number`      | `1000`       | Transition duration in ms                                       |
 | `easing`   | `GaugeEasing` | `"cubicOut"` | Any of the standard d3-ease families — `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out/InOut`, `expIn/Out/InOut`, `circleIn/Out/InOut`, `backIn/Out/InOut`, `elasticIn/Out/InOut`, `bounceIn/Out/InOut` |
 
 With `animation.show: false`, both the bar and needle snap directly to the new value with no transition, regardless of `needle.animation`.
 
 ---
 
-#### Formatting the value
+#### `onDataChange` — data-driven rendering
 
-`GaugeWidget` uses the exact same formatting system as `CardWidget` — `format` (named presets), `formatOptions`, `decimalPlaces`, and `formatValue` all behave identically and share the same precedence (`formatValue` > `format` > `decimalPlaces` > raw value). See [Formatting vs rendering](#formatting-vs-rendering) above for the full preset table and examples; everything there applies unchanged here, e.g.:
+`onDataChange` works the same way it does on `CardWidget` (see [`onDataChange` under CardWidget](#ondatachange--data-driven-rendering)) — it's called with the latest fetched reading and a `meta` object, and can return a partial set of props (including `styles`) that temporarily override the gauge's own props:
 
-```jsx
-<GaugeWidget node={node} variable="freeMemory" format="bytes" />
-<GaugeWidget node={node} variable="uptime" format="duration" />
-<GaugeWidget formatValue={(v) => `${v.toFixed(1)}%`} />
-```
-
-As with Card, `format` takes over the `unit` slot entirely while active, and presets don't validate that they semantically match your data — only use one that fits what the value actually represents.
-
----
-
-#### The last-updated label
-
-Also identical to `CardWidget` — `labelFormat` presets (`time`, `date`, `datetime`, `relative`, `iso`), the `labelText` escape hatch, and `timezone` override all work the same way. See [The last-updated label](#the-last-updated-label) above.
-
-```jsx
-<GaugeWidget labelFormat="relative" />
-<GaugeWidget timezone="Asia/Kolkata" />
-```
-
-One gauge-specific note: in **manual mode** (a `value` prop with no `node`), there's no fetched timestamp to show. In that case the label falls back to the moment the widget first mounted, so the label still renders something meaningful instead of disappearing.
-
----
-
-#### Error & empty states
-
-Same three outcomes as `CardWidget` — success, error (fetch failed), and empty (fetch succeeded, no data yet) — styled via the `error`/`empty` slots, with `renderError(error)` / `renderEmpty()` available for full custom rendering. See [Error & empty states](#error--empty-states) above; behavior and precedence are unchanged for `GaugeWidget`.
-
-```jsx
+```tsx
 <GaugeWidget
-  renderError={(error) => <span className="text-orange-500">⚠ {error}</span>}
+  onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="italic">Offline</span> };
+    }
+    if (!data) return;
+    if (data.value > 80) {
+      return { color: "#ef4444", theme: "dark" };
+    }
+  }}
+/>
+```
+
+The only difference from Card is the data shape passed in — `GaugeData` (`{ value, timestamp }`) and `GaugeDataMeta` — but the resolution behavior (temporary override until the callback runs again; `undefined`/nothing clears it) is identical.
+
+---
+
+#### How props are resolved
+
+Rendering follows the same layered order as `CardWidget`:
+
+1. The props you pass to `<GaugeWidget />`
+2. Any temporary overrides returned from `onDataChange`
+3. Theme resolution (`"light"`, `"dark"`, or a custom `WidgetTheme<GaugeSlot>`)
+4. Per-slot class resolution
+
+For each slot (`container`, `title`, `unit`, `track`, `bar`, `needle`, `needleCap`, `value`, `label`, `tick`, `tickLabel`, `error`, `empty`), classes are merged in this order:
+
+1. `GAUGE_DEFAULT_CLASSES`
+2. Active theme classes
+3. `styles`
+
+Later layers win whenever two Tailwind utilities conflict, resolved with `twMerge`. `className` is separate from this chain — merged onto the outer container after the container slot has been resolved.
+
+> **Rule of thumb:** defaults → theme → `styles` → `onDataChange`. User overrides always win.
+
+---
+
+## Common
+
+The sections below apply to every widget in this SDK. Where behavior is identical, only the shared explanation is given once; each subsection includes an example for both `CardWidget` and `GaugeWidget`.
+
+### Formatting vs rendering
+
+`format`, `formatOptions`, `decimalPlaces`, and `labelFormat` control **what text is displayed**.
+
+`styles` controls **how the widget looks**.
+
+`onDataChange` can override any of these (along with most other widget props), allowing the widget to react to incoming data.
+
+#### `format` — named presets for common unit types
+
+For values that need unit-aware scaling (bytes, durations, lengths, etc.), pass a `format` preset instead of manually computing a unit string:
+
+```tsx
+// CardWidget
+<CardWidget node={node} variable="freeMemory" format="bytes" />
+// renders "512" + "MB" — auto-scaled, no manual unit needed
+
+<CardWidget node={node} variable="uptime" format="duration" />
+// renders "2d 4h 12m"
+
+<CardWidget node={node} variable="distance" format="length" formatOptions={{ formatOptions: 2 }} />
+// renders "1.25" + "km"
+```
+
+```tsx
+// GaugeWidget
+<GaugeWidget node={node} variable="freeMemory" format="bytes" min={0} max={8_000_000_000} />
+// renders "512" + "MB" on the value, and (if tick.show is on) scaled units on tick labels too
+
+<GaugeWidget node={node} variable="uptime" format="duration" min={0} max={86400} />
+// renders "2d 4h 12m"
+```
+
+Available presets:
+
+| Preset     | Input           | Output example                                                                                  |
+| ---------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| `number`   | any             | `"123,456"` — locale-aware thousands separators                                                 |
+| `bytes`    | bytes           | `"500"` + `"KB"` — auto-scales B/KB/MB/GB/TB (or KiB/MiB/GiB with `formatOptions.binary: true`) |
+| `duration` | seconds         | `"2h 15m 30s"`                                                                                  |
+| `length`   | meters          | `"1.25"` + `"km"` — auto-scales mm/cm/m/km                                                      |
+| `volume`   | milliliters     | auto-scales mL/L                                                                                |
+| `dataRate` | bits per second | auto-scales bps/Kbps/Mbps                                                                       |
+| `percent`  | 0–100           | `"45%"`                                                                                          |
+
+`formatOptions` accepts:
+
+```ts
+{
+  locale?: string;      // BCP 47 tag, e.g. "en-IN" — defaults to browser locale
+  binary?: boolean;     // bytes only: 1024-based (KiB/MiB) vs 1000-based (KB/MB)
+  formatOptions?: number;   // decimal places for the scaled number
+}
+```
+
+**When to use each option:**
+
+- **`locale`** — force a specific number format instead of relying on the visitor's browser/OS locale. Useful for a dashboard serving a specific region, or an app with its own explicit language setting:
+```tsx
+  <CardWidget format="number" formatOptions={{ locale: "en-IN" }} />
+  // "1,23,456" (Indian digit grouping) instead of "123,456"
+
+  <GaugeWidget format="number" formatOptions={{ locale: "de-DE" }} min={0} max={200000} />
+  // "123.456" (German uses "." as the thousands separator, "," as the decimal point)
+```
+
+- **`formatOptions`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
+```tsx
+  <CardWidget format="bytes" formatOptions={{ formatOptions: 2 }} />
+  // "512.34" + "MB" — more decimal places than the default
+
+  <GaugeWidget format="bytes" formatOptions={{ formatOptions: 0 }} min={0} max={1_000_000_000} />
+  // "512" + "MB" — whole number, no decimals
+```
+
+- **`binary`** — *(`bytes` preset only)* choose between 1000-based and 1024-based scaling. These genuinely produce different numbers for the same raw byte count, so picking the wrong one can make a value look incorrect even though the math is technically right for the mode you're in:
+```tsx
+  <CardWidget format="bytes" formatOptions={{ binary: true }} />
+  // raw 1048576 -> "1" + "MiB" — matches how OS file managers/RAM usage are usually reported
+
+  <CardWidget format="bytes" />
+  // raw 1048576 -> "1.05" + "MB" — matches how storage manufacturers/network specs are usually reported
+```
+  As a rule of thumb: use `binary: true` for memory/RAM/file-size-on-disk readings, and the default (decimal) for network throughput or storage capacity marketing figures.
+
+**`format` takes over the `unit` slot entirely.** When set, the preset determines its own unit per value (e.g. switching from `"KB"` to `"MB"` as a byte count grows) — the `unit` prop is ignored while `format` is active. On `GaugeWidget`, if `tick.labelFormat` isn't set, enabled tick labels also reuse the active `format` preset, so the value and the tick ring stay unit-consistent.
+
+> **Presets don't validate that they match your data's actual meaning** — they only know how to scale a raw number. Applying `format="length"` to a Celsius reading, for example, will scale it as if it were meters and display a plausible-looking but semantically wrong unit. Only use a preset that matches what the underlying value actually represents.
+
+#### Precedence
+
+`formatValue` always wins if provided — it's a full custom formatting function and bypasses `format`/`decimalPlaces` entirely:
+
+```tsx
+// CardWidget
+<CardWidget
+  formatValue={(v) => `${v.toFixed(2)} % RH`}
+  labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
+/>
+```
+
+```tsx
+// GaugeWidget
+<GaugeWidget
+  formatValue={(v) => `${v.toFixed(1)}%`}
+  labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
+/>
+```
+
+> Long `formatValue` output (e.g. `"56.00 % RH"`) may wrap onto a second line at small widths — the value slot wraps rather than overflowing. On `CardWidget` this interacts with a fixed `height` — see [Sizing](#sizing) below. On `GaugeWidget`, the value block sits below (or centered over, in needle-less mode) the arc and wraps the same way within the available space.
+
+---
+
+### The last-updated label
+
+By default, the label under the value shows a fixed clock time (`"Updated 14:32:10"`). This can be changed with `labelFormat`, or fully replaced with `labelText`.
+
+#### `timezone` — override auto-detection
+
+```tsx
+<CardWidget {...commonProps} labelFormat="datetime" timezone="America/New_York" />
+// shows the timestamp converted to Eastern time, regardless of the visitor's own browser timezone
+
+<GaugeWidget {...commonProps} labelFormat="datetime" timezone="Asia/Kolkata" />
+// shows the timestamp converted to Indian Standard Time
+```
+
+If omitted, the widget uses `Intl.DateTimeFormat().resolvedOptions().timeZone` — the browser's own detected timezone. Pass any IANA timezone name (e.g. `"Asia/Kolkata"`, `"Europe/London"`) to force a specific one instead — useful for dashboards where all viewers should see times in the device's local timezone rather than their own.
+
+`timezone` affects the `time`, `date`, and `datetime` label presets. It has no effect on `relative` (a time difference is timezone-independent) or `iso` (ISO 8601 output is always UTC by definition).
+
+> **`GaugeWidget` in manual mode:** if you're using `value` without a `node` (see [Manual vs live values](#manual-vs-live-values)), there's no fetched timestamp to show. The label falls back to the moment the widget first mounted, so it still renders something meaningful instead of disappearing.
+
+#### `labelFormat` — named presets
+
+```tsx
+<CardWidget {...commonProps} labelFormat="relative" />
+// "5 minutes ago" instead of "Updated 14:32:10"
+
+<CardWidget {...commonProps} labelFormat="date" />
+// "Updated 7/24/2026"
+
+<GaugeWidget {...commonProps} labelFormat="relative" />
+// "5 minutes ago" instead of "Updated 14:32:10"
+```
+
+Available presets:
+
+| Preset           | Output example                    |
+| ---------------- | ---------------------------------- |
+| `time` (default) | `"Updated 14:32:10"`               |
+| `date`           | `"Updated 7/24/2026"`              |
+| `datetime`       | `"Updated 7/24/2026, 2:32:10 PM"`  |
+| `relative`       | `"5 minutes ago"`                  |
+| `iso`            | `"2026-07-24T14:32:10.000Z"`       |
+
+#### `labelText` — full custom control
+
+`labelText` always takes precedence over `labelFormat` and receives the raw timestamp, so you can use it for anything the presets don't cover — 12-hour/AM-PM formatting, hours-only, non-default locales, or combining relative time with custom surrounding text:
+
+```tsx
+// AM/PM, 12-hour
+<CardWidget
+  labelText={(ts) => {
+    const d = new Date(ts < 1e12 ? ts * 1000 : ts);
+    return `Updated ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+  }}
+/>;
+// "Updated 2:32 PM"
+
+// Combining relative time with custom text
+import { relativeTime } from "public-widget-sdk/formatters";
+
+<CardWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
+// "Last synced 5 minutes ago"
+
+<GaugeWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
+// "Last synced 5 minutes ago"
+```
+
+`labelFormat` covers the common cases with zero code; `labelText` is the general escape hatch for everything else — the same relationship `formatValue` has with `format`.
+
+---
+
+### Error & empty states
+
+Every widget distinguishes between three outcomes of a fetch, each rendered differently:
+
+| State | When it happens | Default appearance |
+|---|---|---|
+| Success | Data was fetched normally | The formatted value, unit, and label |
+| Error | The fetch failed (network error, bad request, etc.) | The error message, styled via the `error` slot |
+| Empty | The fetch succeeded, but no data exists yet for this variable | `"N/A"`, styled via the `empty` slot |
+
+Both `error` and `empty` are real slots, so they pick up theme colors automatically and can be restyled the same way as any other slot:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  styles={{
+    error: "text-orange-500 italic",
+    empty: "text-slate-300",
+  }}
+/>
+
+<GaugeWidget
+  {...commonProps}
+  styles={{
+    error: "text-orange-500 italic",
+    empty: "text-slate-300",
+  }}
+/>
+```
+
+#### `renderError` / `renderEmpty` — full custom rendering
+
+For full control beyond just restyling text, `renderError` and `renderEmpty` let you replace the entire error/empty state with your own JSX:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  renderError={(error) => (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-orange-500">⚠ Sensor unreachable</span>
+      <span className="text-xs text-slate-400">{error}</span>
+    </div>
+  )}
+  renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
+/>
+
+<GaugeWidget
+  {...commonProps}
+  renderError={(error) => (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-orange-500">⚠ Sensor unreachable</span>
+      <span className="text-xs text-slate-400">{error}</span>
+    </div>
+  )}
   renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
 />
 ```
 
-`onDataChange` also receives the same `(data, meta)` shape as Card, where `meta.kind` is `"success" | "error" | "empty"`.
+`renderError` receives the raw error message string; `renderEmpty` takes no arguments. When either is provided, it fully replaces the default `error`/`empty` slot rendering — the corresponding `styles.error`/`styles.empty` classes are ignored in that case, since there's no default element left for them to apply to.
+
+#### Reacting to errors/empty state via `onDataChange`
+
+`onDataChange` receives a second argument describing which state just occurred, so you can react to errors or empty data the same way you already react to values:
+
+```tsx
+<CardWidget
+  {...commonProps}
+  onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="italic">Offline</span> };
+    }
+    if (meta.kind === "empty") {
+      return { renderEmpty: () => <span className="text-slate-300">Waiting for first reading…</span> };
+    }
+    if (!data) return;
+    if (data.value > 80) {
+      return { title: "High Humidity", theme: "dark" };
+    }
+  }}
+/>
+
+<GaugeWidget
+  {...commonProps}
+  onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="italic">Offline</span> };
+    }
+    if (meta.kind === "empty") {
+      return { renderEmpty: () => <span className="text-slate-300">Waiting for first reading…</span> };
+    }
+    if (!data) return;
+    if (data.value > 80) {
+      return { color: "#ef4444", theme: "dark" };
+    }
+  }}
+/>
+```
+
+`meta.kind` is one of `"success"`, `"error"`, or `"empty"`; `meta.error` is present only when `meta.kind === "error"`, carrying the underlying error message.
+
+This is backwards compatible — existing `onDataChange={(data) => {...}}` callbacks that ignore the second argument continue to work unchanged.
 
 ---
 
-#### Sizing
+### Formatters export
+
+The formatting helpers used internally are also available as a standalone import, for composing into your own `labelText`/`formatValue` functions — usable with either widget:
+
+```tsx
+import { relativeTime } from "public-widget-sdk/formatters";
+```
+
+| Export         | Signature                                        | Description                                                                                             |
+| -------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `relativeTime` | `(timestamp: number, locale?: string) => string` | Converts a timestamp into a human-relative string (`"5 minutes ago"`). Accepts seconds or milliseconds. |
+
+---
+
+### Sizing
+
+#### CardWidget
+
+`width` / `height` / `minWidth` / `maxWidth` are plain props, applied as inline styles on the container — independent of the whole `styles`/theme system:
+
+```jsx
+<CardWidget width={320} height={200} minWidth={280} maxWidth={400} />
+```
+
+##### `height` has two distinct modes
+
+Whether you pass `height` changes how the card behaves — this is intentional, not a quirk:
+
+|                      | Behavior                                                                                                                                                                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`height` omitted** | The card **auto-grows** to fit its content. If `formatValue`/`labelText` produce long text that wraps, the card simply becomes taller. Sizing scales with **width only**.                                                                                                                               |
+| **`height` passed**  | The card becomes a **fixed-size box**. Sizing scales with **both width and height** (see [Responsive sizing](#responsive-sizing)). If content is too tall to fit (e.g. a long wrapped value at a small height), it is **clipped**, not overflowed — the card will not grow past the height you gave it. |
+
+```jsx
+// Auto-height: card grows to fit content, whatever that content turns out to be
+<CardWidget node={node} variable="humidity" />
+
+// Fixed-height: card is exactly 300px tall; content that doesn't fit is clipped
+<CardWidget node={node} variable="humidity" height={300} width={700} />
+```
+
+If you're using a `formatValue` that can produce long strings, either don't pass a fixed `height` (let the card grow to fit), or pass a `height` generous enough for the wrapped text at your chosen `width`.
+
+#### GaugeWidget
 
 ```jsx
 <GaugeWidget width={280} height={200} />
 <GaugeWidget size={220} />   // shorthand: sets width AND height to the same value (a square gauge)
 ```
 
-`size` takes priority over `width`/`height` when set. Without `size` or `height`, the gauge fills its container's width and derives a proportional height automatically (unless `aspectRatio` is set).
+`size` takes priority over `width`/`height` when both are set. Without `size` or `height`, the gauge fills its container's width and derives a proportional height automatically (unless `aspectRatio` is set).
 
 | Prop          | Type     | Description                                                             |
 | ------------- | -------- | -------------------------------------------------------------------------- |
@@ -873,27 +891,95 @@ Same three outcomes as `CardWidget` — success, error (fetch failed), and empty
 | `maxHeight`   | `number` | Maximum container height in px                                             |
 | `aspectRatio` | `number` | Width-to-height ratio used when neither `size` nor `height` is set         |
 
----
-
-#### Responsive sizing
-
-Like `CardWidget`, the gauge uses CSS Container Queries to scale internal typography and spacing (title/value/unit/label font sizes, gaps) based on its own rendered box, not the browser viewport — no configuration needed, and it composes the same way with Tailwind responsive prefixes in `styles` as described under [Responsive sizing](#responsive-sizing) above.
-
-The arc's radius itself is handled separately (it's a geometry calculation, not a CSS variable) — it auto-fits to whatever space is left after padding and, if enabled, tick-mark space is subtracted, capped by `arc.radius` when you set one explicitly.
+Unlike Card, the gauge doesn't clip content past a fixed `height` — instead, the arc's radius and internal spacing shrink to fit whatever box is available (see [Responsive sizing](#responsive-sizing) below).
 
 ---
 
-#### Other props
+### Responsive sizing
 
-| Prop            | Type                                        | Description                                                                          |
-| --------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `title`         | `string`                                     | Gauge title. Default: `"Latest Value"`                                                    |
-| `value`         | `number`                                     | Manual/controlled value. Used as the initial value, or the only value if no `node` is given |
-| `min`           | `number`                                     | Minimum of the gauge's range. Default: `0`                                                |
-| `max`           | `number`                                     | Maximum of the gauge's range. Default: `100`                                              |
-| `unit`          | `string`                                     | Unit suffix shown next to the value                                                       |
-| `decimalPlaces` | `number`                                     | Decimal places for the displayed value (used only if `formatValue` isn't provided)        |
+The widget automatically scales its internal spacing and typography using **CSS Container Queries** — based on the widget's own rendered size, not the browser viewport.
 
+By default the following properties scale automatically:
+
+- container padding
+- title font size
+- value font size
+- unit font size
+- label font size
+- spacing (`gap`)
+
+**When `height` is omitted**, scaling responds to the container's **width only** (`cqw`).
+
+**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size container renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect.
+
+A widget inside a narrow dashboard column will use smaller typography than the same widget rendered full-width, even on the same screen — this behavior is built in and needs no configuration.
+
+#### Overriding responsive sizing
+
+If you provide your own font-size utility for a slot, you're opting out of the default responsive sizing for that slot.
+
+```tsx
+// CardWidget
+<CardWidget
+  styles={{
+    value: "text-6xl",
+  }}
+/>
+
+// GaugeWidget
+<GaugeWidget
+  styles={{
+    value: "text-6xl",
+  }}
+/>
+```
+
+The value will always render at `text-6xl`. Likewise, responsive Tailwind classes (`text-2xl md:text-5xl`) take precedence over the widget's default responsive sizing — your classes always win over the widget defaults.
+
+> **GaugeWidget note:** the arc's radius itself is handled separately from these CSS variables (it's a geometry calculation, not a font size) — it auto-fits to whatever space is left after padding and, if enabled, tick-mark space is subtracted, capped by `arc.radius` when you set one explicitly.
+
+---
+
+### Loading & error states
+
+#### CardWidget
+
+While the initial fetch is in flight, the card renders **skeleton loaders** in place of the value and label — pulsing placeholder blocks sized to match each slot's current font-size variable (`var(--anedya-card-value-size)` / `var(--anedya-card-label-size)`), so the skeleton scales along with the card exactly like the real content would.
+
+If the fetch fails or no data is available, the card renders the error message text in place of the value (title still renders normally).
+
+Neither state currently accepts style overrides via `styles` — flag it if you need to customize their appearance.
+
+#### GaugeWidget
+
+While the initial fetch is in flight, the gauge renders the same kind of pulsing skeleton blocks in place of the value and label (sized against `var(--anedya-gauge-value-size)` / `var(--anedya-gauge-label-size)`), and the arc/needle themselves render at reduced opacity rather than disappearing, so the gauge's shape stays visible while data loads.
+
+If the fetch fails or no data is available, the error message (or `renderError`/`renderEmpty` output) replaces the value/label block; the arc still renders behind it at the gauge's minimum value.
+
+---
+
+### Other props
+
+#### CardWidget
+
+| Prop            | Type     | Description                                                                        |
+| --------------- | -------- | ------------------------------------------------------------------------------------ |
+| `title`         | `string` | Card title. Default: `"Latest Value"`                                                |
+| `unit`          | `string` | Unit suffix shown next to the value                                                  |
+| `decimalPlaces` | `number` | Decimal places for the displayed value (used only if `formatValue` isn't provided)   |
+
+#### GaugeWidget
+
+| Prop            | Type      | Description                                                                                    |
+| --------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| `title`         | `string`  | Gauge title. Default: `"Latest Value"`                                                              |
+| `value`         | `number`  | Manual/controlled value. Used as the initial value, or the only value if no `node` is given         |
+| `min`           | `number`  | Minimum of the gauge's range. Default: `0`                                                          |
+| `max`           | `number`  | Maximum of the gauge's range. Default: `100`                                                        |
+| `unit`          | `string`  | Unit suffix shown next to the value                                                                 |
+| `decimalPlaces` | `number`  | Decimal places for the displayed value (used only if `formatValue` isn't provided)                  |
+
+---
 
 ## Stylesheet import
 
