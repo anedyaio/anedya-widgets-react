@@ -20,6 +20,8 @@ export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   // inline style in the widget, which wins over classes), so this only
   // needs non-size utilities.
   tickLabel: "font-medium select-none",
+  error: "text-sm font-medium",
+  empty: "text-[length:var(--anedya-card-value-size)] font-bold",
 };
 
 export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
@@ -35,6 +37,8 @@ export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
     value: "text-slate-900",
     tick: "text-slate-300",
     tickLabel: "text-slate-400",
+    error: "text-red-600",
+    empty: "text-slate-400",
   },
 };
 
@@ -51,8 +55,13 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
     label: "text-slate-500",
     tick: "text-slate-600",
     tickLabel: "text-slate-500",
+    error: "text-red-400",
+    empty: "text-slate-500",
   },
 };
 
-export const gaugeThemes = { light: gaugeLightTheme, dark: gaugeDarkTheme } as const;
+export const gaugeThemes = {
+  light: gaugeLightTheme,
+  dark: gaugeDarkTheme,
+} as const;
 export const DEFAULT_GAUGE_THEME = gaugeLightTheme;

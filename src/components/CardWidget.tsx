@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import {
-  AnedyaWidgetBaseProps,
-
-} from "../common";
+import { AnedyaWidgetBaseProps } from "../common";
 
 import type { FormatOptions, FormatPreset, LabelFormatPreset } from "../common";
 import { SlotClassNames, WidgetTheme } from "../types/root";
@@ -15,10 +12,14 @@ import {
 } from "../themes/defaultTheme";
 import { FORMATTERS, LABEL_FORMATTERS } from "../helpers/formatters";
 
-export type CardSlot = "container" | "title" | "value" | "unit" | "label"|"error" | "empty";
-
-
-
+export type CardSlot =
+  | "container"
+  | "title"
+  | "value"
+  | "unit"
+  | "label"
+  | "error"
+  | "empty";
 
 /** The raw data this widget fetched — exactly what comes back from the request, not yet formatted. */
 export interface CardData {
@@ -85,7 +86,10 @@ export interface CardWidgetProps extends AnedyaWidgetBaseProps {
    *   }
    * }}
    */
-onDataChange?: (data: CardData | null, meta: CardDataMeta) => CardWidgetUpdate | void;
+  onDataChange?: (
+    data: CardData | null,
+    meta: CardDataMeta
+  ) => CardWidgetUpdate | void;
 
   /**
    * Named formatting preset for common unit types — auto-scales both
@@ -107,16 +111,16 @@ onDataChange?: (data: CardData | null, meta: CardDataMeta) => CardWidgetUpdate |
    */
   labelFormat?: LabelFormatPreset;
   /** Custom render for the error state. Return JSX to fully replace the default error text. */
-renderError?: (error: string) => React.ReactNode;
+  renderError?: (error: string) => React.ReactNode;
 
-/** Custom render when the fetch succeeds but no data is available. Defaults to a greyed-out "N/A". */
-renderEmpty?: () => React.ReactNode;
-/**
- * IANA timezone name (e.g. "Asia/Kolkata", "America/New_York") used when
- * formatting the last-updated label. Defaults to the browser's
- * auto-detected timezone if omitted.
- */
-timezone?: string;
+  /** Custom render when the fetch succeeds but no data is available. Defaults to a greyed-out "N/A". */
+  renderEmpty?: () => React.ReactNode;
+  /**
+   * IANA timezone name (e.g. "Asia/Kolkata", "America/New_York") used when
+   * formatting the last-updated label. Defaults to the browser's
+   * auto-detected timezone if omitted.
+   */
+  timezone?: string;
 }
 
 const DEFAULT_WIDTH = 240;
@@ -144,7 +148,7 @@ export function CardWidget({
   format,
   formatOptions,
   labelFormat,
-   timezone,
+  timezone,
   renderError,
   renderEmpty,
 }: CardWidgetProps): React.JSX.Element {
@@ -162,7 +166,6 @@ export function CardWidget({
   const mountedRef = useRef(false);
   const isFetchingRef = useRef(false);
 
-  
   useEffect(() => {
     if (!node) return;
     mountedRef.current = true;
@@ -182,22 +185,21 @@ export function CardWidget({
           setTimestamp(res.data.timestamp);
           setError(null);
           setIsEmpty(false);
-        }  else if (res.isSuccess && !res.isDataAvailable) {
+        } else if (res.isSuccess && !res.isDataAvailable) {
           // Fetch succeeded, but there's genuinely no data yet — distinct
           // from an actual error.
           setValue(null);
           setTimestamp(null);
           setError(null);
           setIsEmpty(true);
-        }
-       else {
+        } else {
           setValue(null);
           setError(res.error?.errorMessage ?? "Failed to fetch data");
           setIsEmpty(false);
         }
       } catch (err: any) {
         if (!mountedRef.current) return;
-       setValue(null);
+        setValue(null);
         setError(err?.message ?? "Failed to fetch data");
         setIsEmpty(false);
       } finally {
@@ -214,7 +216,7 @@ export function CardWidget({
     };
   }, [node, variable]);
 
-   // Resolve onDataChange whenever data / error / empty status changes.
+  // Resolve onDataChange whenever data / error / empty status changes.
   // The callback returns temporary prop overrides which layer on top
   // of the widget's original props.
   useEffect(() => {
@@ -225,11 +227,11 @@ export function CardWidget({
 
     const data =
       value != null && timestamp != null ? { value, timestamp } : null;
- const meta: CardDataMeta = error
+    const meta: CardDataMeta = error
       ? { kind: "error", error }
       : isEmpty
-        ? { kind: "empty" }
-        : { kind: "success" };
+      ? { kind: "empty" }
+      : { kind: "success" };
     setDynamicProps(onDataChange(data, meta) ?? {});
   }, [value, timestamp, error, isEmpty, onDataChange]);
   const resolvedProps = {
@@ -248,7 +250,7 @@ export function CardWidget({
     format,
     formatOptions,
     labelFormat,
-     timezone,
+    timezone,
     renderError,
     renderEmpty,
     ...dynamicProps,
@@ -263,8 +265,8 @@ export function CardWidget({
     resolvedProps.theme === "dark"
       ? darkTheme
       : resolvedProps.theme === "light"
-        ? lightTheme
-        : (resolvedProps.theme ?? lightTheme);
+      ? lightTheme
+      : resolvedProps.theme ?? lightTheme;
 
   // Per-slot resolution, lowest to highest precedence:
   //   1. CARD_DEFAULT_CLASSES[slot]      — built-in baseline
@@ -278,33 +280,49 @@ export function CardWidget({
     twMerge(
       CARD_DEFAULT_CLASSES[slot],
       resolvedTheme.styles?.[slot],
-      resolvedProps.styles?.[slot],
+      resolvedProps.styles?.[slot]
     );
 
   const { displayValue, displayUnit } = useMemo(() => {
-    if (value == null) return { displayValue: null, displayUnit: resolvedProps.unit };
+    if (value == null)
+      return { displayValue: null, displayUnit: resolvedProps.unit };
 
     if (resolvedProps.formatValue) {
-      return { displayValue: resolvedProps.formatValue(value), displayUnit: resolvedProps.unit };
+      return {
+        displayValue: resolvedProps.formatValue(value),
+        displayUnit: resolvedProps.unit,
+      };
     }
 
     if (resolvedProps.format) {
-      const result = FORMATTERS[resolvedProps.format](value, resolvedProps.formatOptions);
+      const result = FORMATTERS[resolvedProps.format](
+        value,
+        resolvedProps.formatOptions
+      );
       return { displayValue: result.value, displayUnit: result.unit };
     }
 
     if (resolvedProps.decimalPlaces != null) {
-      return { displayValue: value.toFixed(resolvedProps.decimalPlaces), displayUnit: resolvedProps.unit };
+      return {
+        displayValue: value.toFixed(resolvedProps.decimalPlaces),
+        displayUnit: resolvedProps.unit,
+      };
     }
 
     return { displayValue: String(value), displayUnit: resolvedProps.unit };
-  }, [value, resolvedProps.formatValue, resolvedProps.format, resolvedProps.formatOptions, resolvedProps.decimalPlaces, resolvedProps.unit]);
+  }, [
+    value,
+    resolvedProps.formatValue,
+    resolvedProps.format,
+    resolvedProps.formatOptions,
+    resolvedProps.decimalPlaces,
+    resolvedProps.unit,
+  ]);
 
- 
- // Auto-detect the browser's timezone unless the consumer overrides it.
+  // Auto-detect the browser's timezone unless the consumer overrides it.
   const resolvedTimezone =
     resolvedProps.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
- const displayLabel = useMemo(() => {
+  const displayLabel = useMemo(() => {
     if (timestamp == null) return null;
 
     if (resolvedProps.labelText) return resolvedProps.labelText(timestamp);
@@ -314,7 +332,13 @@ export function CardWidget({
       locale: resolvedProps.formatOptions?.locale,
       timezone: resolvedTimezone,
     });
-  }, [timestamp, resolvedProps.labelText, resolvedProps.labelFormat, resolvedProps.formatOptions?.locale, resolvedTimezone]);
+  }, [
+    timestamp,
+    resolvedProps.labelText,
+    resolvedProps.labelFormat,
+    resolvedProps.formatOptions?.locale,
+    resolvedTimezone,
+  ]);
   const hasExplicitHeight = height != null || dynamicProps.height != null;
 
   return (
@@ -336,7 +360,7 @@ export function CardWidget({
         className={twMerge(
           "anedya-card",
           resolveSlot("container"),
-          resolvedProps.className,
+          resolvedProps.className
         )}
         style={{
           flex: "1 0 auto",
@@ -371,7 +395,7 @@ export function CardWidget({
           ) : (
             <span className={resolveSlot("error")}>{error}</span>
           )
-        ) :isEmpty ? (
+        ) : isEmpty ? (
           resolvedProps.renderEmpty ? (
             resolvedProps.renderEmpty()
           ) : (
@@ -382,7 +406,7 @@ export function CardWidget({
             <span
               className={twMerge(
                 "inline-flex items-baseline justify-center gap-1",
-                resolveSlot("value"),
+                resolveSlot("value")
               )}
             >
               <span className="min-w-0 break-words">{displayValue}</span>

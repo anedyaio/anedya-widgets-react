@@ -36,6 +36,13 @@ export interface GaugeData {
   timestamp: number;
 }
 
+/** Describes which state the widget just landed in, passed alongside `data` to `onDataChange`. */
+export interface GaugeDataMeta {
+  kind: "success" | "error" | "empty";
+  /** Present only when kind === "error". */
+  error?: string;
+}
+
 export type GaugeWidgetUpdate = Partial<
   Omit<GaugeWidgetProps, "node" | "variable" | "onDataChange">
 >;
@@ -65,15 +72,30 @@ export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
   formatOptions?: FormatOptions;
   labelText?: (timestamp: number) => string;
   labelFormat?: LabelFormatPreset;
+  /**
+   * IANA timezone name (e.g. "Asia/Kolkata", "America/New_York") used when
+   * formatting the last-updated label. Defaults to the browser's
+   * auto-detected timezone if omitted.
+   */
+  timezone?: string;
 
   styles?: SlotClassNames<GaugeSlot>;
-  style?: React.CSSProperties;
+  // style?: React.CSSProperties;
 
   onClick?: (value: number) => void;
   // REQUIREMENT 5: onValueChange removed — onDataChange already lets the
   // caller override *any* prop whenever new data arrives, so a separate
   // value-only callback was redundant.
-  onDataChange?: (data: GaugeData | null) => GaugeWidgetUpdate | void;
+  onDataChange?: (
+    data: GaugeData | null,
+    meta: GaugeDataMeta
+  ) => GaugeWidgetUpdate | void;
+
+  /** Custom render for the error state. Return JSX to fully replace the default error text. */
+  renderError?: (error: string) => React.ReactNode;
+
+  /** Custom render when the fetch succeeds but no data is available. Defaults to a greyed-out "N/A". */
+  renderEmpty?: () => React.ReactNode;
 }
 
 const DEG2RAD = Math.PI / 180;
@@ -254,7 +276,7 @@ export function GaugeWidget({
   title = "Latest Value",
   theme,
   className,
-  style,
+  // style,
   width,
   height,
   minWidth = 160,
@@ -281,9 +303,11 @@ export function GaugeWidget({
   formatValue,
   labelText,
   labelFormat,
+  timezone,
   styles = {},
   onDataChange,
-
+  renderError,
+  renderEmpty,
 }: GaugeWidgetProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   // REQUIREMENT 2: stable "now" fallback for manual/custom `value` mode,
@@ -294,6 +318,7 @@ export function GaugeWidget({
   const [timestamp, setTimestamp] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEmpty, setIsEmpty] = useState(false);
 
   const [dynamicProps, setDynamicProps] = useState<GaugeWidgetUpdate>({});
 
@@ -318,14 +343,25 @@ export function GaugeWidget({
         if (res.isSuccess && res.isDataAvailable) {
           setFetchedValue(res.data.value);
           setTimestamp(res.data.timestamp);
+          setError(null);
+          setIsEmpty(false);
+        } else if (res.isSuccess && !res.isDataAvailable) {
+          // Fetch succeeded, but there's genuinely no data yet — distinct
+          // from an actual error.
+          setFetchedValue(null);
+          setTimestamp(null);
+          setError(null);
+          setIsEmpty(true);
         } else {
           setFetchedValue(null);
           setError(res.error?.errorMessage ?? "No data available");
+          setIsEmpty(false);
         }
       } catch (err: any) {
         if (!mountedRef.current) return;
         setFetchedValue(null);
         setError(err?.message ?? "Failed to fetch data");
+        setIsEmpty(false);
       } finally {
         if (mountedRef.current) {
           setLoading(false);
@@ -351,9 +387,14 @@ export function GaugeWidget({
       fetchedValue != null && timestamp != null
         ? { value: fetchedValue, timestamp }
         : null;
+    const meta: GaugeDataMeta = error
+      ? { kind: "error", error }
+      : isEmpty
+      ? { kind: "empty" }
+      : { kind: "success" };
 
-    setDynamicProps(onDataChange(data) ?? {});
-  }, [fetchedValue, timestamp, onDataChange]);
+    setDynamicProps(onDataChange(data, meta) ?? {});
+  }, [fetchedValue, timestamp, error, isEmpty, onDataChange]);
 
   const rawValue = fetchedValue ?? valueProp ?? min;
   const clampedValue = Math.min(max, Math.max(min, rawValue));
@@ -401,10 +442,12 @@ export function GaugeWidget({
     formatOptions,
     labelText,
     labelFormat,
+    timezone,
+    renderError,
+    renderEmpty,
     ...dynamicProps,
     styles: mergedStyles,
     responsive, // not work
-
   };
 
   // ---- Resolved config ----
@@ -470,15 +513,15 @@ export function GaugeWidget({
       ? gaugeLightTheme
       : (resolvedProps.theme as WidgetTheme<GaugeSlot>) ?? DEFAULT_GAUGE_THEME;
 
-      const resolveSlot = useCallback(
-        (slot: GaugeSlot) =>
-          twMerge(
-            GAUGE_DEFAULT_CLASSES[slot],
-            resolvedTheme?.styles?.[slot],
-            resolvedProps.styles[slot]
-          ),
-        [resolvedTheme, resolvedProps.styles]
-      );
+  const resolveSlot = useCallback(
+    (slot: GaugeSlot) =>
+      twMerge(
+        GAUGE_DEFAULT_CLASSES[slot],
+        resolvedTheme?.styles?.[slot],
+        resolvedProps.styles[slot]
+      ),
+    [resolvedTheme, resolvedProps.styles]
+  );
 
   // ---- REQUIREMENT 3: tick values (min..max split into `count` even steps) ----
   const tickValues = useMemo(() => {
@@ -559,6 +602,10 @@ export function GaugeWidget({
     [timestamp, valueProp]
   );
 
+  // Auto-detect the browser's timezone unless the consumer overrides it.
+  const resolvedTimezone =
+    resolvedProps.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   // ---- Last-updated label — THIS is what shows the time ----
   const displayLabel = useMemo(() => {
     if (effectiveTimestamp == null) return null;
@@ -567,12 +614,16 @@ export function GaugeWidget({
       return resolvedProps.labelText(effectiveTimestamp);
 
     const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "time"];
-    return formatter(effectiveTimestamp, resolvedProps.formatOptions?.locale);
+    return formatter(effectiveTimestamp, {
+      locale: resolvedProps.formatOptions?.locale,
+      timezone: resolvedTimezone,
+    } as any);
   }, [
     effectiveTimestamp,
     resolvedProps.labelText,
     resolvedProps.labelFormat,
     resolvedProps.formatOptions?.locale,
+    resolvedTimezone,
   ]);
 
   // ---- Geometry ----
@@ -948,7 +999,7 @@ export function GaugeWidget({
             ? undefined
             : resolvedProps.aspectRatio ?? 1 / DEFAULT_HEIGHT_RATIO,
         boxSizing: "border-box",
-        ...style,
+        // ...style,
       }}
       // onClick={handleClick}
     >
@@ -1010,7 +1061,7 @@ export function GaugeWidget({
             value/label directly over the arc's visual center (cx, cy).
             Position is expressed as a % of the viewBox so it stays correct
             at any container size. */}
-          {!resolvedNeedle.show && !loading && !error && (
+          {!resolvedNeedle.show && !loading && !error && !isEmpty && (
             <div
               className="absolute flex flex-col items-center justify-center gap-[var(--anedya-gauge-gap)] px-2 pointer-events-none"
               style={{
@@ -1044,7 +1095,17 @@ export function GaugeWidget({
             />
           </div>
         ) : error ? (
-          <span className="text-red-600 text-sm">{error}</span>
+          resolvedProps.renderError ? (
+            resolvedProps.renderError(error)
+          ) : (
+            <span className={resolveSlot("error")}>{error}</span>
+          )
+        ) : isEmpty ? (
+          resolvedProps.renderEmpty ? (
+            resolvedProps.renderEmpty()
+          ) : (
+            <span className={resolveSlot("empty")}>N/A</span>
+          )
         ) : (
           // REQUIREMENT 1: needle-mode keeps the original below-the-arc
           // layout. No-needle mode already rendered `valueBlock` centered above.

@@ -11,7 +11,9 @@ export type GaugeSlot =
   | "value"
   | "label"
   | "tick" // NEW — tick line styling via `styles` prop
-  | "tickLabel"; // NEW — tick number styling via `styles` prop
+  | "tickLabel" // NEW — tick number styling via `styles` prop
+  | "error"
+  | "empty";
 
 export interface GaugeArcConfig {
   /** Degrees, 0 = 12 o'clock, clockwise-positive. */

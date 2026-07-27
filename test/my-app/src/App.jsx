@@ -272,7 +272,7 @@ export default function App() {
 
       <GaugeWidget
         value={72}
-        className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
+        className="bg-red-400 rounded-2xl shadow-md shadow-blue-400"
       />
 
       {/* <GaugeWidget
@@ -307,13 +307,13 @@ export default function App() {
         title="Custom Title - Dark Theme"
         theme={gaugeCustomDarkTheme}
         styles={{
-          title: "uppercase font-bold text-[50px] italic",
+          title: "uppercase font-bold italic",
         }}
         tick={{
           show: false,
         }}
         // responsive
-        width={400}
+        // width={400}
         // height="100%"
         arc={{
           startAngle: -180,
@@ -410,6 +410,38 @@ export default function App() {
           };
         }}
       />
+
+      <GaugeWidget
+        {...commonProps}
+        styles={{
+          error: "text-orange-500 italic",
+          empty: "text-slate-300",
+        }}
+        theme="dark"
+        renderError={(error) => (
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-orange-500">⚠ Sensor unreachable</span>
+            <span className="text-xs text-slate-400">{error}</span>
+          </div>
+        )}
+        renderEmpty={() => (
+          <span className="text-slate-300">— no reading yet —</span>
+        )}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        theme="dark"
+        title="IST"
+        timezone="Asia/Kolkata"
+      />
+      <GaugeWidget
+        {...commonProps}
+        theme="dark"
+        title="EST"
+        timezone="America/New_York"
+      />
+      <GaugeWidget {...commonProps} theme="dark" title="UTC" timezone="UTC" />
     </div>
   );
 }
