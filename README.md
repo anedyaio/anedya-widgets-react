@@ -264,6 +264,8 @@ A radial arc gauge — shows a single value as a filled arc with an optional nee
 />
 ```
 
+> **Default behaviour:** simply pass `node` and `variable` — the gauge renders with the light theme, title `"Latest Value"`, no tick marks, and the last‑updated label showing the current time.
+
 #### Required props
 
 | Prop       | Type     | Description                      |
@@ -417,7 +419,7 @@ If omitted, the bar falls back to the theme's `bar` slot color via `currentColor
 | `type`        | `"line" \| "rounded" \| "drop" \| "triangle"`     | `"rounded"`        | Needle shape                                                                          |
 | `length`      | `"short" \| "medium" \| "full" \| number`         | `"medium"`         | Preset (relative to the resolved radius) or an explicit px value                     |
 | `width`       | `number`                                         | `4`                | Needle thickness in px                                                               |
-| `color`       | `string`                                         | —                  | Shorthand — sets both `needleColor` and `capColor` at once                           |
+| `color`       | `string`                                         | `theme`                  | Shorthand — sets both `needleColor` and `capColor` at once                           |
 | `needleColor` | `string`                                         | `color` or theme   | Color of the needle shape specifically, overrides `color` for the shape only         |
 | `capColor`    | `string`                                         | `color` or theme   | Color of the center cap circle specifically                                          |
 | `capRadius`   | `number`                                         | `6`                | Radius of the center cap circle in px                                                |
@@ -462,11 +464,11 @@ Setting `needle={{ show: false }}` turns the gauge into a donut-style indicator 
 | `show`         | `boolean`                    | `false` | Whether tick marks are drawn                                                                         |
 | `count`        | `number`                     | `10`    | Number of **intervals** between `min` and `max` — `count: 10` draws 11 marks                          |
 | `size`         | `number`                     | `6`     | Tick line length in px                                                                                |
-| `color`        | `string`                     | —       | Tick line color; falls back to the theme's `tick` slot via `currentColor`                            |
+| `color`        | `string`                     | `theme`       | Tick line color; falls back to the theme's `tick` slot via `currentColor`                            |
 | `radiusOffset` | `number`                     | `4`     | Gap in px between the arc's outer edge and the start of the tick line                                 |
 | `labelGap`     | `number`                     | `4`     | Gap in px between the end of the tick line and its label                                              |
 | `labelSize`    | `number`                     | `10`    | Tick label font size in px — set as an inline style, so it always wins over `styles.tickLabel`         |
-| `labelColor`   | `string`                     | —       | Tick label color; falls back to the theme's `tickLabel` slot                                          |
+| `labelColor`   | `string`                     | `theme`       | Tick label color; falls back to the theme's `tickLabel` slot                                          |
 | `labelFormat`  | `(value: number) => string`  | —       | Custom formatter for tick numbers. If omitted, reuses the widget's `format` preset if one is set, otherwise a plain rounded number |
 
 Enabling ticks reserves extra space inside the widget for the line + gaps + label, shrinking the arc's radius slightly so the ring is never clipped — you don't need to size the container any differently to accommodate it.
@@ -487,7 +489,7 @@ Enabling ticks reserves extra space inside the widget for the line + gaps + labe
 | ---------- | ------------- | ------------ | -------------------------------------------------------------- |
 | `show`     | `boolean`     | `true`       | Whether the bar (and needle, if also enabled) animates          |
 | `duration` | `number`      | `1000`       | Transition duration in ms                                       |
-| `easing`   | `GaugeEasing` | `"cubicOut"` | Any of the standard d3-ease families — `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out/InOut`, `expIn/Out/InOut`, `circleIn/Out/InOut`, `backIn/Out/InOut`, `elasticIn/Out/InOut`, `bounceIn/Out/InOut` |
+| `easing`   | `GaugeEasing` | `"cubicOut"` | Any of the standard d3-ease families — `easeLinear`, `easeQuadIn`, `easeQuadOut`, `easeQuadInOut`, `easeCubicIn`, `easeCubicOut`, `easeCubicInOut`, `easeSinIn`, `easeSinOut`, `easeSinInOut`, `easeExpIn`, `easeExpOut`, `easeExpInOut`, `easeCircleIn`, `easeCircleOut`, `easeCircleInOut`, `easeBackIn`, `easeBackOut`, `easeBackInOut`, `easeElasticIn`, `easeElasticOut`, `easeElasticInOut`, `easeBounceIn`, `easeBounceOut`, `easeBounceInOut` |
 
 With `animation.show: false`, both the bar and needle snap directly to the new value with no transition, regardless of `needle.animation`.
 
@@ -497,16 +499,70 @@ With `animation.show: false`, both the bar and needle snap directly to the new v
 
 `onDataChange` works the same way it does on `CardWidget` (see [`onDataChange` under CardWidget](#ondatachange--data-driven-rendering)) — it's called with the latest fetched reading and a `meta` object, and can return a partial set of props (including `styles`) that temporarily override the gauge's own props:
 
+**Example 1 – change many props based on value ranges**
+
 ```tsx
 <GaugeWidget
+  node={node}
+  variable="pressure"
+  min={0}
+  max={100}
+  onDataChange={(data, meta) => {
+    if (!data || meta.kind !== "success") return;
+
+    if (data.value > 80) {
+      return {
+        title: "🔴 High",
+        color: "#ef4444",
+        theme: "dark",
+        arc: { startAngle: -135, endAngle: 135 },
+        needle: { type: "triangle", color: "#dc2626" },
+        animation: { duration: 500, easing: "elasticOut" },
+        tick: { show: true, color: "#fca5a5", labelColor: "#f87171" },
+        styles: {
+          value: "text-red-500 text-4xl font-black",
+          title: "uppercase tracking-wide",
+        },
+      };
+    }
+    if (data.value < 20) {
+      return {
+        title: "🟢 Low",
+        color: ["#10b981", "#34d399"],
+        arc: { thickness: 18 },
+        needle: { show: false },
+      };
+    }
+    // Clear overrides for mid-range values
+  }}
+/>
+```
+
+**Example 2 – custom error and empty rendering**
+
+```tsx
+<GaugeWidget
+  node={node}
+  variable="sensor"
   onDataChange={(data, meta) => {
     if (meta.kind === "error") {
-      return { renderError: () => <span className="italic">Offline</span> };
+      return {
+        renderError: (msg) => (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-2xl">⚠️</span>
+            <span className="text-sm text-orange-600 italic">{msg}</span>
+          </div>
+        ),
+      };
     }
-    if (!data) return;
-    if (data.value > 80) {
-      return { color: "#ef4444", theme: "dark" };
+    if (meta.kind === "empty") {
+      return {
+        renderEmpty: () => (
+          <span className="text-slate-400 animate-pulse">— waiting for first reading —</span>
+        ),
+      };
     }
+    // No override on success
   }}
 />
 ```
@@ -661,9 +717,11 @@ By default, the label under the value shows a fixed clock time (`"Updated 14:32:
 
 ```tsx
 <CardWidget {...commonProps} labelFormat="datetime" timezone="America/New_York" />
+// commonProps = { node, variable: "humidity" }
 // shows the timestamp converted to Eastern time, regardless of the visitor's own browser timezone
 
 <GaugeWidget {...commonProps} labelFormat="datetime" timezone="Asia/Kolkata" />
+// commonProps = { node, variable: "humidity" }
 // shows the timestamp converted to Indian Standard Time
 ```
 
@@ -677,12 +735,15 @@ If omitted, the widget uses `Intl.DateTimeFormat().resolvedOptions().timeZone` �
 
 ```tsx
 <CardWidget {...commonProps} labelFormat="relative" />
+// commonProps = { node, variable: "humidity" }
 // "5 minutes ago" instead of "Updated 14:32:10"
 
 <CardWidget {...commonProps} labelFormat="date" />
+// commonProps = { node, variable: "humidity" }
 // "Updated 7/24/2026"
 
 <GaugeWidget {...commonProps} labelFormat="relative" />
+// commonProps = { node, variable: "humidity" }
 // "5 minutes ago" instead of "Updated 14:32:10"
 ```
 
@@ -752,6 +813,8 @@ Both `error` and `empty` are real slots, so they pick up theme colors automatica
     empty: "text-slate-300",
   }}
 />
+
+//commonProps = { node, variable: "humidity" }
 ```
 
 #### `renderError` / `renderEmpty` — full custom rendering
@@ -780,6 +843,8 @@ For full control beyond just restyling text, `renderError` and `renderEmpty` let
   )}
   renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
 />
+
+// commonProps = { node, variable: "humidity" }
 ```
 
 `renderError` receives the raw error message string; `renderEmpty` takes no arguments. When either is provided, it fully replaces the default `error`/`empty` slot rendering — the corresponding `styles.error`/`styles.empty` classes are ignored in that case, since there's no default element left for them to apply to.
@@ -820,6 +885,8 @@ For full control beyond just restyling text, `renderError` and `renderEmpty` let
     }
   }}
 />
+
+// commonProps = { node, variable: "humidity" }
 ```
 
 `meta.kind` is one of `"success"`, `"error"`, or `"empty"`; `meta.error` is present only when `meta.kind === "error"`, carrying the underlying error message.
@@ -907,10 +974,11 @@ By default the following properties scale automatically:
 - unit font size
 - label font size
 - spacing (`gap`)
+- arc thickness (gauge bar thickness)
 
 **When `height` is omitted**, scaling responds to the container's **width only** (`cqw`).
 
-**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size container renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect.
+**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size container renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect. For the `GaugeWidget`, the arc radius and thickness are also computed from the available container size, so they resize automatically.
 
 A widget inside a narrow dashboard column will use smaller typography than the same widget rendered full-width, even on the same screen — this behavior is built in and needs no configuration.
 
