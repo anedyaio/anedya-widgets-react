@@ -27,12 +27,12 @@ export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
     container: "",
     title: "text-slate-500",
     unit: "text-slate-500",
+    label: "text-slate-400",
     track: "text-slate-200", // read via `currentColor` on the track path
     bar: "text-indigo-500",
     needle: "text-slate-700",
     needleCap: "text-slate-700",
     value: "text-slate-900",
-    label: "text-slate-400",
     tick: "text-slate-300",
     tickLabel: "text-slate-400",
   },

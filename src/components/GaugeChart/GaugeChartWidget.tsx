@@ -18,7 +18,7 @@ import {
   GaugeSlot,
   GaugeTickConfig, // NEW
   GaugeTrackConfig,
-  GaugeValueLabelConfig,
+  // GaugeValueLabelConfig,
   GaugeEasing,
 } from "../../types/gauge";
 import {
@@ -52,7 +52,7 @@ export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
   color?: GaugeColor;
 
   needle?: GaugeNeedleConfig;
-  valueLabel?: GaugeValueLabelConfig;
+  // valueLabel?: GaugeValueLabelConfig;
   /** REQUIREMENT 3/4: radial min/max tick marks drawn around the arc. */
   tick?: GaugeTickConfig;
   animation?: GaugeAnimationConfig;
@@ -271,19 +271,19 @@ export function GaugeWidget({
   track,
   color,
   needle,
-  valueLabel,
+  // valueLabel,
   tick,
   animation,
   unit,
   decimalPlaces,
-  formatValue,
   format,
   formatOptions,
+  formatValue,
   labelText,
   labelFormat,
   styles = {},
   onDataChange,
-  // onClick,
+
 }: GaugeWidgetProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   // REQUIREMENT 2: stable "now" fallback for manual/custom `value` mode,
@@ -377,7 +377,8 @@ export function GaugeWidget({
   const resolvedProps = {
     title,
     theme,
-    className,
+    min,
+    max,
     width,
     height,
     minWidth,
@@ -385,19 +386,16 @@ export function GaugeWidget({
     minHeight,
     maxHeight,
     aspectRatio,
-    min,
-    max,
     size,
-    responsive,
     arc,
     track,
     color,
     needle,
-    valueLabel,
-    tick,
     animation,
+    tick,
     unit,
     decimalPlaces,
+    className,
     formatValue,
     format,
     formatOptions,
@@ -405,6 +403,8 @@ export function GaugeWidget({
     labelFormat,
     ...dynamicProps,
     styles: mergedStyles,
+    responsive, // not work
+
   };
 
   // ---- Resolved config ----
@@ -435,9 +435,9 @@ export function GaugeWidget({
     animation: resolvedProps.needle?.animation ?? true,
   };
 
-  const resolvedValueLabel: Required<Pick<GaugeValueLabelConfig, "show">> = {
-    show: resolvedProps.valueLabel?.show ?? true,
-  };
+  // const resolvedValueLabel: Required<Pick<GaugeValueLabelConfig, "show">> = {
+  //   show: resolvedProps.valueLabel?.show ?? true,
+  // };
 
   const resolvedAnimation = {
     ...DEFAULT_ANIMATION,
@@ -470,15 +470,15 @@ export function GaugeWidget({
       ? gaugeLightTheme
       : (resolvedProps.theme as WidgetTheme<GaugeSlot>) ?? DEFAULT_GAUGE_THEME;
 
-  const resolveSlot = useCallback(
-    (slot: GaugeSlot) =>
-      twMerge(
-        GAUGE_DEFAULT_CLASSES[slot],
-        resolvedTheme.styles[slot],
-        resolvedProps.styles[slot]
-      ),
-    [resolvedTheme, resolvedProps.styles]
-  );
+      const resolveSlot = useCallback(
+        (slot: GaugeSlot) =>
+          twMerge(
+            GAUGE_DEFAULT_CLASSES[slot],
+            resolvedTheme?.styles?.[slot],
+            resolvedProps.styles[slot]
+          ),
+        [resolvedTheme, resolvedProps.styles]
+      );
 
   // ---- REQUIREMENT 3: tick values (min..max split into `count` even steps) ----
   const tickValues = useMemo(() => {
@@ -912,20 +912,17 @@ export function GaugeWidget({
   // (no-needle / donut mode) without duplicating JSX.
   const valueBlock = (
     <>
-      {resolvedValueLabel.show && (
-        <span
-          className={twMerge(
-            "inline-flex items-baseline justify-center gap-1",
-            resolveSlot("value")
-          )}
-        >
-          <span className="min-w-0 break-words">{displayValue}</span>
-          {displayUnit && (
-            <span className={resolveSlot("unit")}>{displayUnit}</span>
-          )}
-        </span>
-      )}
-
+      <span
+        className={twMerge(
+          "inline-flex items-baseline justify-center gap-1",
+          resolveSlot("value")
+        )}
+      >
+        <span className="min-w-0 break-words">{displayValue}</span>
+        {displayUnit && (
+          <span className={resolveSlot("unit")}>{displayUnit}</span>
+        )}
+      </span>
       {displayLabel && (
         <span className={resolveSlot("label")}>{displayLabel}</span>
       )}

@@ -21,11 +21,43 @@ const node = anedya.newNode(client, nodeId);
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
 const emeraldTheme = {
-  classNames: {
+  styles: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
     value: "text-emerald-900",
     label: "text-emerald-500",
+  },
+};
+
+export const gaugeCustomLightTheme = {
+  styles: {
+    // Tailwind classes for HTML container and text wrappers
+    container: "bg-emerald-50 border-emerald-200",
+    title: "text-emerald-800",
+    value: "text-emerald-950",
+    label: "text-emerald-600",
+
+    // Hex colors for D3 SVG elements
+    track: "#E2E8F0", // Soft gray background arc (slate-200)
+    bar: "#10B981", // Primary value fill (emerald-500)
+    needle: "#047857", // Darker accent needle for high visibility (emerald-700)
+    needleCap: "#065F46", // Needle center cap (emerald-800)
+  },
+};
+
+export const gaugeCustomDarkTheme = {
+  styles: {
+    // Tailwind classes for HTML container and text wrappers
+    container: "bg-yellow-500 border-emerald-800/50 backdrop-blur-sm",
+    title: "text-red-500",
+    value: "text-yellow-500",
+    label: "text-red-500",
+
+    // Hex colors for D3 SVG elements
+    track: "text-red-500", // Dark muted background arc (slate-800)
+    bar: "text-yellow-500", // High-contrast bright fill (emerald-400)
+    needle: "text-red-500", // Bright needle for dark mode contrast (emerald-300)
+    needleCap: "text-yellow-500", // Bright needle center cap (emerald-200)
   },
 };
 
@@ -178,184 +210,7 @@ export default function App() {
        * whole styles/theme system.
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
-      <GaugeWidget {...commonProps} title="API Value" />
 
-      <GaugeWidget
-        value={72}
-        min={0}
-        max={80}
-        title="Light Theme"
-        theme="light"
-      />
-
-      <GaugeWidget
-        value={72}
-        min={0}
-        max={100}
-        title="Dark Theme"
-        theme="dark"
-        styles={{
-          value: "text-red-500",
-          needle: "text-red-500",
-          needleCap: "text-yellow-500",
-        }}
-      />
-
-      <GaugeWidget
-        value={25.445678}
-        min={0}
-        max={50}
-        unit="°C"
-        decimalPlaces={3}
-        title="Temperature - Decimal Place 3"
-      />
-
-      <GaugeWidget
-        value={55}
-        title="No Value Label"
-        valueLabel={{ show: false }}
-      />
-
-      <GaugeWidget
-        value={60}
-        title="270° Arc"
-        arc={{
-          startAngle: -135,
-          endAngle: 135,
-          thickness: 30,
-          cornerRadius: 10,
-        }}
-      />
-
-      <GaugeWidget
-        value={80}
-        title="No Track"
-        track={{ show: false }}
-        color="#FFE000"
-      />
-
-      <GaugeWidget
-        value={80}
-        title="Gradient Bar"
-        color={["#03001e", "#7303c0", "#ec38bc", "#fdeff9"]}
-        track={{ color: "#e0e7ff" }}
-        tick={{
-          show: false,
-        }}
-        animation={{
-          show: true,
-          easing: "easeCubicInOut",
-        }}
-      />
-
-      <GaugeWidget
-        value={50}
-        title='Needle "line" length "full"'
-        needle={{ type: "line", width: 2, length: "full", capRadius: 12 }}
-      />
-
-      <GaugeWidget
-        value={50}
-        title='Needle "rounded" length "number"'
-        needle={{ type: "rounded", width: 12, length: 50, capRadius: 12 }}
-      />
-
-      <GaugeWidget
-        value={70}
-        title='Needle "triangle" length "short"'
-        needle={{
-          type: "triangle",
-          width: 8,
-          length: "short",
-          capRadius: 12,
-          color: "#7303c0",
-          needleColor: "#f05053",
-          capColor: "green",
-        }}
-      />
-
-      <GaugeWidget
-        value={85}
-        title='Needle "drop" length "full"'
-        needle={{
-          type: "drop",
-          length: "full",
-          capRadius: 8,
-          color: "#db2777",
-        }}
-      />
-
-      <GaugeWidget value={25} title="No Needle" needle={{ show: false }} />
-
-      <GaugeWidget
-        value={75}
-        title="Slow Elastic"
-        animation={{ duration: 3000, easing: "easeElasticOut" }}
-      />
-
-      <GaugeWidget
-        value={90}
-        title="No Animation"
-        animation={{ duration: 0 }}
-      />
-
-      <div
-        style={{
-          width: 300,
-          border: "1px dashed gray",
-          backgroundColor: "#ec38bc",
-        }}
-      >
-        <GaugeWidget
-          value={40}
-          title="Responsive inside container"
-          responsive
-          styles={{
-            title: "text-white text-lg",
-          }}
-        />
-      </div>
-      <GaugeWidget
-        value={60}
-        title="200×150 px"
-        width={200}
-        height={150}
-        styles={{ value: "text-md" }}
-        color="green"
-      />
-      <GaugeWidget
-        value={66}
-        title="Clickable"
-        onClick={(v) => alert(`Clicked ${v}`)}
-      />
-      {/* <GaugeWidget title="Loading Skeleton (no value provided)" /> */}
-      {/* <GaugeWidget title="Error Demo (replace with a failing node)" /> */}
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now() - 3600000} // 1 hour ago
-        title="Relative Time"
-        labelFormat="relative"
-      />
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now()}
-        title="Custom Label"
-        labelText={(ts) => `Last seen: ${new Date(ts).toLocaleTimeString()}`}
-      />
-      <GaugeWidget
-        {...commonProps}
-        title="Custom Formatter"
-        // value={66.7}
-        min={0}
-        max={100}
-        formatValue={(v) => `⭐ ${Math.round(v)}%`} // your own text
-        unit="" // hide unit
-        labelText={(ts) => `recorded ${new Date(ts).toLocaleString()}`}
-        timestamp={Date.now() - 86400000} // 1 day ago
-        onClick={(v) => console.log("Clicked", v)}
-      />
       <GaugeWidget
         {...commonProps}
         // value={78}
@@ -380,6 +235,7 @@ export default function App() {
         //   label: "text-xs italic text-gray-500",
         // }}
       />
+
       <GaugeWidget
         value={72}
         className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
@@ -408,18 +264,119 @@ export default function App() {
         style={{ backgroundColor: "yellow" }}
       /> */}
 
-      {/* <h1 style={{color:"red"}}>Testing All Gauge Widget Props</h1>
+      <h1 style={{ color: "red" }}>Testing All Gauge Widget Props</h1>
 
-
-      <GaugeWidget/>
-      <GaugeWidget {...commonProps}/>
-      <GaugeWidget 
+      <GaugeWidget
+        min={0}
+        max={100}
         {...commonProps}
-        title="Custom Title"
+        title="Custom Title - Dark Theme"
+        theme={gaugeCustomDarkTheme}
         styles={{
-          title:"lowercase text-yellow-500 font-bold text-[50px] italic"
-        }}/> */}
-      
+          title: "uppercase font-bold text-[50px] italic",
+        }}
+        tick={{
+          show: false,
+        }}
+        // responsive
+        width={400}
+        // height="100%"
+        arc={{
+          startAngle: -180,
+          endAngle: 90,
+          // radius:100,
+          thickness: 30,
+          // cornerRadius:50
+        }}
+        color="purple"
+        track={{
+          show: true,
+          color: "#1fa2ff",
+        }}
+        needle={{
+          show: true,
+          length: "short",
+          width: 10,
+          color: "#1fa2ff",
+          // needleColor:"red",
+          capColor: "black",
+          // capRadius:3,
+          // animation:false,
+        }}
+      />
+
+      <GaugeWidget
+        min={0}
+        max={80}
+        value={49}
+        formatValue={(v) => `Hello ${v} km/h`}
+        // labelFormat="relative"
+        // labelFormat="date"
+        labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`} // format="bytes"
+        // formatOptions={{"binary":true,"precision":2}}
+
+        //         value={1234567.891}
+        // format="number"
+        // formatOptions={{"locale":"de-DE","precision":2}}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        title="Wind Speed"
+        unit="Km/h"
+        tick={{ show: true }}
+        styles={{
+          container:
+            "bg-slate-900 rounded-2xl border border-slate-700 shadow-lg",
+          title: "text-slate-300 uppercase tracking-wide text-xs",
+          unit: "text-red-500 text-sm font-normal",
+          value: "text-white text-4xl font-black",
+          label: "text-slate-500 text-[11px] italic",
+          track: "text-yellow-500",
+          bar: "text-emerald-400",
+          needle: "text-red-500",
+          needleCap: "text-yellow-500",
+          tick: "text-slate-700",
+          tickLabel: "text-slate-500 text-[9px]",
+        }}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        // value={90}
+
+        onDataChange={(data) => {
+          if (!data) {
+            return {
+              title: "No Data",
+              color: "#6b7280",
+              styles: { value: "text-slate-500" },
+            };
+          }
+
+          const isCritical = data.value > 70;
+          const isWarning = data.value > 40 && data.value <= 60;
+
+          return {
+            // top-level scalar/config overrides
+            title: isCritical ? "Critical" : isWarning ? "Warning" : "Normal",
+            color: isCritical ? "#ef4444" : isWarning ? "#f59e0b" : "#10b981",
+            unit: "°C",
+            formatValue: (v) => `${v.toFixed(1)}`,
+            labelText: (ts) => `Sampled ${new Date(ts).toLocaleTimeString()}`,
+            needle: { needleColor: isCritical ? "#ef4444" : "#10b981" },
+            track: { color: isCritical ? "#450a0a" : "#052e2b" },
+            animation: { duration: isCritical ? 400 : 1000 },
+
+            // per-slot class overrides — merges with (doesn't replace) the static `styles` prop
+            styles: {
+              value: isCritical ? "text-red-500 animate-pulse" : "text-black",
+              title: isCritical ? "text-red-400" : "text-slate-400",
+            },
+          };
+        }}
+      />
+
     </div>
   );
 }
