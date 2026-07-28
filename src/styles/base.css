@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@source "../widgets/**/*.{ts,tsx}";
+@source "../themes/**/*.{ts,tsx}";
+@source "../common.ts";
+@source "../types/gauge.ts";
+
+.anedya-card-container {
+  container-type: size;
+  container-name: anedya-card;
+  transition: width 0.25s ease, height 0.25s ease;
+}
+
+.anedya-card {
+  --anedya-card-padding: clamp(1rem, 0.5rem + 2.5cqw + 2.5cqh, 4.5rem);
+  --anedya-card-title-size: clamp(0.875rem, 0.6rem + 1.5cqw + 1.5cqh, 3rem);
+  --anedya-card-value-size: clamp(2.25rem, 1rem + 8cqw + 8cqh, 9.5rem);
+  --anedya-card-unit-size: clamp(1rem, 0.7rem + 1.5cqw + 1.5cqh, 3.25rem);
+  --anedya-card-label-size: clamp(0.75rem, 0.5rem + 1.2cqw + 1.2cqh, 2.25rem);
+  --anedya-card-gap: clamp(0.5rem, 0.2rem + 2cqw + 3cqh, 3.5rem);
+
+  transition: padding 0.25s ease, gap 0.25s ease;
+}
+
+.anedya-card>* {
+  transition: font-size 0.25s ease;
+}
+
+
+.anedya-gauge-container {
+  container-type: size;
+  container-name: anedya-gauge;
+  transition: width 0.25s ease, height 0.25s ease;
+} 
+
+.anedya-gauge {
+  --anedya-gauge-padding: clamp(1rem, 0.5rem + 2.5cqw + 2.5cqh, 4.5rem);
+  --anedya-gauge-title-size: clamp(0.875rem, 0.6rem + 1.5cqw + 1.5cqh, 3rem);
+  --anedya-gauge-value-size: clamp(1.6rem, 0.8rem + 4cqw + 4cqh, 4.5rem);
+  --anedya-gauge-unit-size: clamp(1rem, 0.7rem + 1.5cqw + 1.5cqh, 3.25rem);
+  --anedya-gauge-label-size: clamp(0.75rem, 0.5rem + 1.2cqw + 1.2cqh, 2.25rem);
+  --anedya-gauge-tick-size: clamp(0.625rem, 0.4rem + 0.6cqw + 0.6cqh, 0.875rem);
+  --anedya-gauge-tooltip-size: clamp(0.6875rem, 0.45rem + 0.7cqw + 0.7cqh, 1rem);
+  --anedya-gauge-gap: 0.25rem; /* flat 4px */
+
+  transition: padding 0.25s ease, gap 0.25s ease;
+}
+
+.anedya-gauge>* {
+  transition: font-size 0.25s ease;
+}
