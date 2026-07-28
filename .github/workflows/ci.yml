@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Lint · Typecheck · Build
+    name: Typecheck · Build
     runs-on: ubuntu-latest
 
     steps:
