@@ -13,7 +13,8 @@ export type GaugeSlot =
   | "tick" // NEW — tick line styling via `styles` prop
   | "tickLabel" // NEW — tick number styling via `styles` prop
   | "error"
-  | "empty";
+  | "empty"
+  | "tooltip";
 
 export interface GaugeArcConfig {
   /** Degrees, 0 = 12 o'clock, clockwise-positive. */
@@ -102,6 +103,17 @@ export interface GaugeTickConfig {
   labelColor?: string;
   /** Custom label formatter — receives the raw tick value (e.g. 0, 10, 20...). */
   labelFormat?: (value: number) => string;
+}
+
+export interface GaugeTooltipConfig {
+  show?: boolean;
+  /** Full custom tooltip content. Receives the raw + formatted value, unit, and the widget's `variable` name. */
+  content?: (data: {
+    variable: string;
+    value: number;
+    displayValue: string;
+    unit?: string;
+  }) => React.ReactNode;
 }
 
 export interface GaugeAnimationConfig {

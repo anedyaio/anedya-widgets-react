@@ -242,6 +242,9 @@ export default function App() {
         needle={{ show: true, length: "medium", width: 6 }}
         tick={{ show: true, count: 10, size: 6, labelSize: 11 }}
         color="#10B981"
+        styles={{
+          tooltip:"bg-black text-white"
+        }}
       />
 
       {/* ----------------------------------------------------------------

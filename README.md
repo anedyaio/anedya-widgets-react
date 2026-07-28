@@ -36,6 +36,7 @@ Designed for developers using the Anedya Frontend SDK, the library provides drop
     - [Needle configuration](#needle-configuration)
     - [Needle-less (donut) mode](#needle-less-donut-mode)
     - [Tick marks](#tick-marks)
+    - [Tooltip](#tooltip)
     - [Animation configuration](#animation-configuration)
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering-1)
     - [How props are resolved](#how-props-are-resolved-1)
@@ -315,7 +316,7 @@ Like `AnedyaCard`, every part of the gauge is a named **slot**, and the same `st
 type GaugeSlot =
   | "container" | "title" | "unit" | "track" | "bar"
   | "needle" | "needleCap" | "value" | "label"
-  | "tick" | "tickLabel" | "error" | "empty";
+  | "tick" | "tickLabel" | "tooltip" | "error" | "empty";
 ```
 
 ```jsx
@@ -345,6 +346,7 @@ const emeraldGaugeTheme = {
     value: "text-emerald-900",
     needle: "text-emerald-700",
     needleCap: "text-emerald-700",
+    tooltip: "bg-emerald-200 text-emerald-700",
   },
 };
 
@@ -495,6 +497,50 @@ Enabling ticks reserves extra space inside the widget for the line + gaps + labe
 
 ---
 
+
+#### Tooltip
+
+`tooltip` shows a hover tooltip over the arc (both the track and the filled bar respond) — enabled by default. The built-in tooltip text is `"variable: value unit"`, using the **formatted** value (`displayValue` — after `format`/`formatValue`/`decimalPlaces` is applied), not the raw number:
+
+```jsx
+<GaugeWidget node={node} variable="temperature" unit="°C" decimalPlaces={1} />
+// hovering the arc shows: "temperature: 42.5 °C"
+```
+
+| Prop      | Type                                                                                              | Default | Description                                                                 |
+| --------- | ---------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------ |
+| `show`    | `boolean`                                                                                              | `true`  | Whether hovering the arc shows a tooltip                                       |
+| `content` | `(data: { variable: string; value: number; displayValue: string; unit?: string }) => ReactNode`      | —       | Full custom tooltip content. Receives both the **raw** clamped `value` and the already-**formatted** `displayValue`/`unit`, alongside the widget's `variable` name |
+
+Disable it with `tooltip={{ show: false }}`, or fully replace the content with your own JSX — `content` gets the raw value in case you want to do your own formatting/thresholds rather than reuse `displayValue`:
+
+```jsx
+<GaugeWidget
+  tooltip={{
+    content: ({ variable, value, displayValue, unit }) => (
+      <div className="flex flex-col items-center">
+        <span className="font-semibold">{variable}</span>
+        <span>{displayValue}{unit ? ` ${unit}` : ""}</span>
+        <span className="text-xs opacity-70">raw: {value}</span>
+      </div>
+    ),
+  }}
+/>
+```
+
+The tooltip follows the pointer and flips to the opposite side automatically once the pointer crosses the horizontal midpoint of the gauge, so it never overflows off the edge of a narrow container. It's hidden automatically while the widget is in a loading, error, or empty state.
+
+Like every other part of the gauge, the tooltip is styleable via the `tooltip` slot in `styles` or a custom theme:
+
+```jsx
+<GaugeWidget
+  styles={{
+    tooltip: "bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg",
+  }}
+/>
+```
+---
+
 #### Animation configuration
 
 `animation` controls the transition when the value (and, if enabled, the needle) moves to a new reading:
@@ -537,6 +583,13 @@ With `animation.show: false`, both the bar and needle snap directly to the new v
         needle: { type: "triangle", color: "#dc2626" },
         animation: { duration: 500, easing: "elasticOut" },
         tick: { show: true, color: "#fca5a5", labelColor: "#f87171" },
+        tooltip: {
+          content: ({ variable, displayValue, unit }) => (
+            <span className="text-red-400 font-semibold">
+              ⚠ {variable}: {displayValue}{unit ? ` ${unit}` : ""} — critical
+            </span>
+          ),
+        },
         styles: {
           value: "text-red-500 text-4xl font-black",
           title: "uppercase tracking-wide",
@@ -549,9 +602,10 @@ With `animation.show: false`, both the bar and needle snap directly to the new v
         color: ["#10b981", "#34d399"],
         arc: { thickness: 18 },
         needle: { show: false },
+        tooltip: { show: false }, // low readings aren't worth hovering for
       };
     }
-    // Clear overrides for mid-range values
+    // Clear overrides for mid-range values — tooltip reverts to the default
   }}
 />
 ```

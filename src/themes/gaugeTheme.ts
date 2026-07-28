@@ -4,8 +4,7 @@ import { GaugeSlot } from "../types/gauge";
 import { WidgetTheme } from "../types/root";
 
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
-  container:
-    "flex flex-col items-center justify-center text-center",
+  container: "flex flex-col items-center justify-center text-center",
   title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
   unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
   track: "",
@@ -21,7 +20,8 @@ export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   // needs non-size utilities.
   tickLabel: "font-medium select-none",
   error: "text-sm font-medium",
-  empty: "text-[length:var(--anedya-card-value-size)] font-bold",
+  empty: "text-[length:var(--anedya-gauge-value-size)] font-bold",
+  tooltip: "pointer-events-none z-10 rounded-md px-2 text-[length:var(--anedya-gauge-tooltip-size)] shadow-lg whitespace-nowrap font-medium",
 };
 
 export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
@@ -39,6 +39,7 @@ export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
     tickLabel: "text-slate-400",
     error: "text-red-600",
     empty: "text-slate-400",
+    tooltip: "bg-slate-900 text-white",
   },
 };
 
@@ -57,6 +58,7 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
     tickLabel: "text-slate-500",
     error: "text-red-400",
     empty: "text-slate-500",
+    tooltip: "bg-white text-slate-900",
   },
 };
 
