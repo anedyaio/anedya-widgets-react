@@ -4,7 +4,7 @@ import { CardWidget } from "../../../src";
 import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
 import "public-widget-sdk/styles.css";
 import { relativeTime } from "public-widget-sdk/formatters";
-import "./index.css"; 
+import "./index.css";
 // This demo has its own Tailwind build (see vite.config.js + src/index.css),
 // specifically to test consumer-side class overrides via `className`/`styles`.
 // A real consumer app needs the same setup — the widget package's own
@@ -14,12 +14,6 @@ import "./index.css";
 const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
 const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
 const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
-
-import { relativeTime } from "../../../src/helpers/formatters";
-const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
-const token =
-  "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
-const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -32,7 +26,7 @@ const node = anedya.newNode(client, nodeId);
  * built-in default — anything omitted falls back to lightTheme/darkTheme.
  */
 const emeraldTheme = {
-  classNames: {
+  styles: {
     container: "bg-emerald-50 border-emerald-200",
     title: "text-emerald-700",
     value: "text-emerald-900",
@@ -40,30 +34,81 @@ const emeraldTheme = {
   },
 };
 
+export const gaugeCustomLightTheme = {
+  styles: {
+    // Tailwind classes for HTML container and text wrappers
+    container: "bg-emerald-50 border-emerald-200",
+    title: "text-emerald-800",
+    value: "text-emerald-950",
+    label: "text-emerald-600",
+
+    // Hex colors for D3 SVG elements
+    track: "#E2E8F0", // Soft gray background arc (slate-200)
+    bar: "#10B981", // Primary value fill (emerald-500)
+    needle: "#047857", // Darker accent needle for high visibility (emerald-700)
+    needleCap: "#065F46", // Needle center cap (emerald-800)
+  },
+};
+
+export const gaugeCustomDarkTheme = {
+  styles: {
+    // Tailwind classes for HTML container and text wrappers
+    container: "bg-yellow-500 border-emerald-800/50 backdrop-blur-sm",
+    title: "text-red-500",
+    value: "text-yellow-500",
+    label: "text-red-500",
+
+    // Hex colors for D3 SVG elements
+    track: "text-red-500", // Dark muted background arc (slate-800)
+    bar: "text-yellow-500", // High-contrast bright fill (emerald-400)
+    needle: "text-red-500", // Bright needle for dark mode contrast (emerald-300)
+    needleCap: "text-yellow-500", // Bright needle center cap (emerald-200)
+  },
+};
+
 const commonProps = { node, variable: "humidity" };
 
 export default function App() {
   return (
-<div style={{ padding: "2rem", display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}
->
+    <div
+      style={{
+        padding: "2rem",
+        display: "flex",
+        gap: 24,
+        flexWrap: "wrap",
+        alignItems: "flex-start",
+      }}
+    >
       {/* ============================================================
        * 1. Default appearance — no theme, no styles, no
        * formatting props. Every fallback in the widget in one place.
        * ============================================================ */}
-      <CardWidget {...commonProps}title="Default" unit="%" decimalPlaces={1}
-  //  timezone="Asia/Kolkata"
-// timezone="America/Los_Angeles"
+      <CardWidget
+        {...commonProps}
+        title="Default"
+        unit="%"
+        decimalPlaces={1}
+        //  timezone="Asia/Kolkata"
+        // timezone="America/Los_Angeles"
         onDataChange={(data, meta) => {
-    if (meta.kind === "error") {
-      return { renderError: () => <span className="text-orange-500 italic">Sensor unreachable</span> };
-    }
-    if (meta.kind === "empty") {
-      return { renderEmpty: () => <span className="text-slate-300">— no reading yet —</span> };
-    }
-  }}
-    
-       />
-
+          if (meta.kind === "error") {
+            return {
+              renderError: () => (
+                <span className="text-orange-500 italic">
+                  Sensor unreachable
+                </span>
+              ),
+            };
+          }
+          if (meta.kind === "empty") {
+            return {
+              renderEmpty: () => (
+                <span className="text-slate-300">— no reading yet —</span>
+              ),
+            };
+          }
+        }}
+      />
 
       {/* ============================================================
        * 2. theme — a reusable, shareable WidgetTheme object. Same
@@ -114,11 +159,10 @@ export default function App() {
         //   title: "uppercase tracking-wider", // <- targets the INNER "title" slot specifically
         // }}
         styles={{
-  container: "bg-blue-50 border-blue-300", // background/border of the card itself
-  value: "text-red-500 text-5xl",
-  title: "uppercase tracking-wider text-blue-700", // added color here
-}}
-        
+          container: "bg-blue-50 border-blue-300", // background/border of the card itself
+          value: "text-red-500 text-5xl",
+          title: "uppercase tracking-wider text-blue-700", // added color here
+        }}
       />
       {/* ============================================================
        * 4. Plain CSS classes — styles works with ANY class source,
@@ -200,167 +244,7 @@ export default function App() {
        * whole styles/theme system.
        * ============================================================ */}
       {/* <CardWidget {...commonProps} title="Custom Size" unit="%" width={320} minWidth={280} maxWidth={400} height={200} /> */}
-      <GaugeWidget {...commonProps} title="API Value" />
-     
-      <GaugeWidget
-        value={72}
-        min={0}
-        max={80}
-        title="Light Theme"
-        theme="light"
-      />
 
-      <GaugeWidget
-        value={72}
-        min={0}
-        max={100}
-        title="Dark Theme"
-        theme="dark"
-        styles={{
-          value: "text-red-500",
-          needle: "text-red-500",
-          needleCap: "text-yellow-500",
-        }}
-      />
-
-      <GaugeWidget
-        value={25.445678}
-        min={0}
-        max={50}
-        unit="°C"
-        decimalPlaces={3}
-        title="Temperature - Decimal Place 3"
-      />
-
-      <GaugeWidget
-        value={55}
-        title="No Value Label"
-        valueLabel={{ show: false }}
-      />
-
-      <GaugeWidget
-        value={60}
-        title="270° Arc"
-        arc={{
-          startAngle: -135,
-          endAngle: 135,
-          thickness: 30,
-          cornerRadius: 10,
-        }}
-      />
-      <GaugeWidget
-        value={80}
-        title="No Track"
-        track={{ show: false }}
-        color="#FFE000"
-      />
-      <GaugeWidget
-        value={80}
-        title="Gradient Bar"
-        color={["#03001e", "#7303c0", "#ec38bc", "#fdeff9"]}
-        track={{ color: "#e0e7ff" }}
-      />
-      <GaugeWidget
-        value={50}
-        title='Needle "line" length "full"'
-        needle={{ type: "line", width: 2, length: "full", capRadius: 12 }}
-      />
-      <GaugeWidget
-        value={50}
-        title='Needle "rounded" length "number"'
-        needle={{ type: "rounded", width: 12, length: 50, capRadius: 12 }}
-      />
-      <GaugeWidget
-        value={70}
-        title='Needle "triangle" length "short"'
-        needle={{
-          type: "triangle",
-          width: 8,
-          length: "short",
-          capRadius: 12,
-          color: "#7303c0",
-          needleColor: "#f05053",
-          capColor: "green",
-        }}
-      />
-      <GaugeWidget
-        value={85}
-        title='Needle "drop" length "full"'
-        needle={{
-          type: "drop",
-          length: "full",
-          capRadius: 8,
-          color: "#db2777",
-        }}
-      />
-      <GaugeWidget value={25} title="No Needle" needle={{ show: false }} />
-      <GaugeWidget
-        value={75}
-        title="Slow Elastic"
-        animation={{ duration: 3000, easing: "easeElasticOut" }}
-      />
-      <GaugeWidget
-        value={90}
-        title="No Animation"
-        animation={{ duration: 0 }}
-      />
-      <div
-        style={{
-          width: 300,
-          border: "1px dashed gray",
-          backgroundColor: "#ec38bc",
-        }}
-      >
-        <GaugeWidget
-          value={40}
-          title="Responsive inside container"
-          responsive
-          styles={{
-            title: "text-white text-lg",
-          }}
-        />
-      </div>
-      <GaugeWidget
-        value={60}
-        title="200×150 px"
-        width={200}
-        height={150}
-        styles={{ value: "text-md" }}
-        color="green"
-      />
-      <GaugeWidget
-        value={66}
-        title="Clickable"
-        onClick={(v) => alert(`Clicked ${v}`)}
-      />
-      {/* <GaugeWidget title="Loading Skeleton (no value provided)" /> */}
-      {/* <GaugeWidget title="Error Demo (replace with a failing node)" /> */}
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now() - 3600000} // 1 hour ago
-        title="Relative Time"
-        labelFormat="relative"
-      />
-      <GaugeWidget
-        {...commonProps}
-        // value={42}
-        timestamp={Date.now()}
-        title="Custom Label"
-        labelText={(ts) => `Last seen: ${new Date(ts).toLocaleTimeString()}`}
-      />
-      <GaugeWidget
-        {...commonProps}
-        title="Custom Formatter"
-        // value={66.7}
-        min={0}
-        max={100}
-        formatValue={(v) => `⭐ ${Math.round(v)}%`} // your own text
-        unit="" // hide unit
-        labelText={(ts) => `recorded ${new Date(ts).toLocaleString()}`}
-        timestamp={Date.now() - 86400000} // 1 day ago
-        onClick={(v) => console.log("Clicked", v)}
-      />
       <GaugeWidget
         {...commonProps}
         // value={78}
@@ -372,7 +256,7 @@ export default function App() {
         onDataChange={(data) => {
           if (!data) return {};
           const { value } = data;
-          if (value > 80) return { title: "🔴 Critical", color: "#dc2626" };
+          if (value > 60) return { title: "🔴 Critical", color: "#dc2626" };
           if (value > 50) return { title: "🟡 Warning", color: "#f59e0b" };
           return { title: "🟢 Normal", color: "#10b981" };
         }}
@@ -385,10 +269,237 @@ export default function App() {
         //   label: "text-xs italic text-gray-500",
         // }}
       />
+
       <GaugeWidget
         value={72}
-        className="bg-red-400 rounded-2xl p-6 shadow-md w-64 h-48"
-      />{" "}
+        className="bg-red-400 rounded-2xl shadow-md shadow-blue-400"
+      />
+
+      {/* <GaugeWidget
+        min={0}
+        max={50}
+        value={35}
+        tick={{
+          show: true,
+          count: 5,
+          size: 10,
+          color: "#000000",
+          radiusOffset: 5,
+          labelGap: 40,
+          labelSize: 15,
+          labelColor: "#000000",
+          labelFormat: (val) => val + " km/h",
+        }}
+        animation={{
+          show: true,
+          duration: 3000,
+          easing: "bounceIn",
+        }}
+        style={{ backgroundColor: "yellow" }}
+      /> */}
+
+      <h1 style={{ color: "red" }}>Testing All Gauge Widget Props</h1>
+
+      <GaugeWidget
+        min={0}
+        max={100}
+        {...commonProps}
+        title="Custom Title - Dark Theme"
+        theme={gaugeCustomDarkTheme}
+        styles={{
+          title: "uppercase font-bold italic",
+        }}
+        tick={{
+          show: false,
+        }}
+        // responsive
+        // width={400}
+        // height="100%"
+        arc={{
+          startAngle: -180,
+          endAngle: 90,
+          // radius:100,
+          thickness: 30,
+          // cornerRadius:50
+        }}
+        color="purple"
+        track={{
+          show: true,
+          color: "#1fa2ff",
+        }}
+        needle={{
+          show: true,
+          length: "short",
+          width: 10,
+          color: "#1fa2ff",
+          // needleColor:"red",
+          capColor: "black",
+          // capRadius:3,
+          // animation:false,
+        }}
+      />
+
+      <GaugeWidget
+        min={0}
+        max={80}
+        value={49}
+        formatValue={(v) => `Hello ${v} km/h`}
+        // labelFormat="relative"
+        // labelFormat="date"
+        labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`} // format="bytes"
+        // formatOptions={{"binary":true,"precision":2}}
+
+        //         value={1234567.891}
+        // format="number"
+        // formatOptions={{"locale":"de-DE","precision":2}}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        title="Wind Speed"
+        unit="Km/h"
+        tick={{ show: true }}
+        styles={{
+          container:
+            "bg-slate-900 rounded-2xl border border-slate-700 shadow-lg",
+          title: "text-slate-300 uppercase tracking-wide text-xs",
+          unit: "text-red-500 text-sm font-normal",
+          value: "text-white text-4xl font-black",
+          label: "text-slate-500 text-[11px] italic",
+          track: "text-yellow-500",
+          bar: "text-emerald-400",
+          needle: "text-red-500",
+          needleCap: "text-yellow-500",
+          tick: "text-slate-700",
+          tickLabel: "text-slate-500 text-[9px]",
+        }}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        // value={90}
+        styles={{
+          container: "p-0 gap-0",
+        }}
+        onDataChange={(data) => {
+          if (!data) {
+            return {
+              title: "No Data",
+              color: "#6b7280",
+            };
+          }
+
+          const isCritical = data.value > 70;
+          const isWarning = data.value > 40 && data.value <= 60;
+
+          return {
+            // top-level scalar/config overrides
+            title: isCritical ? "Critical" : isWarning ? "Warning" : "Normal",
+            color: isCritical ? "#ef4444" : isWarning ? "#f59e0b" : "#10b981",
+            unit: "°C",
+            formatValue: (v) => `${v.toFixed(1)}`,
+            labelText: (ts) => `Sampled ${new Date(ts).toLocaleTimeString()}`,
+            needle: { needleColor: isCritical ? "#ef4444" : "#10b981" },
+            track: { color: isCritical ? "#450a0a" : "#052e2b" },
+            animation: { duration: isCritical ? 400 : 1000 },
+
+            // per-slot class overrides — merges with (doesn't replace) the static `styles` prop
+            styles: {
+              value: isCritical
+                ? "text-red-500 animate-pulse"
+                : "text-yellow-500",
+              title: isCritical ? "text-red-400" : "text-slate-400",
+            },
+          };
+        }}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        color="#1fa2ff"
+        styles={{
+          error: "text-orange-500 italic",
+          empty: "text-slate-300",
+          // container:"p-0 gap-0"
+        }}
+        theme="dark"
+        renderError={(error) => (
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-orange-500">⚠ Sensor unreachable</span>
+            <span className="text-xs text-slate-400">{error}</span>
+          </div>
+        )}
+        renderEmpty={() => (
+          <span className="text-slate-300">— no reading yet —</span>
+        )}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        color="yellow"
+        theme="dark"
+        title="IST"
+        timezone="Asia/Kolkata"
+        // styles={{
+        // container:"p-0 gap-0"
+        // }}
+      />
+      <GaugeWidget
+        // {...commonProps}
+        value={95}
+        needle={{
+          length:"full",
+          type:"line",
+          // show:false
+        }}
+        tick={{
+          // show:true,
+        }}
+        color={[
+          "#ff75c3",
+          "#ffa647",
+          "#ffe83f",
+          "#9fff5b",
+          "#70e2ff",
+          "#7e22ce",
+        ]}
+        theme="dark"
+        title="EST"
+        timezone="America/New_York"
+        // width={520}
+        // height={300}
+        // styles={{
+        //   container:"p-0 gap-0"
+        // }}
+      />
+
+      <GaugeWidget
+        {...commonProps}
+        color="rgb(255,0,127)"
+        theme="dark"
+        title="UTC"
+        timezone="UTC"
+        animation={{
+          easing:"quadIn"
+        }}
+        // styles={{
+        //   container:"p-0 gap-0"
+        // }}
+        // needle={{
+        //   show:false,
+        // }}
+        // tick={{
+        //   show:true,
+        // }}
+        
+        arc={{
+          startAngle: -180,
+          endAngle: 90,
+        }}
+        size={400}
+      />
+      <GaugeWidget {...commonProps} />
+
     </div>
   );
 }
