@@ -1,4 +1,5 @@
-import { CardSlot } from "../components/CardWidget";
+
+import { CardSlot } from "../components/AnedyaCard";
 import { WidgetTheme } from "../types/root";
 
 export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {

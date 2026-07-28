@@ -15,7 +15,7 @@ This document covers internal build setup for people working on this SDK itself 
 
 Since this SDK is installed as a real package (not copied into the consumer's own repo, the way shadcn/ui works), the consumer's own Tailwind build **never scans this package's source files** by default — so every class string in files like `themes/defaultTheme.ts` / `CARD_DEFAULT_CLASSES` compiles to nothing in their app, and every widget would render with zero layout or color.
 
-The fix: this SDK ships its **own pre-compiled stylesheet** as part of its build, so consumers import real, already-compiled CSS rather than relying on their own Tailwind config to happen to pick up ours. This is why every consumer-facing widget needs `import "public-widget-sdk/styles.css"` — see the README's [Stylesheet import](./README.md#stylesheet-import) section for the consumer-facing side of this.
+The fix: this SDK ships its **own pre-compiled stylesheet** as part of its build, so consumers import real, already-compiled CSS rather than relying on their own Tailwind config to happen to pick up ours. This is why every consumer-facing widget needs `import "anedya-widgets-react/styles.css"` — see the README's [Stylesheet import](./README.md#stylesheet-import) section for the consumer-facing side of this.
 
 ---
 
@@ -99,17 +99,17 @@ npm link
 **2. In the demo app**, link to it:
 
 ```bash
-npm link public-widget-sdk
+npm link anedya-widgets-react
 ```
 
-This creates a symlink from the demo's `node_modules/public-widget-sdk` to your local package root — the demo now resolves that import to your local working copy instead of anything published to npm.
+This creates a symlink from the demo's `node_modules/anedya-widgets-react` to your local package root — the demo now resolves that import to your local working copy instead of anything published to npm.
 
 ### Two ways to import while developing
 
 **Option A — import directly from source (fastest iteration)**
 
 ```jsx
-import { CardWidget } from "../../../src";
+import { AnedyaCard } from "../../../src";
 import "../../../dist/style.css";
 ```
 
@@ -125,8 +125,8 @@ before it shows up in the demo, even in this mode.
 **Option B — import as the published package (accurate consumer simulation)**
 
 ```jsx
-import { CardWidget } from "public-widget-sdk";
-import "public-widget-sdk/styles.css";
+import { AnedyaCard } from "anedya-widgets-react";
+import "anedya-widgets-react/styles.css";
 ```
 
 Use this to verify the package behaves correctly as an actual installed dependency — e.g. confirming `exports` map entries resolve correctly, the stylesheet subpath import works, and nothing that only exists in the local `src/` folder (but wasn't actually exported) is accidentally being relied on.
@@ -150,6 +150,6 @@ Two things worth knowing if changes don't seem to show up:
   rm -rf node_modules/.vite
   npm run dev
 ```
-- Restart the demo's dev server (not just save/hot-reload) after switching which import block is active — changing which module resolves `CardWidget` can require a fresh module graph.
+- Restart the demo's dev server (not just save/hot-reload) after switching which import block is active — changing which module resolves `AnedyaCard` can require a fresh module graph.
 
 **Rule of thumb:** use Option A day-to-day while iterating on a widget; switch to Option B before committing/publishing, as a final sanity check that the consumer-facing package actually works the way the README describes.

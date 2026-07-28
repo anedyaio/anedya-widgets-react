@@ -3,19 +3,39 @@ import { BuiltInTheme, CardSlot } from "./types/card";
 import { WidgetTheme } from "./types/root";
 
 
+
 /**
  * Every widget takes this shape as its base. Widget-specific props
  * (e.g. Card's `unit`/`decimalPlaces`, Chart's `tickCount`) extend this
  * rather than repeating client/node/sizing/theme plumbing per widget.
  *
- * `node` is required directly (built by the consumer via
- * `anedya.newNode(client, nodeId)`) rather than derived internally —
- * keeps node/rate-limiting construction fully in the consumer's control,
- * outside the widget.
+ * `node` is built by the consumer via `anedya.newNode(client, nodeId)`
+ * rather than derived internally — keeps node/rate-limiting construction
+ * fully in the consumer's control, outside the widget.
+ *
+ * `node` and `variable` are optional here because some widgets (Card,
+ * Gauge) also accept a manual `value` prop, making a live fetch optional
+ * for them. 
+ *
+ *   // Widgets WITHOUT a `value` fallback (e.g. ChartWidget):
+ *   export interface ChartWidgetProps
+ *     extends Omit<AnedyaWidgetBaseProps, "node" | "variable"> {
+ *     node: any;
+ *     variable: string;
+ *     // ...chart-specific props
+ *   }
+ *
+ *   // Widgets WITH a `value` fallback (e.g. AnedyaCard, AnedyaGauge):
+ *   export interface AnedyaCardProps extends AnedyaWidgetBaseProps {
+ *     value?: number;
+ *     // node/variable inherited as-is (optional) — see the runtime
+ *     // check in AnedyaCard itself for what enforces "one or the other"
+ *     // at render time, since TypeScript alone can't express that.
+ *   }
  */
 export interface AnedyaWidgetBaseProps {
-  node: any;
-  variable: string;
+  node?: any;
+  variable?: string;
   /** Not every widget needs a range (e.g. Card shows only the latest value) — optional here, required by widgets that do. */
   from?: number;
   to?: number;
