@@ -1,4 +1,4 @@
-// GaugeWidget.tsx
+// AnedyaGauge.tsx
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
@@ -43,11 +43,11 @@ export interface GaugeDataMeta {
   error?: string;
 }
 
-export type GaugeWidgetUpdate = Partial<
-  Omit<GaugeWidgetProps, "node" | "variable" | "onDataChange">
+export type AnedyaGaugeUpdate = Partial<
+  Omit<AnedyaGaugeProps, "node" | "variable" | "onDataChange">
 >;
 
-export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
+export interface AnedyaGaugeProps extends AnedyaWidgetBaseProps {
   value?: number;
   min?: number;
   max?: number;
@@ -89,7 +89,7 @@ export interface GaugeWidgetProps extends AnedyaWidgetBaseProps {
   onDataChange?: (
     data: GaugeData | null,
     meta: GaugeDataMeta
-  ) => GaugeWidgetUpdate | void;
+  ) => AnedyaGaugeUpdate | void;
 
   /** Custom render for the error state. Return JSX to fully replace the default error text. */
   renderError?: (error: string) => React.ReactNode;
@@ -270,7 +270,7 @@ function getArcBounds(startDeg: number, endDeg: number) {
   return { minX, maxX, minY, maxY, w: maxX - minX, h: maxY - minY };
 }
 
-export function GaugeWidget({
+export function AnedyaGauge({
   node,
   variable,
   title = "Latest Value",
@@ -308,7 +308,25 @@ export function GaugeWidget({
   onDataChange,
   renderError,
   renderEmpty,
-}: GaugeWidgetProps) {
+}: AnedyaGaugeProps) : React.JSX.Element{
+  // Runtime invariant — identical rule to AnedyaCard: TypeScript alone
+  // can't express "node+variable OR value, but not neither" across two
+  // independent optional props (see the comment on AnedyaWidgetBaseProps
+  // in common.ts for why node/variable are optional at the type level in
+  // the first place). Runs before any hooks below, so it's a stable
+  // guard clause — either this instance always throws on every render,
+  // or never does, so it can't violate the rules of hooks.
+  if (!node && valueProp == null) {
+    throw new Error(
+      "[AnedyaGauge] Provide either `node` (with `variable`) for live data, or a manual `value` prop for a controlled gauge — neither was given."
+    );
+  }
+  if (node && !variable) {
+    throw new Error(
+      "[AnedyaGauge] `variable` is required whenever `node` is provided."
+    );
+  }
+
   const svgRef = useRef<SVGSVGElement>(null);
   // REQUIREMENT 2: stable "now" fallback for manual/custom `value` mode,
   // captured once on mount (not recomputed every render).
@@ -320,12 +338,12 @@ export function GaugeWidget({
   const [error, setError] = useState<string | null>(null);
   const [isEmpty, setIsEmpty] = useState(false);
 
-  const [dynamicProps, setDynamicProps] = useState<GaugeWidgetUpdate>({});
+  const [dynamicProps, setDynamicProps] = useState<AnedyaGaugeUpdate>({});
 
   const mountedRef = useRef(false);
   const isFetchingRef = useRef(false);
 
-  // ---- Live data fetch (mirrors CardWidget, plus timestamp) ----
+  // ---- Live data fetch (mirrors AnedyaCard, plus timestamp) ----
   useEffect(() => {
     if (!node) return;
     mountedRef.current = true;
@@ -337,7 +355,11 @@ export function GaugeWidget({
       setError(null);
 
       try {
-        const res = await node.getLatestData(variable);
+        // `variable!` — TS still sees this as `string | undefined` since
+        // it's typed optional on the shared base props, but the runtime
+        // invariant check above guarantees it's set whenever we get this
+        // far (the effect itself also bails out early if `!node`).
+        const res = await node.getLatestData(variable!);
         if (!mountedRef.current) return;
 
         if (res.isSuccess && res.isDataAvailable) {
@@ -376,7 +398,7 @@ export function GaugeWidget({
     };
   }, [node, variable]);
 
-  // ---- onDataChange resolution (identical pattern to CardWidget) ----
+  // ---- onDataChange resolution (identical pattern to AnedyaCard) ----
   useEffect(() => {
     if (!onDataChange) {
       setDynamicProps({});
@@ -556,7 +578,7 @@ export function GaugeWidget({
     ]
   );
 
-  // ---- Value + unit formatting (same precedence as CardWidget) ----
+  // ---- Value + unit formatting (same precedence as AnedyaCard) ----
   const { displayValue, displayUnit } = useMemo(() => {
     if (resolvedProps.formatValue) {
       return {

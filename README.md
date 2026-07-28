@@ -1,4 +1,4 @@
-[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-frontend-sdk?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
+[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
 <!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
 <p align="center">
@@ -8,21 +8,24 @@
 
 # Anedya Widgets SDK
 
-A collection of pre-built, themeable React widgets for displaying Anedya IoT data — drop-in components for dashboards and front-end apps.
+A collection of pre-built, themeable React widgets for displaying Anedya IoT data in dashboards and front-end applications.
+
+Designed for developers using the Anedya Frontend SDK, the library provides drop-in UI components that fetch and display device data with minimal setup. Each widget is fully customizable through themes, Tailwind classes, and component props, making it easy to match your application's design while avoiding repetitive UI implementation.
 
 ## Table of Contents
 
 - [Installation & Setup](#installation--setup)
 - [Widgets](#widgets)
-  - [CardWidget](#cardwidget)
+  - [AnedyaCard](#AnedyaCard)
     - [Required props](#required-props)
+    - [Manual vs live values](#manual-vs-live-values)
     - [The styling model](#the-styling-model)
     - [`styles` vs `className`](#styles-vs-classname--the-distinction-that-matters-most)
     - [Theming](#theming)
     - [Tailwind responsive utilities](#tailwind-responsive-utilities)
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering)
     - [How props are resolved](#how-props-are-resolved)
-  - [GaugeWidget](#gaugewidget)
+  - [AnedyaGauge](#AnedyaGauge)
     - [Required props](#required-props-1)
     - [Manual vs live values](#manual-vs-live-values)
     - [Slots & styling](#slots--styling)
@@ -56,28 +59,28 @@ Widgets in this SDK don't create their own Anedya client or node — they only r
 **1. Install both packages:**
 
 ```bash
-npm install @anedyasystems/anedya-frontend-sdk public-widget-sdk
+npm install @anedyasystems/anedya-frontend-sdk anedya-widgets-react
 ```
 
 **2. Import the stylesheet once**, anywhere in your app's entry point:
 
 ```jsx
-import "public-widget-sdk/styles.css";
+import "anedya-widgets-react/styles.css";
 ```
 
 **3. Create a client and node using the Frontend SDK, then pass the node into any widget:**
 
 ```jsx
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { CardWidget } from "public-widget-sdk";
-import "public-widget-sdk/styles.css";
+import { AnedyaCard } from "anedya-widgets-react";
+import "anedya-widgets-react/styles.css";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
 const client = anedya.newClient(config);
 const node = anedya.newNode(client, nodeId);
 
-<CardWidget node={node} variable="humidity" />;
+<AnedyaCard node={node} variable="humidity" />;
 ```
 
 > `tokenId`, `token`, and `nodeId` come from your Anedya account/device setup — see the [Frontend SDK docs](https://www.npmjs.com/package/@anedyasystems/anedya-frontend-sdk) for details on obtaining these and on other `node`/`client` methods (fetching historical data, live streaming, key-value store, etc.) beyond what these widgets use directly.
@@ -86,12 +89,12 @@ const node = anedya.newNode(client, nodeId);
 
 ## Widgets
 
-### CardWidget
+### AnedyaCard
 
 A single-value display widget — shows the latest reading, a title, and a last-updated label.
 
 ```jsx
-<CardWidget
+<AnedyaCard
   node={node}
   variable="humidity"
   title="Humidity"
@@ -102,16 +105,30 @@ A single-value display widget — shows the latest reading, a title, and a last-
 
 #### Required props
 
-| Prop       | Type     | Description                      |
-| ---------- | -------- | --------------------------------- |
-| `node`     | `any`    | `anedya.newNode(client, nodeId)` |
-| `variable` | `string` | Variable name to display         |
+| Prop       | Type     | Description                                                              |
+| ---------- | -------- | ---------------------------------------------------------------------------- |
+| `node`     | `any`    | `anedya.newNode(client, nodeId)` — omit only if using `value` for a fully controlled widget (see below) |
+| `variable` | `string` | Variable name to display — required whenever `node` is provided               |
+
+---
+
+#### Manual vs live values
+
+Like `AnedyaGauge`, `AnedyaCard` can also render **without** a live `node` fetch — pass `value` directly for a fully controlled card:
+
+```jsx
+<AnedyaCard value={72} unit="%" title="Manual reading" />
+```
+
+If both a `node`/`variable` fetch *and* a `value` prop are present, the fetched value takes over once it arrives — `value` acts as the initial/fallback reading until then.
+
+`onDataChange` reflects live fetched data only — it does not fire based on the manual `value` prop.
 
 ---
 
 #### The styling model
 
-`CardWidget` is **entirely class-based** — every visual choice is a CSS class string, not a style property. This is deliberate: card widgets are commonly styled with Tailwind, and classes compose and override far more predictably than inline styles do once you're combining a theme, a per-instance override, and a conditional rule all on the same element.
+`AnedyaCard` is **entirely class-based** — every visual choice is a CSS class string, not a style property. This is deliberate: card widgets are commonly styled with Tailwind, and classes compose and override far more predictably than inline styles do once you're combining a theme, a per-instance override, and a conditional rule all on the same element.
 
 Every part of the card is a named **slot**:
 
@@ -131,7 +148,7 @@ These look similar but do genuinely different things:
 | `className` | plain string           | only the outermost container element                                  | the ordinary React convention every component supports  |
 
 ```jsx
-<CardWidget
+<AnedyaCard
   className="shadow-lg" // outer box only
   styles={{
     value: "text-red-500 text-5xl", // the "value" slot specifically
@@ -160,9 +177,9 @@ const emeraldTheme = {
   },
 };
 
-<CardWidget theme={emeraldTheme} />
+<AnedyaCard theme={emeraldTheme} />
 // or
-<CardWidget theme="dark" />   // built-in preset, or "light" (default)
+<AnedyaCard theme="dark" />   // built-in preset, or "light" (default)
 ```
 
 ---
@@ -172,7 +189,7 @@ const emeraldTheme = {
 You can freely use Tailwind's responsive prefixes inside `styles`:
 
 ```tsx
-<CardWidget
+<AnedyaCard
   styles={{
     value: "text-2xl md:text-4xl xl:text-6xl",
   }}
@@ -203,7 +220,7 @@ It receives the raw fetched data:
 Instead of returning CSS classes, it returns a **partial set of widget props**. Those returned props temporarily override the widget's original props until the callback runs again.
 
 ```tsx
-<CardWidget
+<AnedyaCard
   onDataChange={(data) => {
     if (!data) return;
 
@@ -230,7 +247,7 @@ Returning `undefined` (or nothing) clears any previous overrides and restores th
 
 Rendering happens in layers.
 
-1. The props you pass to `<CardWidget />`
+1. The props you pass to `<AnedyaCard />`
 2. Any temporary overrides returned from `onDataChange`
 3. Theme resolution (`"light"`, `"dark"`, or a custom `WidgetTheme`)
 4. Per-slot class resolution
@@ -249,12 +266,12 @@ Later layers win whenever two Tailwind utilities conflict. Conflicts are resolve
 
 ---
 
-### GaugeWidget
+### AnedyaGauge
 
 A radial arc gauge — shows a single value as a filled arc with an optional needle, min/max tick marks, and a last-updated label.
 
 ```jsx
-<GaugeWidget
+<AnedyaGauge
   node={node}
   variable="temperature"
   title="Temperature"
@@ -268,19 +285,20 @@ A radial arc gauge — shows a single value as a filled arc with an optional nee
 
 #### Required props
 
-| Prop       | Type     | Description                      |
-| ---------- | -------- | --------------------------------- |
-| `node`     | `any`    | `anedya.newNode(client, nodeId)` |
-| `variable` | `string` | Variable name to display         |
+
+| Prop       | Type     | Description                                                              |
+| ---------- | -------- | ---------------------------------------------------------------------------- |
+| `node`     | `any`    | `anedya.newNode(client, nodeId)` — omit only if using `value` for a fully controlled widget (see below) |
+| `variable` | `string` | Variable name to display — required whenever `node` is provided               |
 
 ---
 
 #### Manual vs live values
 
-Unlike `CardWidget`, `GaugeWidget` can also render **without** a live `node` fetch — pass `value` directly for a fully controlled gauge (e.g. driven by your own state, a slider, or a value computed elsewhere in your app):
+Unlike `AnedyaCard`, `AnedyaGauge` can also render **without** a live `node` fetch — pass `value` directly for a fully controlled gauge (e.g. driven by your own state, a slider, or a value computed elsewhere in your app):
 
 ```jsx
-<GaugeWidget value={72} min={0} max={100} unit="%" />
+<AnedyaGauge value={72} min={0} max={100} unit="%" />
 ```
 
 If both a `node`/`variable` fetch *and* a `value` prop are present, the fetched value takes over once it arrives — `value` acts as the initial/fallback reading until then.
@@ -291,7 +309,7 @@ If both a `node`/`variable` fetch *and* a `value` prop are present, the fetched 
 
 #### Slots & styling
 
-Like `CardWidget`, every part of the gauge is a named **slot**, and the same `styles` (per-slot) / `className` (outer container only) system applies:
+Like `AnedyaCard`, every part of the gauge is a named **slot**, and the same `styles` (per-slot) / `className` (outer container only) system applies:
 
 ```ts
 type GaugeSlot =
@@ -301,7 +319,7 @@ type GaugeSlot =
 ```
 
 ```jsx
-<GaugeWidget
+<AnedyaGauge
   className="shadow-lg"          // outer box only
   styles={{
     value: "text-red-500 text-4xl",
@@ -317,7 +335,7 @@ type GaugeSlot =
 
 #### Theming
 
-`theme` works exactly as it does for `CardWidget` — a preset name, or a custom `WidgetTheme<GaugeSlot>` object:
+`theme` works exactly as it does for `AnedyaCard` — a preset name, or a custom `WidgetTheme<GaugeSlot>` object:
 
 ```jsx
 const emeraldGaugeTheme = {
@@ -330,9 +348,9 @@ const emeraldGaugeTheme = {
   },
 };
 
-<GaugeWidget theme={emeraldGaugeTheme} />
+<AnedyaGauge theme={emeraldGaugeTheme} />
 // or
-<GaugeWidget theme="dark" />   // built-in preset, or "light" (default)
+<AnedyaGauge theme="dark" />   // built-in preset, or "light" (default)
 ```
 
 ---
@@ -342,7 +360,7 @@ const emeraldGaugeTheme = {
 `arc` controls the shape of the gauge itself:
 
 ```jsx
-<GaugeWidget
+<AnedyaGauge
   arc={{
     startAngle: -120,   // degrees, 0 = 12 o'clock, clockwise-positive
     endAngle: 120,
@@ -372,7 +390,7 @@ A default `startAngle`/`endAngle` of `-90`/`90` draws the classic bottom half-ci
 `track` is the background arc the value bar sits on top of:
 
 ```jsx
-<GaugeWidget track={{ show: true, color: "#e2e8f0" }} />
+<AnedyaGauge track={{ show: true, color: "#e2e8f0" }} />
 ```
 
 | Prop    | Type      | Default              | Description                                          |
@@ -387,9 +405,9 @@ A default `startAngle`/`endAngle` of `-90`/`90` draws the classic bottom half-ci
 `color` sets the fill of the value arc — a single color, or 2+ colors for a gradient:
 
 ```jsx
-<GaugeWidget color="#f97316" />
+<AnedyaGauge color="#f97316" />
 
-<GaugeWidget color={["#22c55e", "#eab308", "#ef4444"]} />
+<AnedyaGauge color={["#22c55e", "#eab308", "#ef4444"]} />
 // renders a left-to-right gradient across the filled portion of the arc
 ```
 
@@ -400,7 +418,7 @@ If omitted, the bar falls back to the theme's `bar` slot color via `currentColor
 #### Needle configuration
 
 ```jsx
-<GaugeWidget
+<AnedyaGauge
   needle={{
     show: true,
     type: "drop",          // "line" | "rounded" | "drop" | "triangle"
@@ -434,7 +452,7 @@ If omitted, the bar falls back to the theme's `bar` slot color via `currentColor
 Setting `needle={{ show: false }}` turns the gauge into a donut-style indicator — the value/unit/label block is centered directly over the arc instead of rendered below it:
 
 ```jsx
-<GaugeWidget needle={{ show: false }} arc={{ startAngle: -180, endAngle: 180 }} />
+<AnedyaGauge needle={{ show: false }} arc={{ startAngle: -180, endAngle: 180 }} />
 ```
 
 ---
@@ -444,7 +462,7 @@ Setting `needle={{ show: false }}` turns the gauge into a donut-style indicator 
 `tick` draws radial marks (and optional labels) around the arc between `min` and `max`. Off by default:
 
 ```jsx
-<GaugeWidget
+<AnedyaGauge
   tick={{
     show: true,
     count: 10,          // number of INTERVALS, so 10 -> 11 marks (0,10,...,100)
@@ -482,7 +500,7 @@ Enabling ticks reserves extra space inside the widget for the line + gaps + labe
 `animation` controls the transition when the value (and, if enabled, the needle) moves to a new reading:
 
 ```jsx
-<GaugeWidget animation={{ show: true, duration: 800, easing: "elasticOut" }} />
+<AnedyaGauge animation={{ show: true, duration: 800, easing: "elasticOut" }} />
 ```
 
 | Prop       | Type          | Default      | Description                                                |
@@ -497,12 +515,12 @@ With `animation.show: false`, both the bar and needle snap directly to the new v
 
 #### `onDataChange` — data-driven rendering
 
-`onDataChange` works the same way it does on `CardWidget` (see [`onDataChange` under CardWidget](#ondatachange--data-driven-rendering)) — it's called with the latest fetched reading and a `meta` object, and can return a partial set of props (including `styles`) that temporarily override the gauge's own props:
+`onDataChange` works the same way it does on `AnedyaCard` (see [`onDataChange` under AnedyaCard](#ondatachange--data-driven-rendering)) — it's called with the latest fetched reading and a `meta` object, and can return a partial set of props (including `styles`) that temporarily override the gauge's own props:
 
 **Example 1 – change many props based on value ranges**
 
 ```tsx
-<GaugeWidget
+<AnedyaGauge
   node={node}
   variable="pressure"
   min={0}
@@ -541,7 +559,7 @@ With `animation.show: false`, both the bar and needle snap directly to the new v
 **Example 2 – custom error and empty rendering**
 
 ```tsx
-<GaugeWidget
+<AnedyaGauge
   node={node}
   variable="sensor"
   onDataChange={(data, meta) => {
@@ -573,9 +591,9 @@ The only difference from Card is the data shape passed in — `GaugeData` (`{ va
 
 #### How props are resolved
 
-Rendering follows the same layered order as `CardWidget`:
+Rendering follows the same layered order as `AnedyaCard`:
 
-1. The props you pass to `<GaugeWidget />`
+1. The props you pass to `<AnedyaGauge />`
 2. Any temporary overrides returned from `onDataChange`
 3. Theme resolution (`"light"`, `"dark"`, or a custom `WidgetTheme<GaugeSlot>`)
 4. Per-slot class resolution
@@ -594,7 +612,7 @@ Later layers win whenever two Tailwind utilities conflict, resolved with `twMerg
 
 ## Common
 
-The sections below apply to every widget in this SDK. Where behavior is identical, only the shared explanation is given once; each subsection includes an example for both `CardWidget` and `GaugeWidget`.
+The sections below apply to every widget in this SDK. Where behavior is identical, only the shared explanation is given once; each subsection includes an example for both `AnedyaCard` and `AnedyaGauge`.
 
 ### Formatting vs rendering
 
@@ -609,23 +627,23 @@ The sections below apply to every widget in this SDK. Where behavior is identica
 For values that need unit-aware scaling (bytes, durations, lengths, etc.), pass a `format` preset instead of manually computing a unit string:
 
 ```tsx
-// CardWidget
-<CardWidget node={node} variable="freeMemory" format="bytes" />
+// AnedyaCard
+<AnedyaCard node={node} variable="freeMemory" format="bytes" />
 // renders "512" + "MB" — auto-scaled, no manual unit needed
 
-<CardWidget node={node} variable="uptime" format="duration" />
+<AnedyaCard node={node} variable="uptime" format="duration" />
 // renders "2d 4h 12m"
 
-<CardWidget node={node} variable="distance" format="length" formatOptions={{ formatOptions: 2 }} />
+<AnedyaCard node={node} variable="distance" format="length" formatOptions={{ formatOptions: 2 }} />
 // renders "1.25" + "km"
 ```
 
 ```tsx
-// GaugeWidget
-<GaugeWidget node={node} variable="freeMemory" format="bytes" min={0} max={8_000_000_000} />
+// AnedyaGauge
+<AnedyaGauge node={node} variable="freeMemory" format="bytes" min={0} max={8_000_000_000} />
 // renders "512" + "MB" on the value, and (if tick.show is on) scaled units on tick labels too
 
-<GaugeWidget node={node} variable="uptime" format="duration" min={0} max={86400} />
+<AnedyaGauge node={node} variable="uptime" format="duration" min={0} max={86400} />
 // renders "2d 4h 12m"
 ```
 
@@ -655,33 +673,33 @@ Available presets:
 
 - **`locale`** — force a specific number format instead of relying on the visitor's browser/OS locale. Useful for a dashboard serving a specific region, or an app with its own explicit language setting:
 ```tsx
-  <CardWidget format="number" formatOptions={{ locale: "en-IN" }} />
+  <AnedyaCard format="number" formatOptions={{ locale: "en-IN" }} />
   // "1,23,456" (Indian digit grouping) instead of "123,456"
 
-  <GaugeWidget format="number" formatOptions={{ locale: "de-DE" }} min={0} max={200000} />
+  <AnedyaGauge format="number" formatOptions={{ locale: "de-DE" }} min={0} max={200000} />
   // "123.456" (German uses "." as the thousands separator, "," as the decimal point)
 ```
 
 - **`formatOptions`** — control decimal places in the *scaled* output (not the raw value). Useful when the default rounding is too coarse for scientific/financial data, or you want whole numbers for a cleaner dashboard look:
 ```tsx
-  <CardWidget format="bytes" formatOptions={{ formatOptions: 2 }} />
+  <AnedyaCard format="bytes" formatOptions={{ formatOptions: 2 }} />
   // "512.34" + "MB" — more decimal places than the default
 
-  <GaugeWidget format="bytes" formatOptions={{ formatOptions: 0 }} min={0} max={1_000_000_000} />
+  <AnedyaGauge format="bytes" formatOptions={{ formatOptions: 0 }} min={0} max={1_000_000_000} />
   // "512" + "MB" — whole number, no decimals
 ```
 
 - **`binary`** — *(`bytes` preset only)* choose between 1000-based and 1024-based scaling. These genuinely produce different numbers for the same raw byte count, so picking the wrong one can make a value look incorrect even though the math is technically right for the mode you're in:
 ```tsx
-  <CardWidget format="bytes" formatOptions={{ binary: true }} />
+  <AnedyaCard format="bytes" formatOptions={{ binary: true }} />
   // raw 1048576 -> "1" + "MiB" — matches how OS file managers/RAM usage are usually reported
 
-  <CardWidget format="bytes" />
+  <AnedyaCard format="bytes" />
   // raw 1048576 -> "1.05" + "MB" — matches how storage manufacturers/network specs are usually reported
 ```
   As a rule of thumb: use `binary: true` for memory/RAM/file-size-on-disk readings, and the default (decimal) for network throughput or storage capacity marketing figures.
 
-**`format` takes over the `unit` slot entirely.** When set, the preset determines its own unit per value (e.g. switching from `"KB"` to `"MB"` as a byte count grows) — the `unit` prop is ignored while `format` is active. On `GaugeWidget`, if `tick.labelFormat` isn't set, enabled tick labels also reuse the active `format` preset, so the value and the tick ring stay unit-consistent.
+**`format` takes over the `unit` slot entirely.** When set, the preset determines its own unit per value (e.g. switching from `"KB"` to `"MB"` as a byte count grows) — the `unit` prop is ignored while `format` is active. On `AnedyaGauge`, if `tick.labelFormat` isn't set, enabled tick labels also reuse the active `format` preset, so the value and the tick ring stay unit-consistent.
 
 > **Presets don't validate that they match your data's actual meaning** — they only know how to scale a raw number. Applying `format="length"` to a Celsius reading, for example, will scale it as if it were meters and display a plausible-looking but semantically wrong unit. Only use a preset that matches what the underlying value actually represents.
 
@@ -690,22 +708,22 @@ Available presets:
 `formatValue` always wins if provided — it's a full custom formatting function and bypasses `format`/`decimalPlaces` entirely:
 
 ```tsx
-// CardWidget
-<CardWidget
+// AnedyaCard
+<AnedyaCard
   formatValue={(v) => `${v.toFixed(2)} % RH`}
   labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
 />
 ```
 
 ```tsx
-// GaugeWidget
-<GaugeWidget
+// AnedyaGauge
+<AnedyaGauge
   formatValue={(v) => `${v.toFixed(1)}%`}
   labelText={(ts) => `As of ${new Date(ts).toLocaleDateString()}`}
 />
 ```
 
-> Long `formatValue` output (e.g. `"56.00 % RH"`) may wrap onto a second line at small widths — the value slot wraps rather than overflowing. On `CardWidget` this interacts with a fixed `height` — see [Sizing](#sizing) below. On `GaugeWidget`, the value block sits below (or centered over, in needle-less mode) the arc and wraps the same way within the available space.
+> Long `formatValue` output (e.g. `"56.00 % RH"`) may wrap onto a second line at small widths — the value slot wraps rather than overflowing. On `AnedyaCard` this interacts with a fixed `height` — see [Sizing](#sizing) below. On `AnedyaGauge`, the value block sits below (or centered over, in needle-less mode) the arc and wraps the same way within the available space.
 
 ---
 
@@ -716,11 +734,11 @@ By default, the label under the value shows a fixed clock time (`"Updated 14:32:
 #### `timezone` — override auto-detection
 
 ```tsx
-<CardWidget {...commonProps} labelFormat="datetime" timezone="America/New_York" />
+<AnedyaCard {...commonProps} labelFormat="datetime" timezone="America/New_York" />
 // commonProps = { node, variable: "humidity" }
 // shows the timestamp converted to Eastern time, regardless of the visitor's own browser timezone
 
-<GaugeWidget {...commonProps} labelFormat="datetime" timezone="Asia/Kolkata" />
+<AnedyaGauge {...commonProps} labelFormat="datetime" timezone="Asia/Kolkata" />
 // commonProps = { node, variable: "humidity" }
 // shows the timestamp converted to Indian Standard Time
 ```
@@ -729,20 +747,20 @@ If omitted, the widget uses `Intl.DateTimeFormat().resolvedOptions().timeZone` �
 
 `timezone` affects the `time`, `date`, and `datetime` label presets. It has no effect on `relative` (a time difference is timezone-independent) or `iso` (ISO 8601 output is always UTC by definition).
 
-> **`GaugeWidget` in manual mode:** if you're using `value` without a `node` (see [Manual vs live values](#manual-vs-live-values)), there's no fetched timestamp to show. The label falls back to the moment the widget first mounted, so it still renders something meaningful instead of disappearing.
++> **In manual `value` mode** (either widget, no `node` provided): there's no fetched timestamp to show. The label falls back to the moment the widget first mounted, so it still renders something meaningful instead of disappearing.
 
 #### `labelFormat` — named presets
 
 ```tsx
-<CardWidget {...commonProps} labelFormat="relative" />
+<AnedyaCard {...commonProps} labelFormat="relative" />
 // commonProps = { node, variable: "humidity" }
 // "5 minutes ago" instead of "Updated 14:32:10"
 
-<CardWidget {...commonProps} labelFormat="date" />
+<AnedyaCard {...commonProps} labelFormat="date" />
 // commonProps = { node, variable: "humidity" }
 // "Updated 7/24/2026"
 
-<GaugeWidget {...commonProps} labelFormat="relative" />
+<AnedyaGauge {...commonProps} labelFormat="relative" />
 // commonProps = { node, variable: "humidity" }
 // "5 minutes ago" instead of "Updated 14:32:10"
 ```
@@ -763,7 +781,7 @@ Available presets:
 
 ```tsx
 // AM/PM, 12-hour
-<CardWidget
+<AnedyaCard
   labelText={(ts) => {
     const d = new Date(ts < 1e12 ? ts * 1000 : ts);
     return `Updated ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
@@ -772,12 +790,12 @@ Available presets:
 // "Updated 2:32 PM"
 
 // Combining relative time with custom text
-import { relativeTime } from "public-widget-sdk/formatters";
+import { relativeTime } from "anedya-widgets-react/formatters";
 
-<CardWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
+<AnedyaCard labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
 // "Last synced 5 minutes ago"
 
-<GaugeWidget labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
+<AnedyaGauge labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
 // "Last synced 5 minutes ago"
 ```
 
@@ -798,7 +816,7 @@ Every widget distinguishes between three outcomes of a fetch, each rendered diff
 Both `error` and `empty` are real slots, so they pick up theme colors automatically and can be restyled the same way as any other slot:
 
 ```tsx
-<CardWidget
+<AnedyaCard
   {...commonProps}
   styles={{
     error: "text-orange-500 italic",
@@ -806,7 +824,7 @@ Both `error` and `empty` are real slots, so they pick up theme colors automatica
   }}
 />
 
-<GaugeWidget
+<AnedyaGauge
   {...commonProps}
   styles={{
     error: "text-orange-500 italic",
@@ -822,7 +840,7 @@ Both `error` and `empty` are real slots, so they pick up theme colors automatica
 For full control beyond just restyling text, `renderError` and `renderEmpty` let you replace the entire error/empty state with your own JSX:
 
 ```tsx
-<CardWidget
+<AnedyaCard
   {...commonProps}
   renderError={(error) => (
     <div className="flex flex-col items-center gap-1">
@@ -833,7 +851,7 @@ For full control beyond just restyling text, `renderError` and `renderEmpty` let
   renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
 />
 
-<GaugeWidget
+<AnedyaGauge
   {...commonProps}
   renderError={(error) => (
     <div className="flex flex-col items-center gap-1">
@@ -854,7 +872,7 @@ For full control beyond just restyling text, `renderError` and `renderEmpty` let
 `onDataChange` receives a second argument describing which state just occurred, so you can react to errors or empty data the same way you already react to values:
 
 ```tsx
-<CardWidget
+<AnedyaCard
   {...commonProps}
   onDataChange={(data, meta) => {
     if (meta.kind === "error") {
@@ -870,7 +888,7 @@ For full control beyond just restyling text, `renderError` and `renderEmpty` let
   }}
 />
 
-<GaugeWidget
+<AnedyaGauge
   {...commonProps}
   onDataChange={(data, meta) => {
     if (meta.kind === "error") {
@@ -900,7 +918,7 @@ This is backwards compatible — existing `onDataChange={(data) => {...}}` callb
 The formatting helpers used internally are also available as a standalone import, for composing into your own `labelText`/`formatValue` functions — usable with either widget:
 
 ```tsx
-import { relativeTime } from "public-widget-sdk/formatters";
+import { relativeTime } from "anedya-widgets-react/formatters";
 ```
 
 | Export         | Signature                                        | Description                                                                                             |
@@ -911,12 +929,12 @@ import { relativeTime } from "public-widget-sdk/formatters";
 
 ### Sizing
 
-#### CardWidget
+#### AnedyaCard
 
 `width` / `height` / `minWidth` / `maxWidth` are plain props, applied as inline styles on the container — independent of the whole `styles`/theme system:
 
 ```jsx
-<CardWidget width={320} height={200} minWidth={280} maxWidth={400} />
+<AnedyaCard width={320} height={200} minWidth={280} maxWidth={400} />
 ```
 
 ##### `height` has two distinct modes
@@ -930,19 +948,19 @@ Whether you pass `height` changes how the card behaves — this is intentional, 
 
 ```jsx
 // Auto-height: card grows to fit content, whatever that content turns out to be
-<CardWidget node={node} variable="humidity" />
+<AnedyaCard node={node} variable="humidity" />
 
 // Fixed-height: card is exactly 300px tall; content that doesn't fit is clipped
-<CardWidget node={node} variable="humidity" height={300} width={700} />
+<AnedyaCard node={node} variable="humidity" height={300} width={700} />
 ```
 
 If you're using a `formatValue` that can produce long strings, either don't pass a fixed `height` (let the card grow to fit), or pass a `height` generous enough for the wrapped text at your chosen `width`.
 
-#### GaugeWidget
+#### AnedyaGauge
 
 ```jsx
-<GaugeWidget width={280} height={200} />
-<GaugeWidget size={220} />   // shorthand: sets width AND height to the same value (a square gauge)
+<AnedyaGauge width={280} height={200} />
+<AnedyaGauge size={220} />   // shorthand: sets width AND height to the same value (a square gauge)
 ```
 
 `size` takes priority over `width`/`height` when both are set. Without `size` or `height`, the gauge fills its container's width and derives a proportional height automatically (unless `aspectRatio` is set).
@@ -978,7 +996,7 @@ By default the following properties scale automatically:
 
 **When `height` is omitted**, scaling responds to the container's **width only** (`cqw`).
 
-**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size container renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect. For the `GaugeWidget`, the arc radius and thickness are also computed from the available container size, so they resize automatically.
+**When `height` is passed**, scaling responds to **both width and height** (`cqw` + `cqh`) — a taller fixed-size container renders bigger text/gaps than a shorter one at the same width, in addition to width's usual effect. For the `AnedyaGauge`, the arc radius and thickness are also computed from the available container size, so they resize automatically.
 
 A widget inside a narrow dashboard column will use smaller typography than the same widget rendered full-width, even on the same screen — this behavior is built in and needs no configuration.
 
@@ -987,15 +1005,15 @@ A widget inside a narrow dashboard column will use smaller typography than the s
 If you provide your own font-size utility for a slot, you're opting out of the default responsive sizing for that slot.
 
 ```tsx
-// CardWidget
-<CardWidget
+// AnedyaCard
+<AnedyaCard
   styles={{
     value: "text-6xl",
   }}
 />
 
-// GaugeWidget
-<GaugeWidget
+// AnedyaGauge
+<AnedyaGauge
   styles={{
     value: "text-6xl",
   }}
@@ -1004,13 +1022,13 @@ If you provide your own font-size utility for a slot, you're opting out of the d
 
 The value will always render at `text-6xl`. Likewise, responsive Tailwind classes (`text-2xl md:text-5xl`) take precedence over the widget's default responsive sizing — your classes always win over the widget defaults.
 
-> **GaugeWidget note:** the arc's radius itself is handled separately from these CSS variables (it's a geometry calculation, not a font size) — it auto-fits to whatever space is left after padding and, if enabled, tick-mark space is subtracted, capped by `arc.radius` when you set one explicitly.
+> **AnedyaGauge note:** the arc's radius itself is handled separately from these CSS variables (it's a geometry calculation, not a font size) — it auto-fits to whatever space is left after padding and, if enabled, tick-mark space is subtracted, capped by `arc.radius` when you set one explicitly.
 
 ---
 
 ### Loading & error states
 
-#### CardWidget
+#### AnedyaCard
 
 While the initial fetch is in flight, the card renders **skeleton loaders** in place of the value and label — pulsing placeholder blocks sized to match each slot's current font-size variable (`var(--anedya-card-value-size)` / `var(--anedya-card-label-size)`), so the skeleton scales along with the card exactly like the real content would.
 
@@ -1018,7 +1036,7 @@ If the fetch fails or no data is available, the card renders the error message t
 
 Neither state currently accepts style overrides via `styles` — flag it if you need to customize their appearance.
 
-#### GaugeWidget
+#### AnedyaGauge
 
 While the initial fetch is in flight, the gauge renders the same kind of pulsing skeleton blocks in place of the value and label (sized against `var(--anedya-gauge-value-size)` / `var(--anedya-gauge-label-size)`), and the arc/needle themselves render at reduced opacity rather than disappearing, so the gauge's shape stays visible while data loads.
 
@@ -1028,15 +1046,16 @@ If the fetch fails or no data is available, the error message (or `renderError`/
 
 ### Other props
 
-#### CardWidget
+#### AnedyaCard
 
 | Prop            | Type     | Description                                                                        |
 | --------------- | -------- | ------------------------------------------------------------------------------------ |
 | `title`         | `string` | Card title. Default: `"Latest Value"`                                                |
+| `value`         | `number` | Manual/controlled value. Used as the initial value, or the only value if no `node` is given |
 | `unit`          | `string` | Unit suffix shown next to the value                                                  |
 | `decimalPlaces` | `number` | Decimal places for the displayed value (used only if `formatValue` isn't provided)   |
 
-#### GaugeWidget
+#### AnedyaGauge
 
 | Prop            | Type      | Description                                                                                    |
 | --------------- | --------- | -------------------------------------------------------------------------------------------------- |
@@ -1056,7 +1075,7 @@ This SDK ships pre-compiled CSS alongside its JavaScript — you don't need Tail
 **Import the stylesheet once**, anywhere in your app's entry point (e.g. `main.tsx`, `App.tsx`, or your global styles file):
 
 ```jsx
-import "public-widget-sdk/styles.css";
+import "anedya-widgets-react/styles.css";
 ```
 
 That's the entire integration on your end. No `content` glob changes to your `tailwind.config`, no build coordination, nothing else required — every widget in this SDK will render fully styled as soon as this import is present.

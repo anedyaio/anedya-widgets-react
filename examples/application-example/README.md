@@ -1,18 +1,193 @@
-# React + Vite
+# Anedya Widgets Example
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A minimal React application demonstrating how to use the **Anedya Widgets SDK** with the **Anedya Frontend SDK**.
 
-Currently, two official plugins are available:
+This project shows how to authenticate with Anedya, create a client and node, and display live IoT data using the provided widgets. It also demonstrates rendering widgets with manually supplied values, making it a simple reference for integrating the SDK into your own dashboards and applications.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+Before running the example, you'll need:
 
-Note: This will impact Vite dev & build performances.
+- Node.js 18 or later
+- An Anedya account
+- A valid **Token ID**
+- A valid **Token**
+- A **Node ID** for a device
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Installation
+
+Clone the repository and install the project dependencies.
+
+```bash
+npm install
+```
+
+---
+
+## Configuration
+
+Open `src/App.tsx` and replace the placeholder credentials with your own:
+
+```tsx
+const tokenId = "YOUR_TOKEN_ID";
+const token = "YOUR_TOKEN";
+const nodeId = "YOUR_NODE_ID";
+```
+
+The example creates an Anedya client and node that are passed directly to the widgets:
+
+```tsx
+import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
+
+const anedya = new Anedya();
+
+const config = anedya.newConfig(tokenId, token);
+const client = anedya.newClient(config);
+const node = anedya.newNode(client, nodeId);
+```
+
+---
+
+## Running the example
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open the URL displayed in your terminal (typically `http://localhost:5173`).
+
+---
+
+# Using the widgets
+
+## Live data
+
+To display live values from Anedya, provide a `node` and `variable`.
+
+### Card
+
+```tsx
+<AnedyaCard
+  node={node}
+  variable="humidity"
+/>
+```
+
+### Gauge
+
+```tsx
+<AnedyaGauge
+  node={node}
+  variable="temperature"
+/>
+```
+
+---
+
+## Manual values
+
+Widgets can also be rendered without connecting to Anedya by providing a `value`.
+
+### Card
+
+```tsx
+<AnedyaCard
+  value={65}
+  title="Humidity"
+  unit="%"
+/>
+```
+
+### Gauge
+
+```tsx
+<AnedyaGauge
+  value={28}
+  min={0}
+  max={100}
+  unit="°C"
+/>
+```
+
+When both `value` and `node`/`variable` are provided, the manual value is used initially until live data is received.
+
+---
+
+# Required props
+
+The widgets support two operating modes.
+
+## Live data mode
+
+| Prop | Description |
+|------|-------------|
+| `node` | Anedya node instance |
+| `variable` | Variable name to fetch |
+
+Both props are required when displaying live data.
+
+---
+
+## Manual value mode
+
+| Prop | Description |
+|------|-------------|
+| `value` | Value to display |
+
+When `value` is supplied, `node` and `variable` are not required.
+
+---
+
+# Common optional props
+
+Both widgets support the following optional props:
+
+| Prop | Purpose |
+|------|---------|
+| `title` | Widget title |
+| `unit` | Unit displayed beside the value |
+| `theme` | Built-in or custom theme |
+| `styles` | Style individual widget slots |
+| `className` | Style the outer container |
+| `width` | Widget width |
+| `height` | Widget height |
+| `minWidth` | Minimum width |
+| `maxWidth` | Maximum width |
+| `format` | Built-in value formatter |
+| `formatOptions` | Formatting options |
+| `formatValue` | Custom value formatter |
+| `labelFormat` | Built-in timestamp formatter |
+| `labelText` | Custom timestamp text |
+| `timezone` | Timezone used for timestamps |
+| `renderError` | Custom error state |
+| `renderEmpty` | Custom empty state |
+| `onDataChange` | React to incoming data and dynamically update widget props |
+
+---
+
+# Gauge-specific props
+
+`AnedyaGauge` also supports additional configuration options:
+
+- `min`
+- `max`
+- `arc`
+- `track`
+- `needle`
+- `tick`
+- `animation`
+- `color`
+
+The example application demonstrates many of these options and can be used as a reference when configuring your own gauges.
+
+---
+
+# Project purpose
+
+This application is intended as a reference implementation for the Anedya Widgets SDK. It demonstrates the recommended setup, authentication flow, and common widget configurations, making it a useful starting point for building custom dashboards and IoT applications.

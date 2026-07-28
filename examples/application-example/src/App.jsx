@@ -1,8 +1,8 @@
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { CardWidget } from "../../../src";
-import { GaugeWidget } from "../../../src/components/GaugeChart/GaugeChartWidget";
-import "public-widget-sdk/styles.css";
+import { AnedyaCard } from "anedya-widgets-react";
+import { AnedyaGauge } from "anedya-widgets-react";
+import "anedya-widgets-react/styles.css";
 import "./index.css";
 
 // This demo has its own Tailwind build (see vite.config.js + src/index.css),
@@ -11,9 +11,9 @@ import "./index.css";
 // precompiled stylesheet only covers its built-in default classes, not
 // arbitrary classes a consumer passes in.
 
-const tokenId = import.meta.env.VITE_CARD_WIDGET_TOKEN_ID;
-const token = import.meta.env.VITE_CARD_WIDGET_TOKEN;
-const nodeId = import.meta.env.VITE_CARD_WIDGET_NODE_ID;
+const tokenId = "YOUR-TOKEN-ID";
+const token = "YOUR-TOKEN";
+const nodeId = "YOUR-NODE-ID";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -30,7 +30,7 @@ const commonProps = { node, variable: "humidity" };
 // light/dark preset.
 // ============================================================
 
-/** A custom CardWidget theme. */
+/** A custom AnedyaCard theme. */
 const emeraldCardTheme = {
   styles: {
     container: "bg-emerald-50 border-emerald-200",
@@ -41,7 +41,7 @@ const emeraldCardTheme = {
 };
 
 /**
- * A custom GaugeWidget theme.
+ * A custom AnedyaGauge theme.
  *
  * Note the two different color formats in play:
  * - `container`/`title`/`value`/`label` are Tailwind classes, since those
@@ -76,28 +76,28 @@ export default function App() {
       }}
     >
       {/* ================================================================
-       * SECTION 1 — CardWidget
+       * SECTION 1 — AnedyaCard
        * ================================================================ */}
 
       {/* ----------------------------------------------------------------
        * 1.1 Default appearance — no theme, no styles, no formatting
        * props. Every built-in fallback in one place.
        * ---------------------------------------------------------------- */}
-      <CardWidget {...commonProps} title="Default" unit="%" decimalPlaces={1} />
+      <AnedyaCard {...commonProps} title="Default" unit="%" decimalPlaces={1} />
 
       {/* ----------------------------------------------------------------
        * 1.2 theme — a reusable, shareable WidgetTheme object. Same
        * effect across every widget instance that uses it. Built-in
        * preset names ("light" / "dark") also work directly.
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="Emerald Theme"
         unit="%"
         decimalPlaces={1}
         theme={emeraldCardTheme}
       />
-      <CardWidget {...commonProps} title="Dark Preset" unit="%" decimalPlaces={1} theme="dark" />
+      <AnedyaCard {...commonProps} title="Dark Preset" unit="%" decimalPlaces={1} theme="dark" />
 
       {/* ----------------------------------------------------------------
        * 1.3 styles vs className — the distinction that matters most:
@@ -116,7 +116,7 @@ export default function App() {
        * precompiled stylesheet only covers its own built-in classes.
        * This demo has its own Tailwind build for exactly this reason.
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="styles vs className"
         unit="%"
@@ -135,7 +135,7 @@ export default function App() {
        * for the full precedence rules. formatValue/labelText are full
        * escape hatches; format/labelFormat are zero-code presets.
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="Custom Formatting"
         formatValue={(v) => `${v.toFixed(2)} % RH`}
@@ -148,7 +148,7 @@ export default function App() {
        * fully custom JSX via renderError/renderEmpty. See README "Error
        * & empty states" for the full behavior and styles.error/empty.
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="Error & Empty Handling"
         unit="%"
@@ -176,7 +176,7 @@ export default function App() {
        * fetched data ({ value, timestamp }), applied on top of
        * everything else (theme, styles, className).
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="Threshold Coloring"
         unit="%"
@@ -195,7 +195,7 @@ export default function App() {
        * applied as inline styles on the container. See README "Sizing"
        * — `height` has two distinct modes (auto-grow vs. fixed+clip).
        * ---------------------------------------------------------------- */}
-      <CardWidget
+      <AnedyaCard
         {...commonProps}
         title="Custom Size"
         unit="%"
@@ -209,29 +209,29 @@ export default function App() {
        * 1.8 timezone — pins the last-updated label to a specific IANA
        * timezone instead of the visitor's auto-detected one.
        * ---------------------------------------------------------------- */}
-      <CardWidget {...commonProps} title="Pinned to IST" labelFormat="datetime" timezone="Asia/Kolkata" />
+      <AnedyaCard {...commonProps} title="Pinned to IST" labelFormat="datetime" timezone="Asia/Kolkata" />
 
       {/* ================================================================
-       * SECTION 2 — GaugeWidget
+       * SECTION 2 — AnedyaGauge
        * ================================================================ */}
 
       {/* ----------------------------------------------------------------
        * 2.1 Default appearance — live data, no theme/styling overrides.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget {...commonProps} title="Default Gauge" unit="%" min={0} max={100} />
+      <AnedyaGauge {...commonProps} title="Default Gauge" unit="%" min={0} max={100} />
 
       {/* ----------------------------------------------------------------
        * 2.2 Manual value mode — pass `value` directly instead of `node`/
        * `variable` for a static/controlled gauge (e.g. driven by your
        * own app state rather than live Anedya data).
        * ---------------------------------------------------------------- */}
-      <GaugeWidget value={72} title="Manual Value" className="shadow-md" />
+      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" />
 
       {/* ----------------------------------------------------------------
        * 2.3 Full arc/track/needle/color/tick configuration, plus a
        * custom theme. Demonstrates most visual knobs at once.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget
+      <AnedyaGauge
         {...commonProps}
         title="Fully Configured"
         theme={emeraldGaugeTheme}
@@ -245,11 +245,11 @@ export default function App() {
       />
 
       {/* ----------------------------------------------------------------
-       * 2.4 onDataChange — same pattern as CardWidget: conditional
+       * 2.4 onDataChange — same pattern as AnedyaCard: conditional
        * overrides (title, color, needle color, track color, animation
        * speed) driven by the raw fetched value.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget
+      <AnedyaGauge
         {...commonProps}
         title="Threshold Coloring"
         min={0}
@@ -273,9 +273,9 @@ export default function App() {
 
       {/* ----------------------------------------------------------------
        * 2.5 formatValue / labelText — full custom formatting, same
-       * relationship to format/labelFormat as CardWidget.
+       * relationship to format/labelFormat as AnedyaCard.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget
+      <AnedyaGauge
         value={49}
         min={0}
         max={80}
@@ -289,7 +289,7 @@ export default function App() {
        * (track/bar/needle/needleCap/tick/tickLabel), which accept hex
        * colors or `text-*` Tailwind classes (read via currentColor).
        * ---------------------------------------------------------------- */}
-      <GaugeWidget
+      <AnedyaGauge
         {...commonProps}
         title="Wind Speed"
         unit="km/h"
@@ -309,9 +309,9 @@ export default function App() {
       />
 
       {/* ----------------------------------------------------------------
-       * 2.7 Error & empty states — identical mechanism to CardWidget.
+       * 2.7 Error & empty states — identical mechanism to AnedyaCard.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget
+      <AnedyaGauge
         {...commonProps}
         theme="dark"
         renderError={(error) => (
@@ -324,9 +324,9 @@ export default function App() {
       />
 
       {/* ----------------------------------------------------------------
-       * 2.8 timezone — same as CardWidget's.
+       * 2.8 timezone — same as AnedyaCard's.
        * ---------------------------------------------------------------- */}
-      <GaugeWidget {...commonProps} theme="dark" title="IST" timezone="Asia/Kolkata" />
+      <AnedyaGauge {...commonProps} theme="dark" title="IST" timezone="Asia/Kolkata" />
     </div>
   );
 }
