@@ -11,8 +11,5 @@ export function validateRequiredProps(
     ", "
   )}`;
 
-
-
-    console.error(message);
-  
+  console.error(message);
 }
