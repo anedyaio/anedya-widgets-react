@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CI Workflow
+#
+# PURPOSE:
+#   Validate code quality on every Pull Request and on pushes to `develop`.
+#   This workflow NEVER publishes to npm — it is a pure gate workflow.
+#
+# TRIGGERS:
+#   - Any pull_request (any base branch)
+#   - Direct pushes to `develop` (integration branch)
+#
+# WHY NOT prerelease / main?
+#   Those branches have their own dedicated publish workflows (prerelease.yml,
+#   release.yml) which already include all validation steps before publishing.
+#   Running ci.yml on those branches would create a redundant, competing job
+#   and could cause confusing workflow interleaving.
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+
+# Cancel any in-progress run for the same branch/PR so stale runs don't
+# consume minutes and don't produce misleading status checks.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm ci is preferred over npm install in CI:
+      # - It is deterministic (uses package-lock.json exactly)
+      # - It deletes node_modules before installing, preventing stale deps
+      # - It fails if package-lock.json is out of sync with package.json
+      - name: Install Dependencies
+        run: npm ci
+
+      # - name: Lint
+      #   run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build SDK
+        run: npm run build
+
+      # Tests are not yet added — re-enable this step when test coverage lands.
+      # - name: Run Tests
+      #   run: npm test

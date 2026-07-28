@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --muted-foreground: 215 16% 47%;
+  --primary: 221 83% 53%;
+  --secondary: 262 83% 58%;
+  --destructive: 0 84% 60%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 15%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 33% 24%;
+  --muted-foreground: 215 20% 65%;
+  --primary: 217 91% 60%;
+  --secondary: 262 83% 68%;
+  --destructive: 0 63% 60%;
+  --radius: 0.75rem;
+}
+
+.my-card {
+  background: #1e1b4b;
+  border: 1px solid #4338ca;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.my-card-title {
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.my-card-value {
+  color: #eef2ff;
+  font-size: 42px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.my-card-label {
+  color: #818cf8;
+  font-size: 11px;
+}
