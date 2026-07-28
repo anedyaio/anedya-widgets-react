@@ -4,7 +4,7 @@
   "description": "Anedya widget SDK",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-   "type": "module",
+  "type": "module",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
@@ -21,16 +21,17 @@
       "types": "./dist/formatters.d.mts"
     }
   },
-"scripts": {
-  "clean": "rm -rf dist",
-"build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/styles.css --minify",
-  "build:js": "tsdown",
-  "build": "npm run clean && npm run build:js && npm run build:css",
-  "dev": "npm run clean && tsdown --watch",
-  "typecheck": "tsc --noEmit"
-},
- 
-
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/styles.css --minify",
+    "build:js": "tsdown",
+    "build": "npm run clean && npm run build:js && npm run build:css",
+    "dev": "npm run clean && tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "changeset": "changeset",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/anedyaio/anedya-widgets-react"
@@ -53,6 +54,7 @@
   },
   "devDependencies": {
     "@base-ui/react": "^1.6.0",
+    "@changesets/cli": "^2.31.1",
     "@tailwindcss/cli": "^4.3.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
