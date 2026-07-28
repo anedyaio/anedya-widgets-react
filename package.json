@@ -6,6 +6,9 @@
   "module": "dist/index.mjs",
   "type": "module",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
