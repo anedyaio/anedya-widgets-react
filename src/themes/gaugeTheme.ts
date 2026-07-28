@@ -20,7 +20,7 @@ export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
   // needs non-size utilities.
   tickLabel: "font-medium select-none",
   error: "text-sm font-medium",
-  empty: "text-[length:var(--anedya-card-value-size)] font-bold",
+  empty: "text-[length:var(--anedya-gauge-value-size)] font-bold",
   tooltip: "pointer-events-none z-10 rounded-md px-2 text-[length:var(--anedya-gauge-tooltip-size)] shadow-lg whitespace-nowrap font-medium",
 };
 
