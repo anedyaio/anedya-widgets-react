@@ -156,27 +156,6 @@ export default function App() {
       <AnedyaGauge value={72} title="Manual Value" className="shadow-md" />
 
       {/* ----------------------------------------------------------------
-       * 2.3 Full arc/track/needle/color/tick configuration, plus a
-       * custom theme. Demonstrates most visual knobs at once.
-       * ---------------------------------------------------------------- */}
-      <AnedyaGauge
-        {...commonProps}
-        title="Fully Configured"
-        theme={emeraldGaugeTheme}
-        min={0}
-        max={100}
-        arc={{ startAngle: -120, endAngle: 120, thickness: 20 }}
-        track={{ show: true }}
-        needle={{ show: true, length: "medium", width: 6 }}
-        tick={{ show: true, count: 10, size: 6, labelSize: 11 }}
-        color="#10B981"
-        styles={{
-          tooltip:"bg-black text-white"
-        }}
-      />
-
-
-      {/* ----------------------------------------------------------------
        * 2.4 onDataChange — same pattern as AnedyaCard: conditional
        * overrides (title, color, needle color, track color, animation
        * speed) driven by the raw fetched value.
