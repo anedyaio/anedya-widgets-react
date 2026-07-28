@@ -4,5 +4,7 @@
   "initialVersions": {
     "@anedyasystems/anedya-widgets-react": "0.0.1"
   },
-  "changesets": []
+  "changesets": [
+    "thirty-candies-notice"
+  ]
 }
