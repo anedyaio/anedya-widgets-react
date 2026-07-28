@@ -1,6 +1,6 @@
 {
   "name": "@anedyasystems/anedya-widgets-react",
-  "version": "0.0.2-beta.0",
+  "version": "0.0.2-beta.1",
   "description": "Anedya widget SDK",
   "homepage": "https://anedya.io",
   "main": "dist/index.js",
@@ -65,7 +65,7 @@
     "tsdown": "^0.22.13",
     "typescript": "^5.7.3"
   },
-    "keywords": [
+  "keywords": [
     "IoT",
     "Anedya",
     "SDK",
@@ -79,7 +79,7 @@
     "API",
     "browser"
   ],
-    "overrides": {
+  "overrides": {
     "human-id": "4.1.3"
   }
 }

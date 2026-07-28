@@ -1,5 +1,11 @@
 # @anedyasystems/anedya-widgets-react
 
+## 0.0.2-beta.1
+
+### Patch Changes
+
+- 65d8745: Readme updated.
+
 ## 0.0.2-beta.0
 
 ### Patch Changes
