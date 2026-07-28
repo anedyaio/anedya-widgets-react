@@ -60,7 +60,7 @@ Widgets in this SDK don't create their own Anedya client or node — they only r
 **1. Install both packages:**
 
 ```bash
-npm install @anedyasystems/anedya-frontend-sdk anedya-widgets-react
+npm install @anedyasystems/anedya-frontend-sdk @anedyasystems/anedya-widgets-react
 ```
 
 **2. Import the stylesheet once**, anywhere in your app's entry point:
@@ -73,7 +73,7 @@ import "anedya-widgets-react/styles.css";
 
 ```jsx
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { AnedyaCard } from "anedya-widgets-react";
+import { AnedyaCard } from "@anedyasystems/anedya-widgets-react";
 import "anedya-widgets-react/styles.css";
 
 const anedya = new Anedya();
@@ -844,7 +844,7 @@ Available presets:
 // "Updated 2:32 PM"
 
 // Combining relative time with custom text
-import { relativeTime } from "anedya-widgets-react/formatters";
+import { relativeTime } from "@anedyasystems/anedya-widgets-react/formatters";
 
 <AnedyaCard labelText={(ts) => `Last synced ${relativeTime(ts)}`} />;
 // "Last synced 5 minutes ago"
@@ -972,7 +972,7 @@ This is backwards compatible — existing `onDataChange={(data) => {...}}` callb
 The formatting helpers used internally are also available as a standalone import, for composing into your own `labelText`/`formatValue` functions — usable with either widget:
 
 ```tsx
-import { relativeTime } from "anedya-widgets-react/formatters";
+import { relativeTime } from "@anedyasystems/anedya-widgets-react/formatters";
 ```
 
 | Export         | Signature                                        | Description                                                                                             |
@@ -1129,7 +1129,7 @@ This SDK ships pre-compiled CSS alongside its JavaScript — you don't need Tail
 **Import the stylesheet once**, anywhere in your app's entry point (e.g. `main.tsx`, `App.tsx`, or your global styles file):
 
 ```jsx
-import "anedya-widgets-react/styles.css";
+import "@anedyasystems/anedya-widgets-react/styles.css";
 ```
 
 That's the entire integration on your end. No `content` glob changes to your `tailwind.config`, no build coordination, nothing else required — every widget in this SDK will render fully styled as soon as this import is present.

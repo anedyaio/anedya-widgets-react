@@ -1,6 +1,6 @@
 {
-  "name": "anedya-widgets-react",
-  "version": "5.5.0",
+  "name": "@anedyasystems/anedya-widgets-react",
+  "version": "0.0.1",
   "description": "Anedya widget SDK",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
