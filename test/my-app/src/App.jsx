@@ -504,10 +504,3 @@ export default function App() {
   );
 }
 
-{
-  /* 
-//create react app
-//link public-widget-sdk
-//npm run dev
-//send this file tp yash to copy paste  */
-}
