@@ -40,6 +40,7 @@
   --anedya-gauge-unit-size: clamp(1rem, 0.7rem + 1.5cqw + 1.5cqh, 3.25rem);
   --anedya-gauge-label-size: clamp(0.75rem, 0.5rem + 1.2cqw + 1.2cqh, 2.25rem);
   --anedya-gauge-tick-size: clamp(0.625rem, 0.4rem + 0.6cqw + 0.6cqh, 0.875rem);
+  --anedya-gauge-tooltip-size: clamp(0.6875rem, 0.45rem + 0.7cqw + 0.7cqh, 1rem);
   --anedya-gauge-gap: 0.25rem; /* flat 4px */
 
   transition: padding 0.25s ease, gap 0.25s ease;

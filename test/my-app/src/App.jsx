@@ -448,13 +448,15 @@ export default function App() {
         // {...commonProps}
         value={95}
         needle={{
-          length:"full",
-          type:"line",
+          length: "full",
+          type: "line",
           // show:false
         }}
-        tick={{
-          // show:true,
-        }}
+        tick={
+          {
+            // show:true,
+          }
+        }
         color={[
           "#ff75c3",
           "#ffa647",
@@ -475,31 +477,41 @@ export default function App() {
 
       <GaugeWidget
         {...commonProps}
+        unit="@"
         color="rgb(255,0,127)"
         theme="dark"
         title="UTC"
         timezone="UTC"
         animation={{
-          easing:"quadIn"
+          easing: "quadIn",
         }}
         // styles={{
         //   container:"p-0 gap-0"
         // }}
-        // needle={{
-        //   show:false,
-        // }}
+        needle={{
+          show: false,
+        }}
         // tick={{
         //   show:true,
         // }}
-        
+
         arc={{
           startAngle: -180,
           endAngle: 90,
         }}
         size={400}
       />
-      <GaugeWidget {...commonProps} />
-
+      <GaugeWidget
+        {...commonProps}
+        tooltip={{
+          show:true,
+          content: ({ variable, displayValue, unit }) =>
+            `📊 ${variable} → ${displayValue}${unit ?? ""}`,
+        }}
+        styles={{
+          tooltip:"bg-indigo-600 text-white text-sm px-3 py-1.5"
+        }}
+      />
     </div>
   );
 }
