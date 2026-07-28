@@ -2,6 +2,7 @@
   "name": "@anedyasystems/anedya-widgets-react",
   "version": "0.0.2-beta.0",
   "description": "Anedya widget SDK",
+  "homepage": "https://anedya.io",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "type": "module",
@@ -63,5 +64,22 @@
     "tailwindcss": "^4.3.2",
     "tsdown": "^0.22.13",
     "typescript": "^5.7.3"
+  },
+    "keywords": [
+    "IoT",
+    "Anedya",
+    "SDK",
+    "widget",
+    "JavaScript",
+    "React",
+    "commands",
+    "data-access",
+    "cloud",
+    "device-management",
+    "API",
+    "browser"
+  ],
+    "overrides": {
+    "human-id": "4.1.3"
   }
 }
