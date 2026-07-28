@@ -1,4 +1,4 @@
-[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
+[<img alt="PyPI" src="https://img.shields.io/npm/v/%40anedyasystems%2Fanedya-widgets-react?style=for-the-badge">](https://www.npmjs.com/package/@anedyasystems/anedya-widgets-react)&nbsp;&nbsp;[<img alt="Anedya Documentation" src="https://img.shields.io/badge/Anedya-Documentation-blue?style=for-the-badge">](https://docs.anedya.io?utm_source=github&utm_medium=link&utm_campaign=github-sdk&utm_content=js)
 
 <!---<div style="width:20%; margin:0 auto;margin-bottom:50px;margin-top:50px;">-->
 <p align="center">
