@@ -1,4 +1,3 @@
-
 import { CardSlot } from "../components/AnedyaCard";
 import { WidgetTheme } from "../types/root";
 
@@ -38,6 +37,12 @@ export const darkTheme: WidgetTheme<CardSlot> = {
     empty: "text-slate-500",
   },
 };
-export const themes = { light: lightTheme, dark: darkTheme } as const;
-export type ThemeName = keyof typeof themes;
+
+export type ThemeName = "light" | "dark";
+
+export const themes: Record<ThemeName, WidgetTheme<CardSlot>> = {
+  light: lightTheme,
+  dark: darkTheme,
+};
+
 export const DEFAULT_THEME: ThemeName = "light";

@@ -66,7 +66,7 @@ npm install @anedyasystems/anedya-frontend-sdk @anedyasystems/anedya-widgets-rea
 **2. Import the stylesheet once**, anywhere in your app's entry point:
 
 ```jsx
-import "anedya-widgets-react/styles.css";
+import "@anedyasystems/anedya-widgets-react/styles.css";
 ```
 
 **3. Create a client and node using the Frontend SDK, then pass the node into any widget:**

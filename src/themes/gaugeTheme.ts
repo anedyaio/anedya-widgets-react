@@ -62,8 +62,11 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
   },
 };
 
-export const gaugeThemes = {
+export type GaugeThemeName = "light" | "dark";
+
+export const gaugeThemes: Record<GaugeThemeName, WidgetTheme<GaugeSlot>> = {
   light: gaugeLightTheme,
   dark: gaugeDarkTheme,
-} as const;
-export const DEFAULT_GAUGE_THEME = gaugeLightTheme;
+};
+
+export const DEFAULT_GAUGE_THEME: WidgetTheme<GaugeSlot> = gaugeLightTheme;
