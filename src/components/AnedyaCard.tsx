@@ -369,7 +369,10 @@ export function AnedyaCard({
       };
     }
 
-    return { displayValue: String(resolvedValue), displayUnit: resolvedProps.unit };
+    return {
+      displayValue: String(resolvedValue),
+      displayUnit: resolvedProps.unit,
+    };
   }, [
     resolvedValue,
     resolvedProps.formatValue,
@@ -385,7 +388,8 @@ export function AnedyaCard({
   const displayLabel = useMemo(() => {
     if (effectiveTimestamp == null) return null;
 
-    if (resolvedProps.labelText) return resolvedProps.labelText(effectiveTimestamp);
+    if (resolvedProps.labelText)
+      return resolvedProps.labelText(effectiveTimestamp);
 
     const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "time"];
     return formatter(effectiveTimestamp, {
