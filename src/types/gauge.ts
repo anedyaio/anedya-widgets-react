@@ -13,9 +13,42 @@ export type GaugeSlot =
   | "tick" // NEW — tick line styling via `styles` prop
   | "tickLabel" // NEW — tick number styling via `styles` prop
   | "error"
-  | "empty";
-
-export interface GaugeArcConfig {
+  | "empty"
+  | "tooltip";
+  
+  /** A flat color, or an array of 2+ colors to render as a gradient across the bar. */
+  export type GaugeColor = string | string[];
+  
+  export type NeedleType = "line" | "rounded" | "drop" | "triangle";
+  
+  export type GaugeEasing =
+    | "linear"
+    | "quadIn"
+    | "quadOut"
+    | "quadInOut"
+    | "cubicIn"
+    | "cubicOut"
+    | "cubicInOut"
+    | "sinIn"
+    | "sinOut"
+    | "sinInOut"
+    | "expIn"
+    | "expOut"
+    | "expInOut"
+    | "circleIn"
+    | "circleOut"
+    | "circleInOut"
+    | "backIn"
+    | "backOut"
+    | "backInOut"
+    | "elasticIn"
+    | "elasticOut"
+    | "elasticInOut"
+    | "bounceIn"
+    | "bounceOut"
+    | "bounceInOut";
+    
+  export interface GaugeArcConfig {
   /** Degrees, 0 = 12 o'clock, clockwise-positive. */
   startAngle?: number;
   endAngle?: number;
@@ -30,38 +63,6 @@ export interface GaugeTrackConfig {
   color?: string;
 }
 
-/** A flat color, or an array of 2+ colors to render as a gradient across the bar. */
-export type GaugeColor = string | string[];
-
-export type NeedleType = "line" | "rounded" | "drop" | "triangle";
-
-export type GaugeEasing =
-  | "linear"
-  | "quadIn"
-  | "quadOut"
-  | "quadInOut"
-  | "cubicIn"
-  | "cubicOut"
-  | "cubicInOut"
-  | "sinIn"
-  | "sinOut"
-  | "sinInOut"
-  | "expIn"
-  | "expOut"
-  | "expInOut"
-  | "circleIn"
-  | "circleOut"
-  | "circleInOut"
-  | "backIn"
-  | "backOut"
-  | "backInOut"
-  | "elasticIn"
-  | "elasticOut"
-  | "elasticInOut"
-  | "bounceIn"
-  | "bounceOut"
-  | "bounceInOut";
-
 export interface GaugeNeedleConfig {
   show?: boolean;
   type?: NeedleType;
@@ -75,15 +76,6 @@ export interface GaugeNeedleConfig {
   animation?: boolean;
 }
 
-// export interface GaugeValueLabelConfig {
-//   show?: boolean;
-//   precision?: number;
-//   prefix?: string;
-//   suffix?: string;
-//   formatter?: (value: number) => string;
-// }
-
-/** REQUIREMENT 3/4: radial min/max tick marks drawn around the arc. */
 export interface GaugeTickConfig {
   show?: boolean;
   /** Number of INTERVALS between min and max. Default 10 → 11 marks (0,10,20...100 for the 0-100 default). */
@@ -102,6 +94,17 @@ export interface GaugeTickConfig {
   labelColor?: string;
   /** Custom label formatter — receives the raw tick value (e.g. 0, 10, 20...). */
   labelFormat?: (value: number) => string;
+}
+
+export interface GaugeTooltipConfig {
+  show?: boolean;
+  /** Full custom tooltip content. Receives the raw + formatted value, unit, and the widget's `variable` name. */
+  content?: (data: {
+    variable: string;
+    value: number;
+    displayValue: string;
+    unit?: string;
+  }) => React.ReactNode;
 }
 
 export interface GaugeAnimationConfig {

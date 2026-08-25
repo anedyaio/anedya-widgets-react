@@ -1,36 +1,52 @@
 {
-  "name": "anedya-widgets-react",
-  "version": "5.5.0",
+  "name": "@anedyasystems/anedya-widgets-react",
+  "version": "0.0.1",
   "description": "Anedya widget SDK",
+  "homepage": "https://anedya.io",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-   "type": "module",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "types": "./dist/index.d.mts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./styles.css": "./dist/styles.css",
     "./formatters": {
-      "import": "./dist/formatters.mjs",
-      "require": "./dist/formatters.cjs",
-      "types": "./dist/formatters.d.mts"
+      "import": {
+        "types": "./dist/formatters.d.mts",
+        "default": "./dist/formatters.mjs"
+      },
+      "require": {
+        "types": "./dist/formatters.d.cts",
+        "default": "./dist/formatters.cjs"
+      }
     }
   },
-"scripts": {
-  "clean": "rm -rf dist",
-"build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/styles.css --minify",
-  "build:js": "tsdown",
-  "build": "npm run clean && npm run build:js && npm run build:css",
-  "dev": "npm run clean && tsdown --watch",
-  "typecheck": "tsc --noEmit"
-},
- 
-
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build:css": "tailwindcss -i ./src/styles/base.css -o ./dist/styles.css --minify",
+    "build:js": "tsdown",
+    "build": "npm run clean && npm run build:js && npm run build:css",
+    "dev": "npm run clean && tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "changeset": "changeset",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/anedyaio/anedya-widgets-react"
@@ -53,6 +69,7 @@
   },
   "devDependencies": {
     "@base-ui/react": "^1.6.0",
+    "@changesets/cli": "^2.31.1",
     "@tailwindcss/cli": "^4.3.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -61,5 +78,22 @@
     "tailwindcss": "^4.3.2",
     "tsdown": "^0.22.13",
     "typescript": "^5.7.3"
+  },
+    "keywords": [
+    "IoT",
+    "Anedya",
+    "SDK",
+    "widget",
+    "JavaScript",
+    "React",
+    "commands",
+    "data-access",
+    "cloud",
+    "device-management",
+    "API",
+    "browser"
+  ],
+    "overrides": {
+    "human-id": "4.1.3"
   }
 }

@@ -1,0 +1,305 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Unified Publish Workflow  (publish.yml)
+#
+# PURPOSE:
+#   Single workflow that handles BOTH beta and stable npm publishing using
+#   npm Trusted Publishing (OIDC) — no long-lived NPM_TOKEN required.
+#
+# WHY ONE FILE:
+#   npm allows only ONE Trusted Publisher configuration per package at a time,
+#   and validates against the CALLING workflow filename. Having two separate
+#   files (prerelease.yml + release.yml) means only one can be the trusted
+#   publisher at any given time. Merging into a single file solves this:
+#   configure npm trusted publisher with just `publish.yml`.
+#
+# TRIGGERS:
+#   - Push to `prerelease` → publishes beta (dist-tag: beta)
+#   - Push to `main`       → publishes stable (dist-tag: latest)
+#   ci.yml remains separate and handles PRs + develop (no publish).
+#
+# TRUSTED PUBLISHING (OIDC) — HOW IT WORKS:
+#   1. GitHub generates a short-lived OIDC token for this specific run.
+#   2. npm validates: "Is this token from the configured trusted publisher?"
+#      (org=anedyaio, repo=anedya-widgets-react, workflow=publish.yml)
+#   3. If yes → npm issues a scoped, time-limited publish token automatically.
+#   4. npm CLI (>=11.5.1) exchanges this and publishes without any secret.
+#
+#   Requirements:
+#     ✓ id-token: write permission
+#     ✓ registry-url set in setup-node
+#     ✓ npm >= 11.5.1 (auto-detects OIDC environment)
+#     ✓ Node >= 22.14.0
+#     ✓ Public repository (provenance attestations generated automatically)
+#
+# CHANGESETS BRANCH LOGIC:
+#   prerelease branch:
+#     - Enters `changeset pre enter beta` if not already in pre mode
+#     - `changeset version` → X.Y.Z-beta.N
+#     - `changeset publish` → auto-uses `beta` dist-tag (from pre.json)
+#
+#   main branch:
+#     - Exits pre mode (`changeset pre exit`) if pre.json is present
+#     - `changeset version` → clean X.Y.Z
+#     - `changeset publish` → `latest` dist-tag (npm default)
+#     - Creates git tag + GitHub Release
+#
+# PERMISSIONS:
+#   contents: write  → push version bump commits + tags
+#   id-token: write  → generate OIDC token for npm Trusted Publishing
+# ─────────────────────────────────────────────────────────────────────────────
+name: Publish
+
+on:
+  push:
+    branches:
+      - prerelease
+      - main
+
+concurrency:
+  # Separate concurrency groups per branch so a main push doesn't cancel
+  # an in-progress prerelease publish and vice versa.
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false  # Never cancel an in-progress publish run
+
+permissions:
+  contents: write
+  id-token: write  # Required for npm Trusted Publishing (OIDC)
+
+jobs:
+  publish:
+    name: >-
+      ${{ github.ref == 'refs/heads/prerelease' && 'Prerelease · Beta' || 'Release · Stable' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. CHECKOUT ──────────────────────────────────────────────────────────
+      # fetch-depth: 0 gives Changesets full git history so it can determine
+      # which packages changed and what version bump type is needed.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── 2. NODE SETUP ─────────────────────────────────────────────────────────
+      # registry-url MUST be set. setup-node writes an .npmrc that points
+      # NODE_AUTH_TOKEN (or the OIDC-exchanged token) to this registry.
+      # Without it, npm will not perform the OIDC token exchange.
+      - name: Setup Node.js (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # ── 3. NPM UPGRADE ────────────────────────────────────────────────────────
+      # Node 22 ships with npm 10.x by default.
+      # Trusted Publishing requires npm >= 11.5.1 to auto-detect OIDC environments.
+      #
+      # PINNED (not @latest): npm@latest is non-deterministic across CI runs.
+      # A newer npm@latest broke the `sigstore` dependency inside libnpmpublish,
+      # causing MODULE_NOT_FOUND errors during provenance generation.
+      # Pin to a known-good version. Update deliberately when needed.
+      - name: Upgrade npm (required for Trusted Publishing ≥ 11.5.1)
+        run: npm install -g npm@11.5.1
+
+      # ── 4. INSTALL DEPENDENCIES ───────────────────────────────────────────────
+      - name: Install Dependencies
+        run: npm ci
+
+      # ── 5. GIT IDENTITY ───────────────────────────────────────────────────────
+      # Required so that version bump commits created by this workflow have a
+      # valid author when pushed back to the branch.
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # ═════════════════════════════════════════════════════════════════════════
+      # PRERELEASE BRANCH STEPS  (only when push is to `prerelease`)
+      # ═════════════════════════════════════════════════════════════════════════
+
+      # ── 6a. ENTER PRE MODE ───────────────────────────────────────────────────
+      # Enters Changesets prerelease mode only once. Once pre.json is committed
+      # back to the branch, subsequent runs skip this step automatically.
+      # `changeset version` in pre mode produces: X.Y.Z-beta.0, X.Y.Z-beta.1 …
+      - name: Enter Prerelease Mode (if not already active)
+        if: github.ref == 'refs/heads/prerelease'
+        run: |
+          if [ ! -f .changeset/pre.json ]; then
+            echo "::notice::Entering Changesets prerelease mode (beta)"
+            npx changeset pre enter beta
+            git add .changeset/pre.json
+            git commit -m "chore(release): enter prerelease mode [skip ci]"
+            git push origin prerelease
+          else
+            echo "::notice::Already in prerelease mode — skipping"
+          fi
+
+      # ═════════════════════════════════════════════════════════════════════════
+      # MAIN BRANCH STEPS  (only when push is to `main`)
+      # ═════════════════════════════════════════════════════════════════════════
+
+      # ── 6b. EXIT PRE MODE ────────────────────────────────────────────────────
+      # When `prerelease` is merged into `main`, pre.json arrives with the merge.
+      # We must exit pre mode so `changeset version` produces a clean stable
+      # version (e.g., 1.2.0 instead of 1.2.0-beta.3).
+      - name: Exit Prerelease Mode (if active)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [ -f .changeset/pre.json ]; then
+            echo "::notice::Exiting Changesets prerelease mode"
+            npx changeset pre exit
+            git add .changeset/pre.json || true
+          else
+            echo "::notice::Not in prerelease mode — skipping"
+          fi
+
+      # ═════════════════════════════════════════════════════════════════════════
+      # SHARED STEPS  (run for both prerelease and main)
+      # ═════════════════════════════════════════════════════════════════════════
+
+      # ── 7. VERSION PACKAGES ──────────────────────────────────────────────────
+      # Reads pending changeset files and updates package.json + CHANGELOG.md.
+      # In pre mode: appends -beta.N suffix. On main: produces clean X.Y.Z.
+      # If no changeset files exist, this is a no-op (exits cleanly).
+      - name: Version Packages
+        run: npx changeset version
+
+      # ── 8. PUBLISH GATE ──────────────────────────────────────────────────────
+      # Only build + publish if package.json was actually modified.
+      # Prevents publishing when there are no pending changesets (e.g., a
+      # docs-only push with no changeset file added).
+      - name: Check for Version Changes
+        id: version_check
+        run: |
+          if git diff --quiet package.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No changesets found — nothing to publish"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+            echo "changed=true"    >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "::notice::Version bumped to $VERSION"
+          fi
+
+      # ── 9. BUILD ─────────────────────────────────────────────────────────────
+      - name: Build SDK
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm run build
+
+      # Tests are disabled until test coverage lands. Re-enable when ready:
+      # - name: Run Tests
+      #   if: steps.version_check.outputs.changed == 'true'
+      #   run: npm test
+
+      # ── 10. PUBLISH (OIDC — NO TOKEN NEEDED) ─────────────────────────────────
+      # npm CLI ≥ 11.5.1 automatically detects the OIDC environment (id-token: write
+      # permission + registry-url set). It exchanges the GitHub OIDC token for a
+      # short-lived, scoped publish token and publishes.
+      #
+      # Dist-tag logic (automatic, no --tag flag needed):
+      #   - prerelease branch → Changesets reads pre.json → uses `beta` dist-tag
+      #   - main branch       → no pre.json → uses `latest` dist-tag (npm default)
+      #
+      # DO NOT add NODE_AUTH_TOKEN here — OIDC handles authentication entirely.
+      - name: Publish to npm
+        if: steps.version_check.outputs.changed == 'true'
+        run: npx changeset publish
+
+      # ═════════════════════════════════════════════════════════════════════════
+      # PRERELEASE BRANCH — POST-PUBLISH  (push version bump back to branch)
+      # ═════════════════════════════════════════════════════════════════════════
+
+      - name: Commit and Push Prerelease Version Bump
+        if: >-
+          steps.version_check.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/prerelease'
+        run: |
+          git add -A
+          git commit -m "chore(release): v${{ steps.version_check.outputs.version }} prerelease [skip ci]"
+          git push origin prerelease --follow-tags
+
+      # ═════════════════════════════════════════════════════════════════════════
+      # MAIN BRANCH — POST-PUBLISH  (commit, push, GitHub Release)
+      # ═════════════════════════════════════════════════════════════════════════
+
+      # NOTE: No explicit `git tag` step needed here.
+      # `changeset publish` already creates a `v{version}` tag locally because
+      # this is a single-package (root-type) repo — Changesets uses the format
+      # `v${version}` for root repos, not `${name}@${version}`.
+      # `--follow-tags` below pushes that tag to GitHub automatically.
+      # - name: Create Stable Version Tag
+      #   if: >-
+      #     steps.version_check.outputs.changed == 'true' &&
+      #     github.ref == 'refs/heads/main'
+      #   run: |
+      #     git tag -a "v${{ steps.version_check.outputs.version }}" \
+      #             -m "Release v${{ steps.version_check.outputs.version }}"
+
+      - name: Commit and Push Stable Release
+        if: >-
+          steps.version_check.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/main'
+        run: |
+          git add -A
+          git commit -m "chore(release): v${{ steps.version_check.outputs.version }} [skip ci]"
+          git push origin main --follow-tags
+
+      # Extract the latest CHANGELOG section to use as GitHub Release body.
+      # awk prints lines between the first and second `## ` headings.
+      - name: Extract Changelog for Release Notes
+        if: >-
+          steps.version_check.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/main'
+        id: extract_changelog
+        run: |
+          NOTES=$(awk '/^## /{if(found) exit; found=1; next} found{print}' CHANGELOG.md)
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: >-
+          steps.version_check.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version_check.outputs.version }}" \
+            --title "v${{ steps.version_check.outputs.version }}" \
+            --notes "${{ steps.extract_changelog.outputs.notes }}" \
+            --target main
+
+      # ── 11. SYNC MAIN BACK TO DEVELOP ────────────────────────────────────────
+      # Merges the stable release changes and tag updates back into develop.
+      # Falls back to creating a Pull Request if develop is a protected branch.
+      - name: Sync Main back to Develop
+        if: >-
+          steps.version_check.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::notice::Attempting to merge main back into develop..."
+          
+          # Fetch the latest develop branch
+          git fetch origin develop
+          git checkout develop
+          
+          # Merge main (which contains the new version bump and changelog)
+          git merge main --no-edit
+          
+          # Try to push directly (works if develop is not protected)
+          if git push origin develop; then
+            echo "::notice::Successfully merged and pushed main back to develop directly!"
+          else
+            echo "::warning::Direct push to develop was blocked. Creating a Pull Request instead..."
+            git checkout main
+            gh pr create \
+              --base develop \
+              --head main \
+              --title "chore(release): sync main v${{ steps.version_check.outputs.version }} to develop" \
+              --body "Automated PR to sync develop with the stable release v${{ steps.version_check.outputs.version }}." || true
+          fi

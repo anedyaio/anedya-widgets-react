@@ -15,7 +15,7 @@ This document covers internal build setup for people working on this SDK itself 
 
 Since this SDK is installed as a real package (not copied into the consumer's own repo, the way shadcn/ui works), the consumer's own Tailwind build **never scans this package's source files** by default — so every class string in files like `themes/defaultTheme.ts` / `CARD_DEFAULT_CLASSES` compiles to nothing in their app, and every widget would render with zero layout or color.
 
-The fix: this SDK ships its **own pre-compiled stylesheet** as part of its build, so consumers import real, already-compiled CSS rather than relying on their own Tailwind config to happen to pick up ours. This is why every consumer-facing widget needs `import "anedya-widgets-react/styles.css"` — see the README's [Stylesheet import](./README.md#stylesheet-import) section for the consumer-facing side of this.
+The fix: this SDK ships its **own pre-compiled stylesheet** as part of its build, so consumers import real, already-compiled CSS rather than relying on their own Tailwind config to happen to pick up ours. This is why every consumer-facing widget needs `import "@anedyasystems/anedya-widgets-react/styles.css"` — see the README's [Stylesheet import](./README.md#stylesheet-import) section for the consumer-facing side of this.
 
 ---
 
@@ -99,7 +99,7 @@ npm link
 **2. In the demo app**, link to it:
 
 ```bash
-npm link anedya-widgets-react
+npm link @anedyasystems/anedya-widgets-react
 ```
 
 This creates a symlink from the demo's `node_modules/anedya-widgets-react` to your local package root — the demo now resolves that import to your local working copy instead of anything published to npm.
@@ -125,8 +125,8 @@ before it shows up in the demo, even in this mode.
 **Option B — import as the published package (accurate consumer simulation)**
 
 ```jsx
-import { AnedyaCard } from "anedya-widgets-react";
-import "anedya-widgets-react/styles.css";
+import { AnedyaCard } from "@anedyasystems/anedya-widgets-react";
+import "@anedyasystems/anedya-widgets-react/styles.css";
 ```
 
 Use this to verify the package behaves correctly as an actual installed dependency — e.g. confirming `exports` map entries resolve correctly, the stylesheet subpath import works, and nothing that only exists in the local `src/` folder (but wasn't actually exported) is accidentally being relied on.

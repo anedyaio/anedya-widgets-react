@@ -1,5 +1,4 @@
 // AnedyaGauge.tsx
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { twMerge } from "tailwind-merge";
@@ -19,6 +18,7 @@ import {
   GaugeTickConfig, // NEW
   GaugeTrackConfig,
   // GaugeValueLabelConfig,
+  GaugeTooltipConfig, // NEW — tooltip config type
   GaugeEasing,
 } from "../../types/gauge";
 import {
@@ -63,6 +63,9 @@ export interface AnedyaGaugeProps extends AnedyaWidgetBaseProps {
   /** REQUIREMENT 3/4: radial min/max tick marks drawn around the arc. */
   tick?: GaugeTickConfig;
   animation?: GaugeAnimationConfig;
+
+  /** NEW — hover tooltip shown over the arc (track/bar). Defaults to `"variable: value unit"`. */
+  tooltip?: GaugeTooltipConfig;
 
   // ---- Card-parity formatting props ----
   unit?: string;
@@ -296,6 +299,7 @@ export function AnedyaGauge({
   // valueLabel,
   tick,
   animation,
+  tooltip, // NEW
   unit,
   decimalPlaces,
   format,
@@ -308,7 +312,7 @@ export function AnedyaGauge({
   onDataChange,
   renderError,
   renderEmpty,
-}: AnedyaGaugeProps) : React.JSX.Element{
+}: AnedyaGaugeProps): React.JSX.Element {
   // Runtime invariant — identical rule to AnedyaCard: TypeScript alone
   // can't express "node+variable OR value, but not neither" across two
   // independent optional props (see the comment on AnedyaWidgetBaseProps
@@ -337,6 +341,15 @@ export function AnedyaGauge({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEmpty, setIsEmpty] = useState(false);
+
+  // NEW — tooltip position/visibility, updated by pointer handlers attached
+  // to the track/bar SVG elements in the D3 draw effect below.
+  const [tooltipState, setTooltipState] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+    flipX: boolean; // ← add this
+  }>({ x: 0, y: 0, visible: false, flipX: false });
 
   const [dynamicProps, setDynamicProps] = useState<AnedyaGaugeUpdate>({});
 
@@ -456,6 +469,7 @@ export function AnedyaGauge({
     needle,
     animation,
     tick,
+    tooltip, // NEW
     unit,
     decimalPlaces,
     className,
@@ -507,6 +521,14 @@ export function AnedyaGauge({
   const resolvedAnimation = {
     ...DEFAULT_ANIMATION,
     ...resolvedProps.animation,
+  };
+
+  // NEW — tooltip config, defaults to shown with the built-in
+  // "variable: value unit" content.
+  const resolvedTooltip: Required<Pick<GaugeTooltipConfig, "show">> &
+    Pick<GaugeTooltipConfig, "content"> = {
+    show: resolvedProps.tooltip?.show ?? true,
+    content: resolvedProps.tooltip?.content,
   };
 
   // ---- REQUIREMENT 3/4: tick marks config ----
@@ -648,6 +670,28 @@ export function AnedyaGauge({
     resolvedTimezone,
   ]);
 
+  // NEW — default tooltip text: "variable: value unit". Custom `tooltip.content`
+  // receives the same data plus the raw clamped value.
+  const tooltipContent = useMemo(() => {
+    if (resolvedTooltip.content) {
+      return resolvedTooltip.content({
+        variable: variable ?? "",
+        value: clampedValue,
+        displayValue,
+        unit: displayUnit,
+      });
+    }
+    return variable
+      ? `${variable}: ${displayValue}${displayUnit ? ` ${displayUnit}` : ""}`
+      : `${displayValue}${displayUnit ? ` ${displayUnit}` : ""}`;
+  }, [
+    resolvedTooltip.content,
+    variable,
+    clampedValue,
+    displayValue,
+    displayUnit,
+  ]);
+
   // ---- Geometry ----
   const boxWidth =
     resolvedProps.size ?? resolvedProps.width ?? (dims.width || DEFAULT_WIDTH);
@@ -738,6 +782,27 @@ export function AnedyaGauge({
     const startA = resolvedArc.startAngle * DEG2RAD;
     const endA = resolvedArc.endAngle * DEG2RAD;
 
+    // NEW — shared pointer handlers for the tooltip. Position is computed
+    // relative to the arc wrapper div (the tooltip's positioning parent),
+    // not the SVG, since the SVG's internal viewBox coordinate space can
+    // differ from its rendered CSS size.
+    const handleTooltipMove = (event: MouseEvent) => {
+      const wrapperEl = arcWrapperRef.current as HTMLDivElement | null;
+      if (!wrapperEl) return;
+      const rect = wrapperEl.getBoundingClientRect();
+      const relX = event.clientX - rect.left;
+      const flipX = relX > rect.width * 0.5;
+      setTooltipState({
+        visible: true,
+        x: relX,
+        y: event.clientY - rect.top,
+        flipX,
+      });
+    };
+    const handleTooltipLeave = () => {
+      setTooltipState((s) => (s.visible ? { ...s, visible: false } : s));
+    };
+
     const trackSel = root.select<SVGPathElement>(
       "path.anedya-gauge-track-path"
     );
@@ -751,6 +816,20 @@ export function AnedyaGauge({
         .attr("opacity", 1);
     } else {
       trackSel.attr("opacity", 0);
+    }
+
+    // NEW — attach/detach tooltip listeners on the track, gated by
+    // resolvedTooltip.show (added to this effect's dependency array below).
+    if (resolvedTooltip.show) {
+      trackSel
+        .style("cursor", "pointer")
+        .on("mousemove", handleTooltipMove)
+        .on("mouseleave", handleTooltipLeave);
+    } else {
+      trackSel
+        .style("cursor", null)
+        .on("mousemove", null)
+        .on("mouseleave", null);
     }
 
     // ---- REQUIREMENT 3/4: tick marks + labels ----
@@ -829,6 +908,17 @@ export function AnedyaGauge({
       .attr("fill", barFill)
       .attr("stroke", "none")
       .attr("opacity", loading ? 0.4 : 1);
+
+    // NEW — same tooltip listeners on the filled bar, so hovering the
+    // active portion of the arc (not just the track) also triggers it.
+    if (resolvedTooltip.show) {
+      path
+        .style("cursor", "pointer")
+        .on("mousemove", handleTooltipMove)
+        .on("mouseleave", handleTooltipLeave);
+    } else {
+      path.style("cursor", null).on("mousemove", null).on("mouseleave", null);
+    }
 
     const currentEndAngle = path.attr("data-end-angle")
       ? +path.attr("data-end-angle")!
@@ -936,6 +1026,15 @@ export function AnedyaGauge({
     } else {
       needleGroup.attr("opacity", 0);
     }
+
+    // NEW — hide the tooltip immediately if the pointer leaves the SVG
+    // entirely (not just the track/bar shapes specifically).
+    if (resolvedTooltip.show) {
+      svg.on("mouseleave", handleTooltipLeave);
+    } else {
+      svg.on("mouseleave", null);
+      setTooltipState((s) => (s.visible ? { ...s, visible: false } : s));
+    }
   }, [
     boxWidth,
     boxHeight,
@@ -970,9 +1069,11 @@ export function AnedyaGauge({
     resolvedTick.labelGap,
     resolvedTick.labelSize,
     resolvedTick.labelColor,
+    resolvedTooltip.show, // NEW
     tickValues,
     formatTickLabel,
     resolveSlot,
+    arcWrapperRef, // NEW — used inside handleTooltipMove
   ]);
 
   // const handleClick = useCallback(
@@ -1095,6 +1196,29 @@ export function AnedyaGauge({
               {valueBlock}
             </div>
           )}
+
+          {/* NEW — tooltip. Positioned relative to this wrapper div (which is
+            already `relative`), follows the pointer via tooltipState.x/y
+            set by the D3 mousemove handlers above, and hides on mouseleave. */}
+          {resolvedTooltip.show &&
+            tooltipState.visible &&
+            !loading &&
+            !error &&
+            !isEmpty && (
+              <div
+                className={twMerge(
+                  "absolute -translate-y-full",
+                  tooltipState.flipX ? "-translate-x-full" : "-translate-x-1/2",
+                  resolveSlot("tooltip")
+                )}
+                style={{
+                  left: tooltipState.x + (tooltipState.flipX ? -20 : 20),
+                  top: tooltipState.y - 20,
+                }}
+              >
+                {tooltipContent}
+              </div>
+            )}
         </div>
 
         {loading ? (

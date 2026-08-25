@@ -1,8 +1,8 @@
 import React from "react";
 import { Anedya } from "@anedyasystems/anedya-frontend-sdk";
-import { AnedyaCard } from "anedya-widgets-react";
-import { AnedyaGauge } from "anedya-widgets-react";
-import "anedya-widgets-react/styles.css";
+import { AnedyaCard } from "@anedyasystems/anedya-widgets-react";
+import { AnedyaGauge } from "@anedyasystems/anedya-widgets-react";
+import "@anedyasystems/anedya-widgets-react/styles.css";
 import "./index.css";
 
 // This demo has its own Tailwind build (see vite.config.js + src/index.css),
@@ -11,9 +11,13 @@ import "./index.css";
 // precompiled stylesheet only covers its built-in default classes, not
 // arbitrary classes a consumer passes in.
 
-const tokenId = "YOUR-TOKEN-ID";
-const token = "YOUR-TOKEN";
-const nodeId = "YOUR-NODE-ID";
+// const tokenId = "YOUR-TOKEN-ID";
+// const token = "YOUR-TOKEN";
+// const nodeId = "YOUR-NODE-ID";
+
+const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
+const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
+const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -75,6 +79,16 @@ export default function App() {
         alignItems: "flex-start", // prevents one tall card from stretching its row-siblings — see README/Sizing
       }}
     >
+
+      <div style={{ width: "100%", textAlign: "center", marginBottom: 24 }}>
+        <h1 className="text-3xl font-bold">Anedya React Widgets Example</h1>
+        <p className="text-gray-600">
+          A live demo of the Anedya React widget SDK, showing the built-in
+          default behavior and some common customization patterns.
+        </p>
+      </div>
+
+
       {/* ================================================================
        * SECTION 1 — AnedyaCard
        * ================================================================ */}
@@ -130,88 +144,6 @@ export default function App() {
         }}
       />
 
-      {/* ----------------------------------------------------------------
-       * 1.4 formatValue / format / labelText / labelFormat — see README
-       * "Formatting vs rendering" and "The last-updated label" sections
-       * for the full precedence rules. formatValue/labelText are full
-       * escape hatches; format/labelFormat are zero-code presets.
-       * ---------------------------------------------------------------- */}
-      <AnedyaCard
-        {...commonProps}
-        title="Custom Formatting"
-        formatValue={(v) => `${v.toFixed(2)} % RH`}
-        labelFormat="relative"
-      />
-
-      {/* ----------------------------------------------------------------
-       * 1.5 Error & empty states — onDataChange's second argument
-       * (`meta`) tells you which state just occurred, so you can swap in
-       * fully custom JSX via renderError/renderEmpty. See README "Error
-       * & empty states" for the full behavior and styles.error/empty.
-       * ---------------------------------------------------------------- */}
-      <AnedyaCard
-        {...commonProps}
-        title="Error & Empty Handling"
-        unit="%"
-        decimalPlaces={1}
-        onDataChange={(data, meta) => {
-          if (meta.kind === "error") {
-            return {
-              renderError: () => (
-                <span className="text-orange-500 italic">Sensor unreachable</span>
-              ),
-            };
-          }
-          if (meta.kind === "empty") {
-            return {
-              renderEmpty: () => (
-                <span className="text-slate-300">— no reading yet —</span>
-              ),
-            };
-          }
-        }}
-      />
-
-      {/* ----------------------------------------------------------------
-       * 1.6 onDataChange — conditional overrides driven by the RAW
-       * fetched data ({ value, timestamp }), applied on top of
-       * everything else (theme, styles, className).
-       * ---------------------------------------------------------------- */}
-      <AnedyaCard
-        {...commonProps}
-        title="Threshold Coloring"
-        unit="%"
-        decimalPlaces={1}
-        onDataChange={(data) => {
-          if (!data) return;
-          if (data.value > 80) {
-            return { title: "High Humidity", theme: "dark", styles: { value: "text-red-500" } };
-          }
-          return { title: "Humidity", theme: "light" };
-        }}
-      />
-
-      {/* ----------------------------------------------------------------
-       * 1.7 Sizing — width/height/minWidth/maxWidth are plain props,
-       * applied as inline styles on the container. See README "Sizing"
-       * — `height` has two distinct modes (auto-grow vs. fixed+clip).
-       * ---------------------------------------------------------------- */}
-      <AnedyaCard
-        {...commonProps}
-        title="Custom Size"
-        unit="%"
-        width={320}
-        minWidth={280}
-        maxWidth={400}
-        height={200}
-      />
-
-      {/* ----------------------------------------------------------------
-       * 1.8 timezone — pins the last-updated label to a specific IANA
-       * timezone instead of the visitor's auto-detected one.
-       * ---------------------------------------------------------------- */}
-      <AnedyaCard {...commonProps} title="Pinned to IST" labelFormat="datetime" timezone="Asia/Kolkata" />
-
       {/* ================================================================
        * SECTION 2 — AnedyaGauge
        * ================================================================ */}
@@ -219,31 +151,21 @@ export default function App() {
       {/* ----------------------------------------------------------------
        * 2.1 Default appearance — live data, no theme/styling overrides.
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge {...commonProps} title="Default Gauge" unit="%" min={0} max={100} />
+      <AnedyaGauge 
+        {...commonProps} 
+        title="Default Gauge" 
+        unit="%" 
+        min={0} 
+        max={100} 
+        theme="dark"
+        />
 
       {/* ----------------------------------------------------------------
        * 2.2 Manual value mode — pass `value` directly instead of `node`/
        * `variable` for a static/controlled gauge (e.g. driven by your
        * own app state rather than live Anedya data).
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" />
-
-      {/* ----------------------------------------------------------------
-       * 2.3 Full arc/track/needle/color/tick configuration, plus a
-       * custom theme. Demonstrates most visual knobs at once.
-       * ---------------------------------------------------------------- */}
-      <AnedyaGauge
-        {...commonProps}
-        title="Fully Configured"
-        theme={emeraldGaugeTheme}
-        min={0}
-        max={100}
-        arc={{ startAngle: -120, endAngle: 120, thickness: 20 }}
-        track={{ show: true }}
-        needle={{ show: true, length: "medium", width: 6 }}
-        tick={{ show: true, count: 10, size: 6, labelSize: 11 }}
-        color="#10B981"
-      />
+      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" theme="dark" />
 
       {/* ----------------------------------------------------------------
        * 2.4 onDataChange — same pattern as AnedyaCard: conditional
@@ -252,6 +174,7 @@ export default function App() {
        * ---------------------------------------------------------------- */}
       <AnedyaGauge
         {...commonProps}
+        theme="dark"
         title="Threshold Coloring"
         min={0}
         max={100}
@@ -281,53 +204,15 @@ export default function App() {
         min={0}
         max={80}
         title="Custom Formatting"
+        theme="light"
+        needle={{
+          type:"triangle",
+          color:"oklch(59.2% 0.249 0.584)"
+        }}
         formatValue={(v) => `${v} km/h`}
         labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`}
+        className="bg-white p-4 rounded-xl"
       />
-
-      {/* ----------------------------------------------------------------
-       * 2.6 Per-slot styles — including the SVG-backed slots
-       * (track/bar/needle/needleCap/tick/tickLabel), which accept hex
-       * colors or `text-*` Tailwind classes (read via currentColor).
-       * ---------------------------------------------------------------- */}
-      <AnedyaGauge
-        {...commonProps}
-        title="Wind Speed"
-        unit="km/h"
-        tick={{ show: true }}
-        styles={{
-          container: "bg-slate-900 rounded-2xl border border-slate-700 shadow-lg",
-          title: "text-slate-300 uppercase tracking-wide text-xs",
-          value: "text-white text-4xl font-black",
-          label: "text-slate-500 text-[11px] italic",
-          track: "text-slate-700",
-          bar: "text-emerald-400",
-          needle: "text-red-500",
-          needleCap: "text-yellow-500",
-          tick: "text-slate-700",
-          tickLabel: "text-slate-500 text-[9px]",
-        }}
-      />
-
-      {/* ----------------------------------------------------------------
-       * 2.7 Error & empty states — identical mechanism to AnedyaCard.
-       * ---------------------------------------------------------------- */}
-      <AnedyaGauge
-        {...commonProps}
-        theme="dark"
-        renderError={(error) => (
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-orange-500">⚠ Sensor unreachable</span>
-            <span className="text-xs text-slate-400">{error}</span>
-          </div>
-        )}
-        renderEmpty={() => <span className="text-slate-300">— no reading yet —</span>}
-      />
-
-      {/* ----------------------------------------------------------------
-       * 2.8 timezone — same as AnedyaCard's.
-       * ---------------------------------------------------------------- */}
-      <AnedyaGauge {...commonProps} theme="dark" title="IST" timezone="Asia/Kolkata" />
     </div>
   );
 }
