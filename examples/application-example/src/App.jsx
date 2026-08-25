@@ -137,6 +137,7 @@ export default function App() {
         decimalPlaces={1}
         className="shadow-lg"
         styles={{
+
           container: "bg-blue-50 border-blue-300",
           value: "text-red-500 text-5xl",
           title: "uppercase tracking-wider text-blue-700",
@@ -215,3 +216,5 @@ export default function App() {
     </div>
   );
 }
+ 
+//css classes instead of ts classes --- rn css is getting converting to ts and back to ts - follow base ui - tailwind format support 
