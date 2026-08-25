@@ -73,6 +73,9 @@
   --anedya-fallback-border: #e2e8f0;    /* slate-200 */
   --anedya-fallback-muted: #64748b;     /* slate-500 */
   --anedya-fallback-primary: #6366f1;   /* indigo-500 — used for gauge bar */
+    --anedya-fallback-radius: 0.75rem; /* your current rounded-xl equivalent */
+     --anedya-fallback-tooltip-bg: #0f172a;  
+  --anedya-fallback-tooltip-fg: #ffffff;
 }
 
 .dark {
@@ -81,4 +84,7 @@
   --anedya-fallback-border: #334155;    /* slate-700 */
   --anedya-fallback-muted: #94a3b8;     /* slate-400 */
   --anedya-fallback-primary: #818cf8;   /* indigo-400 */
+    --anedya-fallback-radius: 0.75rem; /* your current rounded-xl equivalent */
+     --anedya-fallback-tooltip-bg: #ffffff;
+  --anedya-fallback-tooltip-fg: #0f172a;
 }

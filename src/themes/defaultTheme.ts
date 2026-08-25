@@ -1,38 +1,43 @@
-import { CardSlot } from "../components/AnedyaCard";
+
 import { WidgetTheme } from "../types/root";
+import { themeVar } from "../helpers/themeVar";
+import { CardSlot } from "../components/AnedyaCard";
 
 export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {
   container:
-    "flex flex-col items-center justify-center text-center border rounded-xl " +
+    "flex flex-col items-center justify-center text-center border " +
+    `rounded-[${themeVar("--radius", "--mui-shape-borderRadius", "--anedya-fallback-radius")}] ` +
     "p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)] " +
-    "bg-[var(--card,var(--anedya-fallback-bg))] " +
-    "border-[var(--border,var(--anedya-fallback-border))]",
+    `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-fallback-bg")}] ` +
+    `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
 
   title:
     "text-[length:var(--anedya-card-title-size)] font-medium " +
-    "text-[var(--muted-foreground,var(--anedya-fallback-muted))]",
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
 
   value:
     "text-[length:var(--anedya-card-value-size)] font-bold leading-none " +
-    "text-[var(--card-foreground,var(--anedya-fallback-fg))]",
+    `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
 
   unit:
     "text-[length:var(--anedya-card-unit-size)] " +
-    "text-[var(--card-foreground,var(--anedya-fallback-fg))]",
+    `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
 
   label:
     "text-[length:var(--anedya-card-label-size)] " +
-    "text-[var(--muted-foreground,var(--anedya-fallback-muted))]",
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
 
-  error: "text-sm font-medium text-red-600",
-  empty: "text-[length:var(--anedya-card-value-size)] font-bold text-[var(--muted-foreground,var(--anedya-fallback-muted))]",
+  error:
+    "text-sm font-medium " +
+    `text-[${themeVar("--destructive", "--mui-palette-error-main", "--anedya-fallback-error")}]`,
+
+  empty:
+    "text-[length:var(--anedya-card-value-size)] font-bold " +
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
 };
 
-// `lightTheme`/`darkTheme` remain as explicit OPT-IN presets — a consumer
-// who passes theme="dark" still gets your hand-picked dark palette
-// regardless of what the app's own CSS variables say. Auto-detection only
-// applies when NO theme prop is set at all (the default state), via
-// CARD_DEFAULT_CLASSES above.
+// Explicit opt-in presets — bypass auto-detection entirely when a
+// consumer sets theme="light"/"dark" or a custom WidgetTheme.
 export const lightTheme: WidgetTheme<CardSlot> = {
   styles: {
     container: "bg-white border-slate-200",
@@ -54,6 +59,8 @@ export const darkTheme: WidgetTheme<CardSlot> = {
     empty: "text-slate-500",
   },
 };
+
+
 
 export type ThemeName = "light" | "dark";
 

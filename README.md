@@ -41,6 +41,7 @@ Designed for developers using the Anedya Frontend SDK, the library provides drop
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering-1)
     - [How props are resolved](#how-props-are-resolved-1)
 - [Common](#common)
+  - [Automatic theme detection](#automatic-theme-detection)
   - [Formatting vs rendering](#formatting-vs-rendering)
   - [The last-updated label](#the-last-updated-label)
   - [Error & empty states](#error--empty-states)
@@ -667,6 +668,32 @@ Later layers win whenever two Tailwind utilities conflict, resolved with `twMerg
 ## Common
 
 The sections below apply to every widget in this SDK. Where behavior is identical, only the shared explanation is given once; each subsection includes an example for both `AnedyaCard` and `AnedyaGauge`.
+
+### Automatic theme detection
+
+By default (no `theme` or `styles` prop set), every widget tries to match the colors — and, for `AnedyaCard`, the border radius — of the app it's rendered in, before falling back to its own built-in palette.
+
+This works by reading standard CSS custom properties, in this priority order:
+
+1. **shadcn/ui convention** — `--card`, `--card-foreground`, `--border`, `--muted-foreground`, `--primary`, `--destructive`, `--radius`. If your app uses shadcn/ui (or any design system defining these same variable names), the widget matches it automatically with zero configuration.
+2. **MUI CSS-variables mode** — `--mui-palette-background-paper`, `--mui-palette-text-primary`, `--mui-palette-text-secondary`, `--mui-palette-divider`, `--mui-palette-primary-main`, `--mui-palette-error-main`. Only present if your MUI theme was created with `cssVariables: true` (MUI v5.15+/v6) — classic MUI setups (CSS-in-JS only) don't expose anything to detect here.
+3. **The widget's own built-in colors** — used whenever neither of the above are present.
+
+```jsx
+// No theme, no styles — automatically matches shadcn's card colors and
+// radius if the app defines --card/--card-foreground/--border/
+// --muted-foreground/--radius.
+<AnedyaCard node={node} variable="humidity" />
+```
+
+#### What this does and doesn't cover
+
+- **Colors and border radius only.** Spacing (padding, gap) and typography scale are governed entirely by each widget's own responsive (`clamp()`-based) sizing system — see [Responsive sizing](#responsive-sizing) — and are not part of auto-detection. A widget matched to your app's colors may still have different padding/height than a native component in that design system, since the two use independent spacing logic.
+- **Tooltips are intentionally excluded** (`AnedyaGauge`'s `tooltip` slot). Tooltip colors are always a fixed high-contrast inversion (dark background + light text in light mode, and vice versa in dark mode), regardless of the app's theme — this guarantees the tooltip stays readable even if the app's `--popover`/`--card` colors happen to be close to the page background.
+- **Only covers design systems that expose their palette as CSS custom properties** under the specific variable names listed above. Plain Tailwind apps with no design-system layer, and MUI setups not using CSS-variables mode, have no equivalent "app theme" for the widget to detect — for these, use `theme`/`styles` to style the widget manually, exactly as you always could.
+- **Explicit props always win.** Passing `theme="light"` / `theme="dark"` / a custom `WidgetTheme` object bypasses auto-detection entirely for that widget instance. Passing `styles` overrides individual slots regardless of what auto-detection resolved to. Auto-detection is only ever the *lowest*-priority layer — see [How props are resolved](#how-props-are-resolved).
+
+If your app uses a different design system with its own CSS-variable convention (not shadcn or MUI), you can still get automatic matching by defining your app's variables under the names above — e.g. setting `--card`/`--card-foreground` at your own `:root` to alias your system's real tokens — since the widget doesn't know or care which library originally defined them.
 
 ### Formatting vs rendering
 
