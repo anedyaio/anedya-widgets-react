@@ -3,10 +3,10 @@ import { WidgetTheme } from "../types/root";
 import { themeVar } from "../helpers/themeVar";
 
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
-  container:
-    "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)] " +
-    `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-fallback-bg")}] ` +
-    `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
+container:
+  "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)] " +
+  `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-gauge-fallback-bg")}] ` +
+  `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-gauge-fallback-border")}]`,
 
   title:
     "text-[length:var(--anedya-gauge-title-size)] font-medium " +

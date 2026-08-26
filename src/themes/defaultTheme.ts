@@ -4,16 +4,16 @@ import { themeVar } from "../helpers/themeVar";
 import { CardSlot } from "../components/AnedyaCard";
 
 export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {
-  container:
-    "flex flex-col items-center justify-center text-center border " +
-    `rounded-[${themeVar("--radius", "--mui-shape-borderRadius", "--anedya-fallback-radius")}] ` +
-    "p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)] " +
-    `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-fallback-bg")}] ` +
-    `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
+container:
+  "flex flex-col items-center justify-center text-center border " +
+  `rounded-[${themeVar("--radius", "--mui-shape-borderRadius", "--anedya-fallback-radius")}] ` +
+  "p-[var(--anedya-card-padding)] gap-[var(--anedya-card-gap)] " +
+  `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-card-fallback-bg")}] ` +
+  `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-card-fallback-border")}]`,
 
   title:
     "text-[length:var(--anedya-card-title-size)] font-medium " +
-    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-title")}]`,
 
   value:
     "text-[length:var(--anedya-card-value-size)] font-bold leading-none " +
@@ -25,7 +25,7 @@ export const CARD_DEFAULT_CLASSES: Record<CardSlot, string> = {
 
   label:
     "text-[length:var(--anedya-card-label-size)] " +
-    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-label")}]`,
 
   error:
     "text-sm font-medium " +
