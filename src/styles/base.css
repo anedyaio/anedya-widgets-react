@@ -20,6 +20,10 @@
   --anedya-card-gap: clamp(0.5rem, 0.2rem + 2cqw + 3cqh, 3.5rem);
 
   transition: padding 0.25s ease, gap 0.25s ease;
+  --anedya-card-bg-fallback: #ffffff;
+  --anedya-card-border-fallback: #e2e8f0;
+  --anedya-card-fg-fallback: #0f172a;
+  --anedya-card-muted-fallback: #64748b;
 }
 
 .anedya-card>* {
@@ -48,4 +52,56 @@
 
 .anedya-gauge>* {
   transition: font-size 0.25s ease;
+}
+
+/* ============================================================
+ * Theme auto-detection fallbacks
+ *
+ * These are OUR default colors, used only when the consuming app
+ * doesn't define the corresponding shadcn-convention CSS variable
+ * (--card, --card-foreground, --border, --muted-foreground, --primary).
+ *
+ * If the app already defines those variables (shadcn, or any design
+ * system following the same naming convention), the widget picks them
+ * up automatically — including automatic dark-mode support, since the
+ * browser re-resolves var() live whenever the app's own .dark class
+ * (or equivalent) changes those variables' values.
+ * ============================================================ */
+:root {
+
+  --anedya-fallback-fg: #0f172a;        /* slate-900 */
+  --anedya-fallback-primary: #6366f1;   /* indigo-500 — used for gauge bar */
+    --anedya-fallback-radius: 0.75rem; /* your current rounded-xl equivalent */
+     --anedya-fallback-tooltip-bg: #0f172a;  
+  --anedya-fallback-tooltip-fg: #ffffff;
+   --anedya-fallback-muted-title: #94a3b8;  /* slate-400 — matches original title */
+  --anedya-fallback-muted-label: #94a3b8;  /* slate-400 — matches original label */
+   --anedya-fallback-error: #dc2626;
+
+
+    /* Card: opaque — restores its actual original appearance */
+  --anedya-card-fallback-bg: #ffffff;
+  --anedya-card-fallback-border: #e2e8f0;
+
+  /* Gauge: transparent — restores its actual original appearance (never had a bg/border) */
+  --anedya-gauge-fallback-bg: transparent;
+  --anedya-gauge-fallback-border: transparent;
+}
+
+.dark {
+--anedya-card-fallback-bg: #0f172a;
+  --anedya-card-fallback-border: #334155;
+
+  --anedya-gauge-fallback-bg: transparent;
+  --anedya-gauge-fallback-border: transparent;
+
+  --anedya-fallback-fg: #f8fafc;
+  --anedya-fallback-muted-title: #94a3b8;
+  --anedya-fallback-muted-label: #64748b;
+  --anedya-fallback-primary: #818cf8;
+  --anedya-fallback-error: #f87171;
+  --anedya-fallback-radius: 0.75rem;
+  --anedya-fallback-tooltip-bg: #ffffff;
+  --anedya-fallback-tooltip-fg: #0f172a;
+
 }

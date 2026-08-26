@@ -11,9 +11,13 @@ import "./index.css";
 // precompiled stylesheet only covers its built-in default classes, not
 // arbitrary classes a consumer passes in.
 
-const tokenId = "YOUR-TOKEN-ID";
-const token = "YOUR-TOKEN";
-const nodeId = "YOUR-NODE-ID";
+// const tokenId = "YOUR-TOKEN-ID";
+// const token = "YOUR-TOKEN";
+// const nodeId = "YOUR-NODE-ID";
+
+const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
+const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
+const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
@@ -133,6 +137,7 @@ export default function App() {
         decimalPlaces={1}
         className="shadow-lg"
         styles={{
+
           container: "bg-blue-50 border-blue-300",
           value: "text-red-500 text-5xl",
           title: "uppercase tracking-wider text-blue-700",
@@ -146,14 +151,21 @@ export default function App() {
       {/* ----------------------------------------------------------------
        * 2.1 Default appearance — live data, no theme/styling overrides.
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge {...commonProps} title="Default Gauge" unit="%" min={0} max={100} />
+      <AnedyaGauge 
+        {...commonProps} 
+        title="Default Gauge" 
+        unit="%" 
+        min={0} 
+        max={100} 
+        theme="dark"
+        />
 
       {/* ----------------------------------------------------------------
        * 2.2 Manual value mode — pass `value` directly instead of `node`/
        * `variable` for a static/controlled gauge (e.g. driven by your
        * own app state rather than live Anedya data).
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" />
+      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" theme="dark" />
 
       {/* ----------------------------------------------------------------
        * 2.4 onDataChange — same pattern as AnedyaCard: conditional
@@ -162,6 +174,7 @@ export default function App() {
        * ---------------------------------------------------------------- */}
       <AnedyaGauge
         {...commonProps}
+        theme="dark"
         title="Threshold Coloring"
         min={0}
         max={100}
@@ -191,9 +204,17 @@ export default function App() {
         min={0}
         max={80}
         title="Custom Formatting"
+        theme="light"
+        needle={{
+          type:"triangle",
+          color:"oklch(59.2% 0.249 0.584)"
+        }}
         formatValue={(v) => `${v} km/h`}
         labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`}
+        className="bg-white p-4 rounded-xl"
       />
     </div>
   );
 }
+ 
+//css classes instead of ts classes --- rn css is getting converting to ts and back to ts - follow base ui - tailwind format support 
