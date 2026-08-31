@@ -5,7 +5,6 @@
     "@anedyasystems/anedya-widgets-react": "0.0.2"
   },
   "changesets": [
-    "jolly-zebras-double",
-    "thirty-candies-notice"
+    "better-corners-lick"
   ]
 }
