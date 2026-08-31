@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- 567e470: Readme Updated
+
+## 0.0.3-beta.0
+
+### Patch Changes
+
 - 8f0e34e: Improvements & Bugs fixes
 
 ## 0.0.2-beta.2
