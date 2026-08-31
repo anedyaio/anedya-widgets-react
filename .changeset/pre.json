@@ -2,7 +2,7 @@
   "mode": "pre",
   "tag": "beta",
   "initialVersions": {
-    "@anedyasystems/anedya-widgets-react": "0.0.1"
+    "@anedyasystems/anedya-widgets-react": "0.0.2"
   },
   "changesets": [
     "jolly-zebras-double",
