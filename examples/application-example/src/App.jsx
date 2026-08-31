@@ -11,13 +11,9 @@ import "./index.css";
 // precompiled stylesheet only covers its built-in default classes, not
 // arbitrary classes a consumer passes in.
 
-// const tokenId = "YOUR-TOKEN-ID";
-// const token = "YOUR-TOKEN";
-// const nodeId = "YOUR-NODE-ID";
-
-const tokenId = "sdaIC9xpHKdPQpWXPtOlG1Pl";
-const token = "eMYc82DiKX2oO9TgXylCCeyugok8MDOY65XMTRDLdsh2ENHOi0Tyv3RmfCuLQ6kb";
-const nodeId = "019e8d46-e895-713f-b763-6969b36e37a4";
+const tokenId = "YOUR-TOKEN-ID";
+const token = "YOUR-TOKEN";
+const nodeId = "YOUR-NODE-ID";
 
 const anedya = new Anedya();
 const config = anedya.newConfig(tokenId, token);
