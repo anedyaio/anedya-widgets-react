@@ -4,6 +4,7 @@
 @source "../themes/**/*.{ts,tsx}";
 @source "../common.ts";
 @source "../types/gauge.ts";
+@source "../types/lineChart.ts";
 
 .anedya-card-container {
   container-type: size;
@@ -104,4 +105,24 @@
   --anedya-fallback-tooltip-bg: #ffffff;
   --anedya-fallback-tooltip-fg: #0f172a;
 
+}
+.anedya-linechart-container {
+  container-type: size;
+  container-name: anedya-linechart;
+  transition: width 0.25s ease, height 0.25s ease;
+}
+
+.anedya-linechart {
+  --anedya-linechart-padding: clamp(0.75rem, 0.4rem + 2cqw + 2cqh, 2rem);
+  --anedya-linechart-gap: clamp(0.5rem, 0.3rem + 1cqw + 1cqh, 1.25rem);
+  --anedya-linechart-title-size: clamp(0.875rem, 0.65rem + 1cqw + 1cqh, 1.5rem);
+  --anedya-linechart-label-size: clamp(0.6875rem, 0.5rem + 0.6cqw + 0.6cqh, 1rem);
+  --anedya-linechart-axis-size: clamp(0.625rem, 0.45rem + 0.5cqw + 0.5cqh, 0.875rem);
+  --anedya-linechart-tooltip-size: clamp(0.6875rem, 0.45rem + 0.7cqw + 0.7cqh, 1rem);
+
+  transition: padding 0.25s ease, gap 0.25s ease;
+}
+
+.anedya-linechart > * {
+  transition: font-size 0.25s ease;
 }
