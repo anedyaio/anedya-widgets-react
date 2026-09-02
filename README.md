@@ -40,6 +40,13 @@ Designed for developers using the Anedya Frontend SDK, the library provides drop
     - [Animation configuration](#animation-configuration)
     - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering-1)
     - [How props are resolved](#how-props-are-resolved-1)
+  - [AnedyaLineChart](#anedyalinechart)
+    - [Required props](#required-props-2)
+    - [Time range & data fetching](#time-range--data-fetching)
+    - [The D3 passthrough model](#the-d3-passthrough-model)
+    - [Tooltip](#tooltip-1)
+    - [Area, points & grid](#area-points--grid)
+    - [`onDataChange` — data-driven rendering](#ondatachange--data-driven-rendering-2)
 - [Common](#common)
   - [Automatic theme detection](#automatic-theme-detection)
   - [Formatting vs rendering](#formatting-vs-rendering)
@@ -662,6 +669,155 @@ For each slot (`container`, `title`, `unit`, `track`, `bar`, `needle`, `needleCa
 Later layers win whenever two Tailwind utilities conflict, resolved with `twMerge`. `className` is separate from this chain — merged onto the outer container after the container slot has been resolved.
 
 > **Rule of thumb:** defaults → theme → `styles` → `onDataChange`. User overrides always win.
+
+---
+
+### AnedyaLineChart
+
+A time-series line chart built on D3 — shows a variable's history as a line, with an optional filled area, point markers, gridlines, and a hover tooltip.
+
+```jsx
+<AnedyaLineChart node={node} variable="humidity" title="Humidity" unit="%" />
+```
+
+#### Required props
+
+| Prop | Type | Description |
+|---|---|---|
+| `node` | `any` | `anedya.newNode(client, nodeId)` |
+| `variable` | `string` | Variable name to fetch |
+
+---
+
+#### Time range & data fetching
+
+`AnedyaLineChart` calls `node.getData({ variable, from, to, limit, order })` once, whenever `node`, `variable`, `from`, `to`, `limit`, or `order` changes.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `from` | `number` | one year before `to` | Start of the range, in **milliseconds** |
+| `to` | `number` | now | End of the range, in **milliseconds** |
+| `limit` | `number` | `1000` | Max data points fetched |
+| `order` | `"asc" \| "desc"` | `"asc"` | Fetch order |
+
+```jsx
+<AnedyaLineChart
+  node={node}
+  variable="humidity"
+  from={Date.now() - 24 * 60 * 60 * 1000}
+  to={Date.now()}
+/>
+```
+
+> **Note on `order`:** the underlying SDK's own default is `"desc"` — this widget deliberately defaults to `"asc"` instead, since a line chart reads left-to-right chronologically. Pass `order="desc"` explicitly if you want the SDK's original default behavior.
+
+---
+
+#### The D3 passthrough model
+
+Unlike `AnedyaCard`/`AnedyaGauge`'s config props (which use widget-specific shapes), `AnedyaLineChart`'s chart-drawing customizations are **real D3 objects, passed through unmodified** — if you already know D3, you already know how to customize this chart. Nothing is reshaped or reinvented.
+
+```jsx
+import * as d3 from "d3";
+
+<AnedyaLineChart
+  node={node}
+  variable="temperature"
+  line={(line) => line.curve(d3.curveMonotoneX)}
+  xAxis={(axis) => axis.ticks(6).tickFormat(d3.timeFormat("%b %d"))}
+  yScale={(scale) => scale.nice()}
+/>
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `line` | `(line: d3.Line<LineChartDataPoint>) => d3.Line<LineChartDataPoint>` | Receives a `d3.line()` already bound to the data's x/y accessors — chain any D3 method on it, same as hand-written D3 |
+| `xScale` | `(scale: d3.ScaleTime<number, number>) => ...` | Customize the time scale directly |
+| `yScale` | `(scale: d3.ScaleLinear<number, number>) => ...` | Customize the value scale directly |
+| `xAxis` | `(axis: d3.Axis<...>) => ...` | Customize the x-axis generator directly |
+| `yAxis` | `(axis: d3.Axis<...>) => ...` | Customize the y-axis generator directly |
+
+Each of these receives a **real, functioning D3 object already configured with sensible defaults** — you're not building from scratch, just modifying what the widget already set up, exactly as you'd chain additional `.method()` calls onto any D3 generator/scale/axis in vanilla code.
+
+---
+
+#### Tooltip
+
+On by default, with built-in content and pointer-following positioning — same visual pattern as `AnedyaGauge`'s tooltip.
+
+```jsx
+<AnedyaLineChart
+  node={node}
+  variable="humidity"
+  tooltip={{
+    content: (d) => <span className="text-red-400">{d.value}% RH</span>,
+  }}
+/>
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `show` | `boolean` | Default `true` |
+| `content` | `(d: LineChartDataPoint) => ReactNode` | Custom content, keeps the widget's built-in positioning |
+| `onMouseOver` / `onMouseMove` / `onMouseOut` | Raw D3 event handlers `(event: MouseEvent, d: LineChartDataPoint) => void` | Full manual control — same signatures you'd pass to `.on("mouseover", ...)` on a real D3 selection |
+
+**Providing any of `onMouseOver`/`onMouseMove`/`onMouseOut` opts you out of the built-in tooltip entirely** — you're then responsible for building and positioning your own tooltip DOM, exactly as in hand-written D3:
+
+```jsx
+<AnedyaLineChart
+  node={node}
+  variable="pressure"
+  tooltip={{
+    onMouseOver: (event, d) => d3.select("#my-tooltip").style("opacity", 1),
+    onMouseMove: (event, d) => d3.select("#my-tooltip").text(d.value),
+    onMouseOut: () => d3.select("#my-tooltip").style("opacity", 0),
+  }}
+/>
+```
+
+---
+
+#### Area, points & grid
+
+```jsx
+<AnedyaLineChart
+  node={node}
+  variable="humidity"
+  area={{ show: true, opacity: 0.2 }}
+  point={{ show: true, radius: 4 }}
+  grid={{ ticksY: 4, ticksX: 6 }}
+/>
+```
+
+| Prop | Type | Description |
+|---|---|---|
+| `area.show` | `boolean` | Fill under the line. Default `false` |
+| `area.opacity` | `number` | Fill opacity. Default `0.15` |
+| `point.show` | `boolean` | Dot at each data point. Default `false` |
+| `point.radius` | `number` | Dot radius in px. Default `3` |
+| `grid.show` | `boolean` | Background gridlines. Default `true` |
+| `grid.ticksX` / `grid.ticksY` | `number` | Approximate gridline count. Default `5` each |
+
+---
+
+#### `onDataChange` — data-driven rendering
+
+Same mechanism as `AnedyaCard`/`AnedyaGauge` — called whenever the fetched dataset changes, receives the full array of points (not a single value) plus a `meta` object:
+
+```jsx
+<AnedyaLineChart
+  node={node}
+  variable="humidity"
+  onDataChange={(data, meta) => {
+    if (meta.kind === "error") {
+      return { renderError: () => <span className="italic">Offline</span> };
+    }
+    if (!data) return;
+    const max = Math.max(...data.map((d) => d.value));
+    if (max > 90) return { title: "⚠ Peak humidity detected" };
+  }}
+/>
+```
 
 ---
 
