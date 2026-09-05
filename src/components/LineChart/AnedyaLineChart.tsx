@@ -34,24 +34,23 @@ export type AnedyaLineChartUpdate = Partial<
   Omit<AnedyaLineChartProps, "node" | "variable" | "onDataChange">
 >;
 
-
 const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
 
 export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
-  /** Start of the time range, in milliseconds. Default: one year before `to`. */
   from?: number;
-  /** End of the time range, in milliseconds. Default: now. */
   to?: number;
-  /** Max data points to fetch. Default: 1000. */
   limit?: number;
-  /**
-   * Fetch order. Default: `"asc"` — chronological, left-to-right, which
-   * is what a line chart timeline needs. The underlying SDK itself
-   * defaults to `"desc"`; this widget deliberately overrides that
-   * default so lines don't render backwards unless you explicitly ask
-   * for `"desc"`.
-   */
   order?: "asc" | "desc";
+
+  /**
+   * Whether the built-in refresh button is shown, top-right of the
+   * chart. Clicking it re-runs BOTH the range fetch (`getData`) and the
+   * latest-value fetch (`getLatestData`). Default: `true`.
+   */
+  refresh?: boolean;
+
+  /** Called after a manual refresh (button click) completes, success or not. */
+  onRefresh?: () => void;
 
   width?: number;
   height?: number;
@@ -68,46 +67,21 @@ export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
   labelFormat?: LabelFormatPreset;
   timezone?: string;
 
-  /**
-   * Customize the D3 line generator directly. Receives a `d3.line()`
-   * already bound to the fetched data's x/y accessors — return it
-   * modified however you'd normally chain D3 methods. Nothing about
-   * this is reshaped; it's the real d3.Line object.
-   *
-   * @example line={(line) => line.curve(d3.curveMonotoneX)}
-   */
   line?: (line: d3.Line<LineChartDataPoint>) => d3.Line<LineChartDataPoint>;
-
-  /** Customize the x (time) scale directly — same passthrough pattern as `line`. */
   xScale?: (
     scale: d3.ScaleTime<number, number>
   ) => d3.ScaleTime<number, number>;
-  /** Customize the y (value) scale directly. */
   yScale?: (
     scale: d3.ScaleLinear<number, number>
   ) => d3.ScaleLinear<number, number>;
-
-  /** Customize the x-axis generator directly (e.g. `.ticks()`, `.tickFormat()`). */
   xAxis?: (
     axis: d3.Axis<Date | d3.NumberValue>
   ) => d3.Axis<Date | d3.NumberValue>;
-  /** Customize the y-axis generator directly. */
   yAxis?: (axis: d3.Axis<d3.NumberValue>) => d3.Axis<d3.NumberValue>;
 
-  /** Optional filled area under the line. Off by default. */
   area?: LineChartAreaConfig;
-  /** Optional dots at each data point. Off by default. */
   point?: LineChartPointConfig;
-  /** Background gridlines. On by default. */
   grid?: LineChartGridConfig;
-
-  /**
-   * Hover tooltip. On by default with built-in content and positioning.
-   * Provide `content` to keep the built-in positioning but customize
-   * what's shown, or provide any of `onMouseOver`/`onMouseMove`/
-   * `onMouseOut` to fully take over with raw D3 event handlers — in
-   * that case the built-in tooltip is bypassed entirely.
-   */
   tooltip?: LineChartTooltipConfig;
 
   title?: string;
@@ -121,11 +95,39 @@ export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
 
   renderError?: (error: string) => React.ReactNode;
   renderEmpty?: () => React.ReactNode;
+
+
+    /** Show the "Live" toggle button in the toolbar. Default: `true`. Not yet wired to live-streaming — UI only for now. */
+  live?: boolean;
+  /** Show the "Export" button in the toolbar. Default: `true`. Not yet wired to an export action — UI only for now. */
+  export?: boolean;
+  /** Show the date-range picker in the toolbar. Default: `true`. Not yet wired to actually change `from`/`to` — UI only for now. */
+  dateRangePicker?: boolean;
+/** Show a Min / Avg / Max summary row below the chart, computed from the fetched range data. Default: `false`. */
+summary?: boolean;
+
 }
 
 const DEFAULT_WIDTH = 480;
 const DEFAULT_HEIGHT_RATIO = 0.5;
 const DEFAULT_HEIGHT = 240;
+
+function RefreshIcon({ spinning }: { spinning: boolean }) {
+  return (
+    <svg
+      className={twMerge("w-4 h-4", spinning && "animate-spin")}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
 
 export function AnedyaLineChart({
   node,
@@ -134,6 +136,7 @@ export function AnedyaLineChart({
   to,
   limit = 1000,
   order = "asc",
+  onRefresh,
   title,
   theme,
   className,
@@ -163,21 +166,45 @@ export function AnedyaLineChart({
   onDataChange,
   renderError,
   renderEmpty,
+  refresh = true,
+  live = true,
+  summary=true,
+
+  export: showExport = true, // `export` is a reserved word, alias the destructure
+  dateRangePicker = true,
 }: AnedyaLineChartProps): React.JSX.Element {
-  if (!node) {
-    throw new Error("[AnedyaLineChart] `node` is required.");
-  }
-  if (!variable) {
-    throw new Error("[AnedyaLineChart] `variable` is required.");
-  }
+  if (!node) throw new Error("[AnedyaLineChart] `node` is required.");
+  if (!variable) throw new Error("[AnedyaLineChart] `variable` is required.");
 
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // dataPoints: null = not-yet-fetched/error, [] = fetched successfully but
+  // genuinely no points in the range, [...] = real range data.
   const [dataPoints, setDataPoints] = useState<LineChartDataPoint[] | null>(
     null
   );
+  // The single most recent point, from getLatestData — used both as the
+  // floating badge value AND as a fallback single-point chart when the
+  // range fetch comes back empty.
+  const [latestPoint, setLatestPoint] = useState<LineChartDataPoint | null>(
+    null
+  );
+
+  const summaryStats = useMemo(() => {
+  if (!dataPoints || dataPoints.length === 0) return null;
+  let min = dataPoints[0];
+  let max = dataPoints[0];
+  let sum = 0;
+  for (const d of dataPoints) {
+    if (d.value < min.value) min = d;
+    if (d.value > max.value) max = d;
+    sum += d.value;
+  }
+  return { min, max, avg: sum / dataPoints.length };
+}, [dataPoints]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEmpty, setIsEmpty] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [dynamicProps, setDynamicProps] = useState<AnedyaLineChartUpdate>({});
   const [tooltipState, setTooltipState] = useState<{
     x: number;
@@ -186,63 +213,105 @@ export function AnedyaLineChart({
     flipX: boolean;
     point: LineChartDataPoint | null;
   }>({ x: 0, y: 0, visible: false, flipX: false, point: null });
+  const [latestBadgePos, setLatestBadgePos] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  }>({ x: 0, y: 0, visible: false });
 
   const mountedRef = useRef(false);
   const { ref: chartWrapperRef, size: dims } =
     useResizeObserver<HTMLDivElement>(width == null);
 
-const resolvedTo = useMemo(() => to ?? Date.now(), [to]);
-const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, resolvedTo]);
+  // Stable — recomputed only when the actual `to`/`from` PROPS change, not
+  // on every render. See earlier fix: computing Date.now() unmemoized here
+  // caused an infinite fetch loop, since it fed a useEffect dependency
+  // array with a "new" value on every render.
+  const resolvedTo = useMemo(() => to ?? Date.now(), [to]);
+  const resolvedFrom = useMemo(
+    () => from ?? resolvedTo - MS_PER_YEAR,
+    [from, resolvedTo]
+  );
 
-  // ---- Data fetch ----
+  // Whichever of the two calls has anything at all — used to decide
+  // whether a fetch failure/refresh-in-flight should blank the chart or
+  // just keep showing the last-known data underneath.
+  const hasAnyData = (dataPoints && dataPoints.length > 0) || latestPoint != null;
+
+  // ---- Combined fetch: range data + latest value, in parallel ----
   useEffect(() => {
     mountedRef.current = true;
 
-    const fetchData = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const res = await node.getData({
-          variable,
-          from: resolvedFrom,
-          to: resolvedTo,
-          limit,
-          order,
-        });
+        const [rangeRes, latestRes] = await Promise.all([
+          node.getData({
+            variable,
+            from: resolvedFrom,
+            to: resolvedTo,
+            limit,
+            order,
+          }),
+          node.getLatestData(variable),
+        ]);
 
         if (!mountedRef.current) return;
 
-        if (res.isSuccess && res.isDataAvailable) {
-          const points: LineChartDataPoint[] = res.data.map((d: any) => ({
-            timestamp: d.timestamp,
-            value: d.value,
-          }));
+        const latest: LineChartDataPoint | null =
+          latestRes.isSuccess && latestRes.isDataAvailable
+            ? {
+                timestamp: latestRes.data.timestamp,
+                value: latestRes.data.value,
+              }
+            : null;
+        setLatestPoint(latest);
+
+        if (rangeRes.isSuccess && rangeRes.isDataAvailable) {
+          const points: LineChartDataPoint[] = rangeRes.data.map(
+            (d: any) => ({ timestamp: d.timestamp, value: d.value })
+          );
           setDataPoints(points);
-          setIsEmpty(false);
-        } else if (res.isSuccess && !res.isDataAvailable) {
+          setError(null);
+        } else if (rangeRes.isSuccess && !rangeRes.isDataAvailable) {
+          // No points in range — fine, `effectiveDataPoints` below falls
+          // back to the single latest point if one exists.
           setDataPoints([]);
-          setIsEmpty(true);
+          setError(null);
         } else {
           setDataPoints(null);
-          setError(res.error?.errorMessage ?? "Failed to fetch data");
-          setIsEmpty(false);
+          setError(rangeRes.error?.errorMessage ?? "Failed to fetch data");
         }
       } catch (err: any) {
         if (!mountedRef.current) return;
         setDataPoints(null);
         setError(err?.message ?? "Failed to fetch data");
-        setIsEmpty(false);
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+          onRefresh?.();
+        }
       }
     };
 
-    fetchData();
+    fetchAll();
     return () => {
       mountedRef.current = false;
     };
-  }, [node, variable, resolvedFrom, resolvedTo, limit, order]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node, variable, resolvedFrom, resolvedTo, limit, order, refreshTick]);
+
+  // What actually gets drawn: real range data if present, else the single
+  // latest point as a one-point fallback chart, else nothing.
+  const effectiveDataPoints = useMemo(() => {
+    if (dataPoints && dataPoints.length > 0) return dataPoints;
+    if (latestPoint) return [latestPoint];
+    return [];
+  }, [dataPoints, latestPoint]);
+
+  const isEmpty = !loading && !error && effectiveDataPoints.length === 0;
 
   // ---- onDataChange ----
   useEffect(() => {
@@ -284,7 +353,12 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
     yScale,
     xAxis,
     yAxis,
+    refresh,
+  live,
+  export: showExport,
+  dateRangePicker,
     className,
+    summary,
     ...dynamicProps,
     styles: mergedStyles,
   };
@@ -309,9 +383,6 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
     onMouseMove: resolvedProps.tooltip?.onMouseMove ?? tooltip?.onMouseMove,
     onMouseOut: resolvedProps.tooltip?.onMouseOut ?? tooltip?.onMouseOut,
   };
-  // Providing ANY raw handler opts the consumer out of the built-in
-  // tooltip entirely — matches the "exactly like D3" contract: once
-  // you're wiring your own .on() handlers, we don't also drive our own.
   const hasRawTooltipHandlers =
     !!resolvedTooltip.onMouseOver ||
     !!resolvedTooltip.onMouseMove ||
@@ -359,7 +430,7 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
 
   const formatTimestamp = useCallback(
     (ts: number): string => {
-      const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "time"];
+const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "datetime"];
       return formatter(ts, {
         locale: resolvedProps.formatOptions?.locale,
         timezone: resolvedTimezone,
@@ -386,9 +457,7 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
     [displayFor, formatTimestamp, resolvedProps.unit]
   );
 
-  // ---- Geometry ----
-  const boxWidth =
-    resolvedProps.width ?? (dims.width || DEFAULT_WIDTH);
+  const boxWidth = resolvedProps.width ?? (dims.width || DEFAULT_WIDTH);
   const boxHeight =
     resolvedProps.height ?? (dims.height || boxWidth * DEFAULT_HEIGHT_RATIO) ?? DEFAULT_HEIGHT;
 
@@ -396,31 +465,44 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
   const innerWidth = Math.max(0, boxWidth - margin.left - margin.right);
   const innerHeight = Math.max(0, boxHeight - margin.top - margin.bottom);
 
+  const isSinglePoint = effectiveDataPoints.length === 1;
+
   // ---- D3 draw ----
   useEffect(() => {
     if (!svgRef.current || innerWidth <= 0 || innerHeight <= 0) return;
-    if (!dataPoints || dataPoints.length === 0) return;
+    if (effectiveDataPoints.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const root = svg.select<SVGGElement>("g.anedya-linechart-root");
     root.attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const xExtent = d3.extent(dataPoints, (d) => d.timestamp) as [
-      number,
-      number
-    ];
-    const yExtent = d3.extent(dataPoints, (d) => d.value) as [number, number];
-    const yPad = (yExtent[1] - yExtent[0]) * 0.1 || 1;
+    const xExtentRaw = d3.extent(
+      effectiveDataPoints,
+      (d) => d.timestamp
+    ) as [number, number];
+    const yExtentRaw = d3.extent(
+      effectiveDataPoints,
+      (d) => d.value
+    ) as [number, number];
+
+    // Degenerate domains (single point → identical min/max) need padding,
+    // or the scale collapses to zero range and nothing draws correctly.
+    const xPad = xExtentRaw[0] === xExtentRaw[1] ? 60 * 60 * 1000 : 0; // ±1h
+    const yRange = yExtentRaw[1] - yExtentRaw[0];
+    const yPad = yRange > 0 ? yRange * 0.1 : Math.abs(yExtentRaw[0]) * 0.1 || 1;
 
     let x = d3
       .scaleTime()
-      .domain([new Date(xExtent[0]), new Date(xExtent[1])])
+      .domain([
+        new Date(xExtentRaw[0] - xPad),
+        new Date(xExtentRaw[1] + xPad),
+      ])
       .range([0, innerWidth]);
     if (resolvedProps.xScale) x = resolvedProps.xScale(x) as any;
 
     let y = d3
       .scaleLinear()
-      .domain([yExtent[0] - yPad, yExtent[1] + yPad])
+      .domain([yExtentRaw[0] - yPad, yExtentRaw[1] + yPad])
       .range([innerHeight, 0]);
     if (resolvedProps.yScale) y = resolvedProps.yScale(y) as any;
 
@@ -439,14 +521,16 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
             .tickFormat(() => "")
         )
         .call((g) => g.select(".domain").remove())
-        .call((g) => g.selectAll("line").attr("stroke", "currentColor").attr("opacity", 0.5));
+        .call((g) =>
+          g.selectAll("line").attr("stroke", "currentColor").attr("opacity", 0.5)
+        );
     }
 
     // ---- Axes ----
     let xAxisGen = d3.axisBottom(x).ticks(5);
     if (resolvedProps.xAxis) xAxisGen = resolvedProps.xAxis(xAxisGen as any) as any;
-    const xAxisGroup = root.select<SVGGElement>("g.anedya-linechart-xaxis");
-    xAxisGroup
+    root
+      .select<SVGGElement>("g.anedya-linechart-xaxis")
       .attr("class", twMerge("anedya-linechart-xaxis", resolveSlot("xAxis")))
       .attr("transform", `translate(0,${innerHeight})`)
       .call(xAxisGen as any)
@@ -456,8 +540,8 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
 
     let yAxisGen = d3.axisLeft(y).ticks(5);
     if (resolvedProps.yAxis) yAxisGen = resolvedProps.yAxis(yAxisGen as any) as any;
-    const yAxisGroup = root.select<SVGGElement>("g.anedya-linechart-yaxis");
-    yAxisGroup
+    root
+      .select<SVGGElement>("g.anedya-linechart-yaxis")
       .attr("class", twMerge("anedya-linechart-yaxis", resolveSlot("yAxis")))
       .call(yAxisGen as any)
       .call((g) => g.select(".domain").attr("stroke", "currentColor").attr("opacity", 0.3))
@@ -467,7 +551,7 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
     // ---- Area ----
     const areaGroup = root.select<SVGGElement>("g.anedya-linechart-area");
     areaGroup.selectAll("*").remove();
-    if (resolvedArea.show) {
+    if (resolvedArea.show && !isSinglePoint) {
       const areaGen = d3
         .area<LineChartDataPoint>()
         .x((d) => x(new Date(d.timestamp)))
@@ -476,13 +560,13 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
       areaGroup
         .append("path")
         .attr("class", twMerge("anedya-linechart-area-path", resolveSlot("area")))
-        .attr("d", areaGen(dataPoints)!)
+        .attr("d", areaGen(effectiveDataPoints)!)
         .attr("fill", "currentColor")
         .attr("stroke", "none")
         .attr("opacity", resolvedArea.opacity);
     }
 
-    // ---- Line — this is the literal D3 passthrough ----
+    // ---- Line ----
     let lineGen = d3
       .line<LineChartDataPoint>()
       .x((d) => x(new Date(d.timestamp)))
@@ -491,28 +575,36 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
 
     const lineGroup = root.select<SVGGElement>("g.anedya-linechart-line");
     lineGroup.selectAll("*").remove();
-    lineGroup
-      .append("path")
-      .attr("class", twMerge("anedya-linechart-line-path", resolveSlot("line")))
-      .attr("d", lineGen(dataPoints)!)
-      .attr("fill", "none")
-      .attr("stroke", "currentColor")
-      .attr("stroke-width", 2);
+    if (!isSinglePoint) {
+      lineGroup
+        .append("path")
+        .attr("class", twMerge("anedya-linechart-line-path", resolveSlot("line")))
+        .attr("d", lineGen(effectiveDataPoints)!)
+        .attr("fill", "none")
+        .attr("stroke", "currentColor")
+        .attr("stroke-width", 2);
+    }
 
-    // ---- Points ----
+    // ---- Points — forced on for the single-point fallback case, since
+    // otherwise a one-point "chart" would render as empty axes with
+    // nothing visible on them at all. ----
     const pointGroup = root.select<SVGGElement>("g.anedya-linechart-points");
     pointGroup.selectAll("*").remove();
-    if (resolvedPoint.show) {
+    if (resolvedPoint.show || isSinglePoint) {
       pointGroup
         .selectAll("circle")
-        .data(dataPoints)
+        .data(effectiveDataPoints)
         .join("circle")
         .attr("class", resolveSlot("point"))
         .attr("cx", (d) => x(new Date(d.timestamp)))
         .attr("cy", (d) => y(d.value))
-        .attr("r", resolvedPoint.radius)
+        .attr("r", isSinglePoint ? Math.max(resolvedPoint.radius, 4) : resolvedPoint.radius)
         .attr("fill", "currentColor");
     }
+
+
+
+ 
 
     // ---- Tooltip hit area + handlers ----
     const handleMove = (event: MouseEvent) => {
@@ -523,10 +615,10 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
 
       const bisect = d3.bisector((d: LineChartDataPoint) => d.timestamp).left;
       const targetTs = x.invert(relX).getTime();
-      const idx = bisect(dataPoints, targetTs);
+      const idx = bisect(effectiveDataPoints, targetTs);
       const closest =
-        dataPoints[
-          Math.min(dataPoints.length - 1, Math.max(0, idx))
+        effectiveDataPoints[
+          Math.min(effectiveDataPoints.length - 1, Math.max(0, idx))
         ];
 
       if (hasRawTooltipHandlers) {
@@ -544,8 +636,8 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
     };
 
     const handleOver = (event: MouseEvent) => {
-      if (hasRawTooltipHandlers && dataPoints.length > 0) {
-        resolvedTooltip.onMouseOver?.(event, dataPoints[0]);
+      if (hasRawTooltipHandlers && effectiveDataPoints.length > 0) {
+        resolvedTooltip.onMouseOver?.(event, effectiveDataPoints[0]);
       }
     };
 
@@ -573,10 +665,15 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
         .on("mousemove", handleMove)
         .on("mouseleave", handleLeave);
     } else {
-      hitRect.style("cursor", null).on("mouseover", null).on("mousemove", null).on("mouseleave", null);
+      hitRect
+        .style("cursor", null)
+        .on("mouseover", null)
+        .on("mousemove", null)
+        .on("mouseleave", null);
     }
   }, [
-    dataPoints,
+    effectiveDataPoints,
+    isSinglePoint,
     innerWidth,
     innerHeight,
     margin.left,
@@ -629,18 +726,85 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
           ...(hasExplicitHeight ? { overflow: "hidden" } : {}),
         }}
       >
-        {resolvedProps.title && (
-          <span className={resolveSlot("title")}>{resolvedProps.title}</span>
-        )}
+    {(resolvedProps.title ||
+  resolvedProps.refresh !== false ||
+  resolvedProps.live !== false ||
+  resolvedProps.export !== false ||
+  resolvedProps.dateRangePicker !== false) && (
+  <div className="flex items-center justify-between w-full gap-2 flex-wrap">
+    {resolvedProps.title ? (
+      <span className={resolveSlot("title")}>{resolvedProps.title}</span>
+    ) : (
+      <span />
+    )}
 
-        {loading ? (
+    <div className="flex items-center gap-2 ml-auto">
+      {/* {resolvedProps.live !== false && (
+        <button
+          type="button"
+          disabled
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium bg-blue-500 text-white opacity-50 cursor-not-allowed"
+          title="Live streaming — coming soon"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          Live
+        </button>
+      )} */}
+
+      {resolvedProps.dateRangePicker !== false && (
+        <button
+          type="button"
+          disabled
+          className={twMerge(
+            "rounded-md px-2 py-1 text-xs opacity-50 cursor-not-allowed border",
+            resolveSlot("refreshButton")
+          )}
+          title="Date range picker — coming soon"
+        >
+          {formatTimestamp(resolvedFrom)} – {formatTimestamp(resolvedTo)}
+        </button>
+      )}
+
+      {/* {resolvedProps.export !== false && (
+        <button
+          type="button"
+          disabled
+          className={twMerge(
+            "rounded-md p-1 opacity-50 cursor-not-allowed",
+            resolveSlot("refreshButton")
+          )}
+          title="Export — coming soon"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
+      )} */}
+
+      {resolvedProps.refresh !== false && (
+        <button
+          type="button"
+          aria-label="Refresh chart data"
+          onClick={() => setRefreshTick((t) => t + 1)}
+          className={twMerge("cursor-pointer", resolveSlot("refreshButton"))}
+        >
+          <RefreshIcon spinning={loading} />
+        </button>
+      )}
+    </div>
+  </div>
+)}
+
+        {loading && !hasAnyData ? (
           <div className="flex flex-col gap-2 w-full items-center justify-center flex-1">
             <div
               className="w-full bg-slate-200 dark:bg-slate-700 rounded-md animate-pulse"
               style={{ height: "60%" }}
             />
           </div>
-        ) : error ? (
+        ) : error && !hasAnyData ? (
           renderError ? (
             renderError(error)
           ) : (
@@ -672,6 +836,22 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
                 <g className="anedya-linechart-yaxis" />
               </g>
             </svg>
+{latestPoint && !loading && !error && !isEmpty && (
+  <div
+    className={twMerge(
+      "absolute top-2 right-2 flex flex-col items-end",
+      resolveSlot("latestBadge")
+    )}
+  >
+    <span className="font-bold leading-tight">
+      {displayFor(latestPoint.value)}
+      {resolvedProps.unit ? ` ${resolvedProps.unit}` : ""}
+    </span>
+    <span className="font-normal text-[0.75em] opacity-80 leading-tight">
+      {formatTimestamp(latestPoint.timestamp)}
+    </span>
+  </div>
+)} 
 
             {!hasRawTooltipHandlers &&
               resolvedTooltip.show &&
@@ -695,6 +875,32 @@ const resolvedFrom = useMemo(() => from ?? resolvedTo - MS_PER_YEAR, [from, reso
                   )}
                 </div>
               )}
+{/* 
+{resolvedProps.summary && summaryStats && (
+  <div
+    className={twMerge(
+      "flex items-center justify-between w-full px-1 shrink-0 pt-2",
+      resolveSlot("summary")
+    )}
+  >
+    <div className="flex flex-col items-start">
+      <span className="opacity-60 text-[0.85em]">MIN</span>
+      <span className="font-medium">
+        {displayFor(summaryStats.min.value)} | {formatTimestamp(summaryStats.min.timestamp)}
+      </span>
+    </div>
+    <div className="flex flex-col items-center">
+      <span className="opacity-60 text-[0.85em]">AVG</span>
+      <span className="font-medium">{displayFor(summaryStats.avg)}</span>
+    </div>
+    <div className="flex flex-col items-end">
+      <span className="opacity-60 text-[0.85em]">MAX</span>
+      <span className="font-medium">
+        {displayFor(summaryStats.max.value)} | {formatTimestamp(summaryStats.max.timestamp)}
+      </span>
+    </div>
+  </div>
+)} */}
           </div>
         )}
       </div>

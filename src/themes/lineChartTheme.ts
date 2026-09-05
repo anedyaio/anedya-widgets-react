@@ -43,6 +43,19 @@ export const LINECHART_DEFAULT_CLASSES: Record<LineChartSlot, string> = {
     "pointer-events-none z-10 rounded-md px-2 py-1 text-[length:var(--anedya-linechart-tooltip-size)] " +
     "shadow-lg whitespace-nowrap font-medium " +
     "bg-[var(--anedya-fallback-tooltip-bg)] text-[var(--anedya-fallback-tooltip-fg)]",
+
+
+latestBadge:
+  "pointer-events-none z-10 rounded-md px-2 py-1 " +
+  "shadow-lg " +
+  "bg-[var(--anedya-fallback-tooltip-bg)] text-[var(--anedya-fallback-tooltip-fg)]",
+
+refreshButton:
+  "shrink-0 rounded-md p-1 transition-opacity hover:opacity-70 cursor-pointer " +
+  `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-label")}]`,
+  summary:
+  "text-xs " +
+  `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-label")}]`,
 };
 
 export const lineChartLightTheme: WidgetTheme<LineChartSlot> = {
@@ -59,6 +72,9 @@ export const lineChartLightTheme: WidgetTheme<LineChartSlot> = {
     error: "text-red-600",
     empty: "text-slate-400",
     tooltip: "bg-slate-900 text-white",
+    latestBadge: "bg-slate-900 text-white",
+refreshButton: "text-slate-400",
+summary: "text-slate-500",
   },
 };
 
@@ -76,6 +92,9 @@ export const lineChartDarkTheme: WidgetTheme<LineChartSlot> = {
     error: "text-red-400",
     empty: "text-slate-500",
     tooltip: "bg-white text-slate-900",
+    latestBadge: "bg-white text-slate-900",
+refreshButton: "text-slate-500",
+summary: "text-slate-400",
   },
 };
 

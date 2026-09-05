@@ -16,8 +16,11 @@ export type LineChartSlot =
   | "xAxis"
   | "yAxis"
   | "tooltip"
+  | "latestBadge"   // NEW — the floating "current value" pill
+  | "refreshButton" // NEW — the refresh icon button
   | "error"
-  | "empty";
+  |"summary"
+  |"empty";
 
 export interface LineChartTooltipConfig {
   /** Whether hovering the chart shows a tooltip. Default: `true`. */
