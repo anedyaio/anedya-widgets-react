@@ -17,10 +17,6 @@ export const LINECHART_DEFAULT_CLASSES: Record<LineChartSlot, string> = {
     "text-[length:var(--anedya-linechart-label-size)] " +
     `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-label")}]`,
 
-  line: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
-  area: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
-  point: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
-
   grid: `text-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
 
   xAxis:
@@ -56,6 +52,10 @@ refreshButton:
   summary:
   "text-xs " +
   `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted-label")}]`,
+
+    line: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
+  area: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
+  point: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
 };
 
 export const lineChartLightTheme: WidgetTheme<LineChartSlot> = {
