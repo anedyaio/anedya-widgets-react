@@ -211,6 +211,52 @@ export default function App() {
         labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`}
         className="bg-white p-4 rounded-xl"
       />
+
+            {/* ================================================================
+       * SECTION 3 — AnedyaLineChart
+       * ================================================================ */}
+
+      {/* ----------------------------------------------------------------
+       * 3.1 Default appearance — no width/height, no theme. Fills its
+       * container's width and derives a proportional height capped at
+       * ~320px (see maxHeight in Sizing).
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Default Line Chart"
+        unit="%"
+      />
+
+      {/* ----------------------------------------------------------------
+       * 3.2 Explicit sizing + area fill + summary row. The area's
+       * gradient reads `currentColor`, so it's set via `styles` on the
+       * `line`/`area` slots together.
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Humidity — Last Year"
+        unit="%"
+        width={600}
+        height={300}
+        area={{ show: true }}
+        summary
+        styles={{ line: "text-[#42a5f5]", area: "text-[#42a5f5]" }}
+      />
+
+      {/* ----------------------------------------------------------------
+       * 3.3 The D3 passthrough model — real d3.line()/axis objects,
+       * chained exactly as you would with raw D3.
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Custom Curve + Ticks"
+        unit="%"
+        width={600}
+        height={300}
+        point={{ show: true, radius: 4 }}
+        line={(line) => line.curve(d3.curveMonotoneX)}
+        xAxis={(axis) => axis.ticks(6)}
+      />
     </div>
   );
 }

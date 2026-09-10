@@ -66,3 +66,15 @@ export interface LineChartPointConfig {
   /** Dot radius in px. Default: `3`. */
   radius?: number;
 }
+
+export interface LineChartGapConfig {
+  /** Gap threshold in milliseconds — consecutive points further apart than this are treated as a gap. Default: 12 hours (43200000ms). */
+  threshold?: number;
+  /**
+   * How to render a gap:
+   * - `"break"` — no line drawn between the two points (a visible break)
+   * - `"dotted"` — a dashed line connects them (default)
+   * - `"connect"` — drawn as a normal solid line, same as if there were no gap
+   */
+  style?: "break" | "dotted" | "connect";
+}

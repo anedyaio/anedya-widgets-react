@@ -1,5 +1,3 @@
-
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { twMerge } from "tailwind-merge";
@@ -36,12 +34,8 @@ export type AnedyaLineChartUpdate = Partial<
 >;
 const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
 
-// The SDK returns timestamps in SECONDS (confirmed from real API
-// responses, e.g. `"timestamp": 1788495106`). Every place a Date is
-// built from a raw timestamp inside this widget must go through this
-// helper — treating a seconds value as milliseconds silently produces
-// dates near the 1970 epoch, which is exactly the "x-axis looks weird /
-// everything shows Jan 21" bug this fixes.
+// The SDK returns timestamps in SECONDS. Every place a Date is built
+// from a raw timestamp must go through this helper.
 const toMs = (ts: number) => (ts < 1e12 ? ts * 1000 : ts);
 
 export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
@@ -54,13 +48,6 @@ export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
   refresh?: boolean;
   /** Called after a manual refresh (button click) completes, success or not. */
   onRefresh?: () => void;
-
-  /** Show the "Live" toggle button in the toolbar. Default: `true`. UI only for now — not yet wired to live-streaming. */
-  live?: boolean;
-  /** Show the "Export" button in the toolbar. Default: `true`. UI only for now. */
-  export?: boolean;
-  /** Show the date-range picker in the toolbar. Default: `true`. UI only for now — not yet wired to change `from`/`to`. */
-  dateRangePicker?: boolean;
 
   /** Show a Min / Avg / Max summary row below the chart, computed from the fetched range data. Default: `false`. */
   summary?: boolean;
@@ -83,8 +70,7 @@ export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
   /**
    * Customize the D3 line generator directly. Receives a `d3.line()`
    * already bound to the fetched data's x/y accessors — return it
-   * modified however you'd normally chain D3 methods. Nothing about
-   * this is reshaped; it's the real d3.Line object.
+   * modified however you'd normally chain D3 methods.
    */
   line?: (line: d3.Line<LineChartDataPoint>) => d3.Line<LineChartDataPoint>;
   xScale?: (
@@ -106,10 +92,17 @@ export interface AnedyaLineChartProps extends AnedyaWidgetBaseProps {
    * Hover tooltip. On by default with built-in content and positioning.
    * Provide `content` to keep the built-in positioning but customize
    * what's shown, or provide any of `onMouseOver`/`onMouseMove`/
-   * `onMouseOut` to fully take over with raw D3 event handlers — in
-   * that case the built-in tooltip AND crosshair are bypassed entirely.
+   * `onMouseOut` to fully take over with raw D3 event handlers.
    */
   tooltip?: LineChartTooltipConfig;
+
+  /**
+   * Whether to show the floating "latest value" badge. Default: `true`.
+   * The underlying `getLatestData` call is always made regardless — it's
+   * also used as the single-point fallback when `getData` returns no
+   * points in range — this prop only controls the badge's visibility.
+   */
+  showLatestValue?: boolean;
 
   title?: string;
   styles?: SlotClassNames<LineChartSlot>;
@@ -129,9 +122,6 @@ const DEFAULT_HEIGHT_RATIO = 0.5;
 const DEFAULT_HEIGHT = 240;
 const SUMMARY_ROW_HEIGHT = 44;
 
-// Adaptive tick formatter — mirrors Chart.js's `displayFormats` idea:
-// picks a finer or coarser format per tick based on how much time that
-// tick actually represents, instead of one fixed format for every tick.
 const formatMillisecond = d3.timeFormat(".%L");
 const formatSecond = d3.timeFormat("%H:%M:%S");
 const formatMinute = d3.timeFormat("%H:%M");
@@ -161,10 +151,6 @@ function multiFormat(date: Date): string {
   )(date);
 }
 
-// Default tooltip timestamp format — a fixed, compact convention
-// ("MMM dd, HH:mm:ss") independent of the labelFormat/Intl system used
-// for the last-updated label elsewhere, since a hover tooltip wants a
-// consistently terse format regardless of locale settings.
 const tooltipTimeFormat = d3.timeFormat("%b %d, %H:%M:%S");
 
 function RefreshIcon({ spinning }: { spinning: boolean }) {
@@ -184,24 +170,6 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
   );
 }
 
-function ExportIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}
-
 export function AnedyaLineChart({
   node,
   variable,
@@ -211,15 +179,12 @@ export function AnedyaLineChart({
   order = "asc",
   refresh = true,
   onRefresh,
-  live = true,
-  export: showExport = true,
-  dateRangePicker = true,
   summary = false,
   title,
   theme,
   className,
-  width,
-  height,
+  width=600,
+  height=300,
   minWidth = 240,
   maxWidth,
   minHeight = 160,
@@ -244,6 +209,7 @@ export function AnedyaLineChart({
   onDataChange,
   renderError,
   renderEmpty,
+  showLatestValue = true,
 }: AnedyaLineChartProps): React.JSX.Element {
   if (!node) throw new Error("[AnedyaLineChart] `node` is required.");
   if (!variable) throw new Error("[AnedyaLineChart] `variable` is required.");
@@ -272,10 +238,6 @@ export function AnedyaLineChart({
   const { ref: chartWrapperRef, size: dims } =
     useResizeObserver<HTMLDivElement>(width == null);
 
-  // Stable — recomputed only when the actual `to`/`from` PROPS change, not
-  // on every render. Computing Date.now() unmemoized here caused an
-  // infinite fetch loop (see earlier fix), since it fed a useEffect
-  // dependency array with a "new" value on every render.
   const resolvedTo = useMemo(() => to ?? Date.now(), [to]);
   const resolvedFrom = useMemo(
     () => from ?? resolvedTo - MS_PER_YEAR,
@@ -285,7 +247,6 @@ export function AnedyaLineChart({
   const hasAnyData =
     (dataPoints && dataPoints.length > 0) || latestPoint != null;
 
-  // ---- Combined fetch: range data + latest value, in parallel ----
   useEffect(() => {
     mountedRef.current = true;
 
@@ -356,8 +317,6 @@ export function AnedyaLineChart({
 
   const isEmpty = !loading && !error && effectiveDataPoints.length === 0;
 
-  // Min/Max/Avg computed from the REAL range data only (not the single-
-  // point fallback) — a summary of one point is meaningless.
   const summaryStats = useMemo(() => {
     if (!dataPoints || dataPoints.length === 0) return null;
     let min = dataPoints[0];
@@ -371,7 +330,6 @@ export function AnedyaLineChart({
     return { min, max, avg: sum / dataPoints.length };
   }, [dataPoints]);
 
-  // ---- onDataChange ----
   useEffect(() => {
     if (!onDataChange) {
       setDynamicProps({});
@@ -412,11 +370,9 @@ export function AnedyaLineChart({
     xAxis,
     yAxis,
     refresh,
-    live,
-    export: showExport,
-    dateRangePicker,
     summary,
     className,
+    showLatestValue,
     ...dynamicProps,
     styles: mergedStyles,
   };
@@ -488,10 +444,6 @@ export function AnedyaLineChart({
   const resolvedTimezone =
     resolvedProps.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  // Used for the toolbar's date-range label and the summary row's
-  // min/max timestamps — respects labelFormat/timezone, defaults to
-  // "datetime" (date + time) rather than LineChart falling back to
-  // Card/Gauge's "time"-only default.
   const formatTimestamp = useCallback(
     (ts: number): string => {
       const formatter = LABEL_FORMATTERS[resolvedProps.labelFormat ?? "datetime"];
@@ -528,16 +480,15 @@ export function AnedyaLineChart({
     DEFAULT_HEIGHT;
   const boxHeight = rawBoxHeight;
 
-  // Increased top margin (was 12) so the corner-pinned latest-value badge
-  // has breathing room above data spikes near the top of the y-domain,
-  // instead of visually overlapping the line.
-  const margin = { top: 44, right: 16, bottom: 28, left: 44 };
+  // Extra bottom margin so rotated x-axis labels have room to extend
+  // below the axis line without getting clipped by the SVG's own
+  // viewBox boundary.
+  const margin = { top: 44, right: 16, bottom: 64, left: 44 };
   const innerWidth = Math.max(0, boxWidth - margin.left - margin.right);
   const innerHeight = Math.max(0, boxHeight - margin.top - margin.bottom);
 
   const isSinglePoint = effectiveDataPoints.length === 1;
 
-  // ---- D3 draw ----
   useEffect(() => {
     if (!svgRef.current || innerWidth <= 0 || innerHeight <= 0) return;
     if (effectiveDataPoints.length === 0) return;
@@ -562,7 +513,7 @@ export function AnedyaLineChart({
       toMs(xExtentRaw[0]),
       toMs(xExtentRaw[1]),
     ];
-    const xPad = xExtentMs[0] === xExtentMs[1] ? 60 * 60 * 1000 : 0; // ±1h for single-point
+    const xPad = xExtentMs[0] === xExtentMs[1] ? 60 * 60 * 1000 : 0;
     const yRange = yExtentRaw[1] - yExtentRaw[0];
     const yPad = yRange > 0 ? yRange * 0.1 : Math.abs(yExtentRaw[0]) * 0.1 || 1;
 
@@ -578,7 +529,7 @@ export function AnedyaLineChart({
       .range([innerHeight, 0]);
     if (resolvedProps.yScale) y = resolvedProps.yScale(y) as any;
 
-    // ---- Grid (both X and Y) ----
+    // ---- Grid ----
     const gridGroup = root.select<SVGGElement>("g.anedya-linechart-grid");
     gridGroup.selectAll("*").remove();
     if (resolvedGrid.show) {
@@ -617,14 +568,41 @@ export function AnedyaLineChart({
     // ---- Axes ----
     let xAxisGen = d3.axisBottom(x).ticks(5).tickFormat(multiFormat as any);
     if (resolvedProps.xAxis) xAxisGen = resolvedProps.xAxis(xAxisGen as any) as any;
-    root
+
+    const xAxisSelection = root
       .select<SVGGElement>("g.anedya-linechart-xaxis")
       .attr("class", twMerge("anedya-linechart-xaxis", resolveSlot("xAxis")))
       .attr("transform", `translate(0,${innerHeight})`)
       .call(xAxisGen as any)
       .call((g) => g.select(".domain").attr("stroke", "currentColor").attr("opacity", 0.3))
-      .call((g) => g.selectAll("text").attr("fill", "currentColor"))
-      .call((g) => g.selectAll("line").attr("stroke", "currentColor").attr("opacity", 0.3));
+      .call((g) => g.selectAll("line").attr("stroke", "currentColor").attr("opacity", 0.3))
+      .call((g) =>
+        g
+          .selectAll("text")
+          .attr("fill", "currentColor")
+          .attr("transform", null)
+          .style("text-anchor", "middle")
+          .attr("dx", null)
+          .attr("dy", null)
+      );
+
+    const tickTexts = xAxisSelection.selectAll<SVGTextElement, unknown>("text");
+    const tickCount = tickTexts.size();
+    if (tickCount > 1) {
+      const avgSpacing = innerWidth / tickCount;
+      let needsRotation = false;
+      tickTexts.each(function () {
+        const bbox = (this as SVGTextElement).getBBox();
+        if (bbox.width > avgSpacing * 0.9) needsRotation = true;
+      });
+      if (needsRotation) {
+        tickTexts
+          .attr("transform", "rotate(-35)")
+          .style("text-anchor", "end")
+          .attr("dx", "-0.5em")
+          .attr("dy", "0.4em");
+      }
+    }
 
     let yAxisGen = d3.axisLeft(y).ticks(5);
     if (resolvedProps.yAxis) yAxisGen = resolvedProps.yAxis(yAxisGen as any) as any;
@@ -636,39 +614,38 @@ export function AnedyaLineChart({
       .call((g) => g.selectAll("text").attr("fill", "currentColor"))
       .call((g) => g.selectAll("line").attr("stroke", "currentColor").attr("opacity", 0.3));
 
-    // ---- Area (with gradient fill, following currentColor) ----
+    // ---- Area (gradient fill) ----
     const areaGroup = root.select<SVGGElement>("g.anedya-linechart-area");
     areaGroup.selectAll("*").remove();
     if (resolvedArea.show && !isSinglePoint) {
       const gradientId = "anedya-linechart-area-gradient";
-  
-     let gradient = defs.select<SVGLinearGradientElement>(`#${gradientId}`);
-if (gradient.empty()) {
-  gradient = defs
-    .append("linearGradient")
-    .attr("id", gradientId)
-    .attr("class", resolveSlot("area")) // stops inherit `color` from here, not from the path
-    .attr("x1", "0")
-    .attr("x2", "0")
-    .attr("y1", "0")
-    .attr("y2", "1");
-  gradient
-    .append("stop")
-    .attr("class", "anedya-linechart-gradient-top")
-    .attr("offset", "0%")
-    .attr("stop-color", "currentColor")
-    .attr("stop-opacity", resolvedArea.opacity);
-  gradient
-    .append("stop")
-    .attr("offset", "100%")
-    .attr("stop-color", "currentColor")
-    .attr("stop-opacity", 0);
-} else {
-  gradient
-    .attr("class", resolveSlot("area")) // keep in sync if styles/theme change on re-render
-    .select(".anedya-linechart-gradient-top")
-    .attr("stop-opacity", resolvedArea.opacity);
-}
+      let gradient = defs.select<SVGLinearGradientElement>(`#${gradientId}`);
+      if (gradient.empty()) {
+        gradient = defs
+          .append("linearGradient")
+          .attr("id", gradientId)
+          .attr("class", resolveSlot("area"))
+          .attr("x1", "0")
+          .attr("x2", "0")
+          .attr("y1", "0")
+          .attr("y2", "1");
+        gradient
+          .append("stop")
+          .attr("class", "anedya-linechart-gradient-top")
+          .attr("offset", "0%")
+          .attr("stop-color", "currentColor")
+          .attr("stop-opacity", resolvedArea.opacity);
+        gradient
+          .append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", "currentColor")
+          .attr("stop-opacity", 0);
+      } else {
+        gradient
+          .attr("class", resolveSlot("area"))
+          .select(".anedya-linechart-gradient-top")
+          .attr("stop-opacity", resolvedArea.opacity);
+      }
 
       const areaGen = d3
         .area<LineChartDataPoint>()
@@ -681,7 +658,6 @@ if (gradient.empty()) {
         .attr("class", twMerge("anedya-linechart-area-path", resolveSlot("area")))
         .attr("d", areaGen(effectiveDataPoints)!)
         .attr("fill", `url(#${gradientId})`)
-        //  .attr("fill", "#42a5f5")
         .attr("stroke", "none");
     }
 
@@ -704,7 +680,7 @@ if (gradient.empty()) {
         .attr("stroke-width", 2);
     }
 
-    // ---- Points (forced on for single-point fallback) ----
+    // ---- Points ----
     const pointGroup = root.select<SVGGElement>("g.anedya-linechart-points");
     pointGroup.selectAll("*").remove();
     if (resolvedPoint.show || isSinglePoint) {
@@ -722,7 +698,7 @@ if (gradient.empty()) {
         .attr("fill", "currentColor");
     }
 
-    // ---- Crosshair (vertical dashed line, shown on hover) ----
+    // ---- Crosshair ----
     let crosshair = root.select<SVGLineElement>("line.anedya-linechart-crosshair");
     if (crosshair.empty()) {
       crosshair = root
@@ -832,9 +808,6 @@ if (gradient.empty()) {
   ]);
 
   const hasExplicitHeight = height != null || dynamicProps.height != null;
-  // When a fixed height is set AND summary is enabled, reserve extra
-  // room so the summary row doesn't get clipped by overflow:hidden —
-  // consumers should add roughly this much to their passed `height`.
   const effectiveMinHeight = resolvedProps.summary
     ? DEFAULT_HEIGHT + SUMMARY_ROW_HEIGHT
     : DEFAULT_HEIGHT;
@@ -867,11 +840,7 @@ if (gradient.empty()) {
           ...(hasExplicitHeight ? { overflow: "hidden" } : {}),
         }}
       >
-        {(resolvedProps.title ||
-          resolvedProps.refresh !== false ||
-          resolvedProps.live !== false ||
-          resolvedProps.export !== false ||
-          resolvedProps.dateRangePicker !== false) && (
+        {(resolvedProps.title || resolvedProps.refresh !== false) && (
           <div className="flex items-center justify-between w-full gap-2 flex-wrap shrink-0">
             {resolvedProps.title ? (
               <span className={resolveSlot("title")}>
@@ -881,58 +850,16 @@ if (gradient.empty()) {
               <span />
             )}
 
-            <div className="flex items-center gap-2 ml-auto">
-              {/* {resolvedProps.live !== false && (
-                <button
-                  type="button"
-                  disabled
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium bg-blue-500 text-white opacity-50 cursor-not-allowed"
-                  title="Live streaming — coming soon"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                  Live
-                </button>
-              )} */}
-
-              {resolvedProps.dateRangePicker !== false && (
-                <button
-                  type="button"
-                  disabled
-                  className={twMerge(
-                    "rounded-md px-2 py-1 text-xs opacity-50 cursor-not-allowed border",
-                    resolveSlot("refreshButton")
-                  )}
-                  title="Date range picker — coming soon"
-                >
-                  {formatTimestamp(resolvedFrom)} – {formatTimestamp(resolvedTo)}
-                </button>
-              )}
-
-              {/* {resolvedProps.export !== false && (
-                <button
-                  type="button"
-                  disabled
-                  className={twMerge(
-                    "rounded-md p-1 opacity-50 cursor-not-allowed",
-                    resolveSlot("refreshButton")
-                  )}
-                  title="Export — coming soon"
-                >
-                  <ExportIcon />
-                </button>
-              )} */}
-
-              {resolvedProps.refresh !== false && (
-                <button
-                  type="button"
-                  aria-label="Refresh chart data"
-                  onClick={() => setRefreshTick((t) => t + 1)}
-                  className={twMerge("cursor-pointer", resolveSlot("refreshButton"))}
-                >
-                  <RefreshIcon spinning={loading} />
-                </button>
-              )}
-            </div>
+            {resolvedProps.refresh !== false && (
+              <button
+                type="button"
+                aria-label="Refresh chart data"
+                onClick={() => setRefreshTick((t) => t + 1)}
+                className={twMerge("cursor-pointer", resolveSlot("refreshButton"))}
+              >
+                <RefreshIcon spinning={loading} />
+              </button>
+            )}
           </div>
         )}
 
@@ -991,25 +918,26 @@ if (gradient.empty()) {
               </g>
             </svg>
 
-            {/* Floating "latest value" badge — always pinned top-right,
-              distinct from the hover tooltip. Extra margin.top above
-              gives it room so it doesn't overlap data spikes. */}
-            {latestPoint && !loading && !error && !isEmpty && (
-              <div
-                className={twMerge(
-                  "absolute top-2 right-2 flex flex-col items-end",
-                  resolveSlot("latestBadge")
-                )}
-              >
-                <span className="font-bold leading-tight">
-                  {displayFor(latestPoint.value)}
-                  {resolvedProps.unit ? ` ${resolvedProps.unit}` : ""}
-                </span>
-                <span className="font-normal text-[0.75em] opacity-80 leading-tight">
-                  {formatTimestamp(latestPoint.timestamp)}
-                </span>
-              </div>
-            )}
+            {resolvedProps.showLatestValue !== false &&
+              latestPoint &&
+              !loading &&
+              !error &&
+              !isEmpty && (
+                <div
+                  className={twMerge(
+                    "absolute top-2 right-2 flex flex-col items-end",
+                    resolveSlot("latestBadge")
+                  )}
+                >
+                  <span className="font-bold leading-tight">
+                    {displayFor(latestPoint.value)}
+                    {resolvedProps.unit ? ` ${resolvedProps.unit}` : ""}
+                  </span>
+                  <span className="font-normal text-[0.75em] opacity-80 leading-tight">
+                    {formatTimestamp(latestPoint.timestamp)}
+                  </span>
+                </div>
+              )}
 
             {!hasRawTooltipHandlers &&
               resolvedTooltip.show &&
