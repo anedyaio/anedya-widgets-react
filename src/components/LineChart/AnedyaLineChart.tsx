@@ -862,29 +862,37 @@ export function AnedyaLineChart({
             )}
           </div>
         )}
-
-        {loading && !hasAnyData ? (
-          <div className="relative w-full flex-1 min-h-0 flex items-center justify-center">
-            <svg
-              viewBox={`0 0 ${boxWidth || 200} ${boxHeight || 100}`}
-              className="block w-full h-full opacity-30"
-            >
-              <g transform={`translate(${margin.left},${margin.top})`}>
-                <line
-                  x1={0}
-                  y1={innerHeight}
-                  x2={innerWidth}
-                  y2={innerHeight}
-                  stroke="currentColor"
-                />
-                <line x1={0} y1={0} x2={0} y2={innerHeight} stroke="currentColor" />
-              </g>
-            </svg>
-            <span className={twMerge("absolute", resolveSlot("label"))}>
-              Loading data…
-            </span>
+    {loading && !hasAnyData ? (
+       <div className="relative w-full flex-1 min-h-0 flex flex-col justify-end gap-2 animate-pulse">
+          {/* jagged bars standing in for the line — same rounded-block
+            language, and same theme-aware color, as the gauge's skeleton */}
+        <div className="flex items-end gap-1 flex-1 px-1 pb-6">
+            {[38, 52, 34, 58, 48, 66, 44, 60, 52, 74, 58, 46].map((h, i) => (
+            <div
+            key={i}
+             className="flex-1 rounded-sm"               style={{
+                 height: `${h}%`,
+                 backgroundColor:
+                   resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb",
+              }}
+             />
+            ))}
+         </div>
+         {/* skeleton x-axis tick labels */}
+        <div className="flex justify-between px-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+            <div
+               key={i}
+              className="h-2 w-10 rounded"
+               style={{
+                  backgroundColor:
+                    resolvedProps.theme === "dark" ? "#374151" : "#e5e7eb",
+                }}
+              />
+           ))}
           </div>
-        ) : error && !hasAnyData ? (
+       </div>
+      ) : error && !hasAnyData  ? (
           renderError ? (
             renderError(error)
           ) : (
