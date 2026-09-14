@@ -133,6 +133,7 @@ export default function App() {
         decimalPlaces={1}
         className="shadow-lg"
         styles={{
+
           container: "bg-blue-50 border-blue-300",
           value: "text-red-500 text-5xl",
           title: "uppercase tracking-wider text-blue-700",
@@ -146,7 +147,14 @@ export default function App() {
       {/* ----------------------------------------------------------------
        * 2.1 Default appearance — live data, no theme/styling overrides.
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge {...commonProps} title="Default Gauge" unit="%" min={0} max={100} />
+      <AnedyaGauge 
+        {...commonProps} 
+        title="Default Gauge" 
+        unit="%" 
+        min={0} 
+        max={100} 
+   
+        />
 
       {/* ----------------------------------------------------------------
        * 2.2 Manual value mode — pass `value` directly instead of `node`/
@@ -191,9 +199,63 @@ export default function App() {
         min={0}
         max={80}
         title="Custom Formatting"
+        theme="light"
+        needle={{
+          type:"triangle",
+          color:"oklch(59.2% 0.249 0.584)"
+        }}
         formatValue={(v) => `${v} km/h`}
         labelText={(ts) => `Refreshed at ${new Date(ts).toLocaleTimeString()}`}
+        className="bg-white p-4 rounded-xl"
+      />
+
+            {/* ================================================================
+       * SECTION 3 — AnedyaLineChart
+       * ================================================================ */}
+
+      {/* ----------------------------------------------------------------
+       * 3.1 Default appearance — no width/height, no theme. Fills its
+       * container's width and derives a proportional height capped at
+       * ~320px (see maxHeight in Sizing).
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Default Line Chart"
+        unit="%"
+      />
+
+      {/* ----------------------------------------------------------------
+       * 3.2 Explicit sizing + area fill + summary row. The area's
+       * gradient reads `currentColor`, so it's set via `styles` on the
+       * `line`/`area` slots together.
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Humidity — Last Year"
+        unit="%"
+        width={600}
+        height={300}
+        area={{ show: true }}
+        summary
+        styles={{ line: "text-[#42a5f5]", area: "text-[#42a5f5]" }}
+      />
+
+      {/* ----------------------------------------------------------------
+       * 3.3 The D3 passthrough model — real d3.line()/axis objects,
+       * chained exactly as you would with raw D3.
+       * ---------------------------------------------------------------- */}
+      <AnedyaLineChart
+        {...commonProps}
+        title="Custom Curve + Ticks"
+        unit="%"
+        width={600}
+        height={300}
+        point={{ show: true, radius: 4 }}
+        line={(line) => line.curve(d3.curveMonotoneX)}
+        xAxis={(axis) => axis.ticks(6)}
       />
     </div>
   );
 }
+ 
+//css classes instead of ts classes --- rn css is getting converting to ts and back to ts - follow base ui - tailwind format support 

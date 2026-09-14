@@ -1,27 +1,54 @@
-// themes/gaugeTheme.ts
-
 import { GaugeSlot } from "../types/gauge";
 import { WidgetTheme } from "../types/root";
+import { themeVar } from "../helpers/themeVar";
 
 export const GAUGE_DEFAULT_CLASSES: Record<GaugeSlot, string> = {
-  container: "flex flex-col items-center justify-center text-center",
-  title: "text-[length:var(--anedya-gauge-title-size)] font-medium",
-  unit: "text-[length:var(--anedya-gauge-unit-size)] font-medium",
-  track: "",
-  bar: "",
-  needle: "",
-  needleCap: "",
-  value: "text-[length:var(--anedya-gauge-value-size)] font-bold leading-none",
-  label: "text-[length:var(--anedya-gauge-label-size)]",
-  // NEW — tick line has no default utility classes; color comes from theme below.
-  tick: "",
-  // NEW — font-size is always driven by the `tick.labelSize` prop (set via
-  // inline style in the widget, which wins over classes), so this only
-  // needs non-size utilities.
-  tickLabel: "font-medium select-none",
-  error: "text-sm font-medium",
-  empty: "text-[length:var(--anedya-gauge-value-size)] font-bold",
-  tooltip: "pointer-events-none z-10 rounded-md px-2 text-[length:var(--anedya-gauge-tooltip-size)] shadow-lg whitespace-nowrap font-medium",
+container:
+  "flex flex-col items-center justify-center text-center gap-[var(--anedya-gauge-gap)] p-[var(--anedya-gauge-padding)] " +
+  `bg-[${themeVar("--card", "--mui-palette-background-paper", "--anedya-gauge-fallback-bg")}] ` +
+  `border-[${themeVar("--border", "--mui-palette-divider", "--anedya-gauge-fallback-border")}]`,
+
+  title:
+    "text-[length:var(--anedya-gauge-title-size)] font-medium " +
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+
+  unit:
+    "text-[length:var(--anedya-gauge-unit-size)] font-medium " +
+    `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
+
+  value:
+    "text-[length:var(--anedya-gauge-value-size)] font-bold leading-none " +
+    `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
+
+  label:
+    "text-[length:var(--anedya-gauge-label-size)] " +
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+
+  track: `text-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
+  bar: `text-[${themeVar("--primary", "--mui-palette-primary-main", "--anedya-fallback-primary")}]`,
+  needle: `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
+  needleCap: `text-[${themeVar("--card-foreground", "--mui-palette-text-primary", "--anedya-fallback-fg")}]`,
+  tick: `text-[${themeVar("--border", "--mui-palette-divider", "--anedya-fallback-border")}]`,
+  tickLabel:
+    "font-medium select-none " +
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+
+  error:
+    "text-sm font-medium " +
+    `text-[${themeVar("--destructive", "--mui-palette-error-main", "--anedya-fallback-error")}]`,
+
+  empty:
+    "text-[length:var(--anedya-gauge-value-size)] font-bold " +
+    `text-[${themeVar("--muted-foreground", "--mui-palette-text-secondary", "--anedya-fallback-muted")}]`,
+
+  // Tooltip: intentionally hardcoded, NOT run through themeVar/auto-
+  // detection — always inverted for guaranteed readability regardless of
+  // the app's theme (a tooltip that blends into the page is a real usability
+  // bug, so this one favors reliability over automatic matching).
+  tooltip:
+    "pointer-events-none z-10 rounded-md px-2 text-[length:var(--anedya-gauge-tooltip-size)] " +
+    "shadow-lg whitespace-nowrap font-medium " +
+    "bg-[var(--anedya-fallback-tooltip-bg)] text-[var(--anedya-fallback-tooltip-fg)]",
 };
 
 export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
@@ -30,7 +57,7 @@ export const gaugeLightTheme: WidgetTheme<GaugeSlot> = {
     title: "text-slate-500",
     unit: "text-slate-500",
     label: "text-slate-400",
-    track: "text-slate-200", // read via `currentColor` on the track path
+    track: "text-slate-200",
     bar: "text-indigo-500",
     needle: "text-slate-700",
     needleCap: "text-slate-700",
@@ -62,8 +89,12 @@ export const gaugeDarkTheme: WidgetTheme<GaugeSlot> = {
   },
 };
 
-export const gaugeThemes = {
+
+export type GaugeThemeName = "light" | "dark";
+
+export const gaugeThemes: Record<GaugeThemeName, WidgetTheme<GaugeSlot>> = {
   light: gaugeLightTheme,
   dark: gaugeDarkTheme,
-} as const;
-export const DEFAULT_GAUGE_THEME = gaugeLightTheme;
+};
+
+export const DEFAULT_GAUGE_THEME: WidgetTheme<GaugeSlot> = gaugeLightTheme;

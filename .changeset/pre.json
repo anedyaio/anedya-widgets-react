@@ -1,0 +1,11 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "@anedyasystems/anedya-widgets-react": "0.0.2"
+  },
+  "changesets": [
+    "free-pianos-brush",
+    "khaki-cameras-play"
+  ]
+}
