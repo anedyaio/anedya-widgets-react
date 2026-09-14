@@ -88,6 +88,17 @@ To display live values from Anedya, provide a `node` and `variable`.
 />
 ```
 
+### Line Chart
+
+```tsx
+<AnedyaLineChart
+  node={node}
+  variable="humidity"
+/>
+```
+
+Unlike `AnedyaCard`/`AnedyaGauge`, `AnedyaLineChart` doesn't support a manual `value` mode — it always fetches a time-series range via `node`/`variable`.
+
 ---
 
 ## Manual values
@@ -122,6 +133,7 @@ When both `value` and `node`/`variable` are provided, the manual value is used i
 # Required props
 
 The widgets support two operating modes.
+Both props are required when displaying live data — this applies to `AnedyaLineChart` as well, which has no manual `value` mode.
 
 ## Live data mode
 
@@ -185,6 +197,25 @@ Both widgets support the following optional props:
 - `color`
 
 The example application demonstrates many of these options and can be used as a reference when configuring your own gauges.
+
+---
+
+# Line chart–specific props
+
+`AnedyaLineChart` also supports additional configuration:
+
+- `from` / `to` — time range in milliseconds (default: last year)
+- `limit` / `order` — max points fetched / fetch order
+- `refresh` / `onRefresh` — manual refresh button and callback
+- `area` — gradient fill under the line (`show`, `opacity`)
+- `point` — data-point markers (`show`, `radius`)
+- `grid` — background gridlines (`show`, `ticksX`, `ticksY`)
+- `tooltip` — hover tooltip (`show`, `content`, or raw `onMouseOver`/`onMouseMove`/`onMouseOut`)
+- `summary` — Min/Avg/Max row below the chart
+- `showLatestValue` — the floating "latest value" badge
+- `line` / `xScale` / `yScale` / `xAxis` / `yAxis` — real D3 objects, passed through for direct customization
+
+The example application demonstrates several of these and can be used as a reference when configuring your own charts.
 
 ---
 
