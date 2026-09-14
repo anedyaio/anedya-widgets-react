@@ -1,5 +1,12 @@
 # @anedyasystems/anedya-widgets-react
 
+## 0.0.3
+
+### Patch Changes
+
+- 5ba9afd: Added Chart
+- 567e470: Readme Updated
+
 ## 0.0.3-beta.1
 
 ### Patch Changes
