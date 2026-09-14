@@ -6,7 +6,7 @@
 </p>
 <!--</div>-->
 
-# Anedya Widgets SDK - React
+# Anedya Widgets SDK
 
 A collection of pre-built, themeable React widgets for displaying Anedya IoT data in dashboards and front-end applications.
 

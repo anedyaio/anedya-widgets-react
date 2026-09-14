@@ -153,7 +153,7 @@ export default function App() {
         unit="%" 
         min={0} 
         max={100} 
-        theme="dark"
+   
         />
 
       {/* ----------------------------------------------------------------
@@ -161,7 +161,7 @@ export default function App() {
        * `variable` for a static/controlled gauge (e.g. driven by your
        * own app state rather than live Anedya data).
        * ---------------------------------------------------------------- */}
-      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" theme="dark" />
+      <AnedyaGauge value={72} title="Manual Value" className="shadow-md" />
 
       {/* ----------------------------------------------------------------
        * 2.4 onDataChange — same pattern as AnedyaCard: conditional
@@ -170,7 +170,6 @@ export default function App() {
        * ---------------------------------------------------------------- */}
       <AnedyaGauge
         {...commonProps}
-        theme="dark"
         title="Threshold Coloring"
         min={0}
         max={100}
